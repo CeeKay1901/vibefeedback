@@ -1,0 +1,539 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VibeFeedback — Kommentare auf Vibecoding-Projekte</title>
+<style>
+:root{
+  --bg:#0f1115; --panel:#161a22; --panel2:#1d2230; --line:#2a3040;
+  --fg:#e8ecf3; --muted:#8892a6; --accent:#7c5cff; --accent2:#3ddc97;
+  --danger:#ff6b6b; --warn:#ffb84d;
+  --shadow:0 8px 24px rgba(0,0,0,.35);
+  --radius:10px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;background:var(--bg);color:var(--fg);font-size:14px;line-height:1.5}
+a{color:var(--accent2)}
+button{font-family:inherit;font-size:14px;cursor:pointer;border:1px solid var(--line);background:var(--panel2);color:var(--fg);padding:8px 14px;border-radius:8px;transition:.15s}
+button:hover{border-color:var(--accent);background:var(--panel)}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button.primary:hover{filter:brightness(1.1)}
+button.ghost{background:transparent}
+button.danger{border-color:var(--danger);color:var(--danger)}
+input[type=text],input[type=url],textarea{font-family:inherit;font-size:14px;width:100%;background:var(--panel);border:1px solid var(--line);color:var(--fg);padding:10px 12px;border-radius:8px;outline:none}
+input:focus,textarea:focus{border-color:var(--accent)}
+textarea{resize:vertical;min-height:100px}
+code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px}
+h1,h2,h3{margin:0 0 8px}
+.muted{color:var(--muted)}
+.hidden{display:none!important}
+
+/* Setup layout */
+.setup{max-width:720px;margin:60px auto;padding:0 20px}
+.setup h1{font-size:28px;letter-spacing:-.2px}
+.setup p{color:var(--muted)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:22px;margin-top:20px;box-shadow:var(--shadow)}
+.row{display:flex;gap:10px;align-items:center}
+.row>*:first-child{flex:1}
+.tag{display:inline-block;padding:2px 8px;border-radius:99px;background:var(--panel2);color:var(--muted);font-size:11px;border:1px solid var(--line)}
+.step{display:flex;gap:12px;margin:14px 0}
+.step .n{flex:0 0 26px;height:26px;border-radius:99px;background:var(--accent);color:#fff;display:grid;place-items:center;font-weight:600}
+.link-box{display:flex;gap:8px;align-items:center;background:var(--panel2);border:1px dashed var(--line);border-radius:8px;padding:10px 12px}
+.link-box code{flex:1;overflow:auto;white-space:nowrap}
+
+/* Feedback layout */
+.app{display:grid;grid-template-columns:1fr 380px;grid-template-rows:52px 1fr;height:100vh}
+.topbar{grid-column:1/-1;display:flex;align-items:center;gap:14px;padding:0 14px;background:var(--panel);border-bottom:1px solid var(--line)}
+.topbar .brand{font-weight:600}
+.topbar .src{color:var(--muted);flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.topbar .role{padding:3px 10px;border-radius:99px;font-size:11px;border:1px solid var(--line);background:var(--panel2)}
+.topbar .role.commenter{color:var(--accent2);border-color:var(--accent2)}
+.topbar .role.owner{color:var(--warn);border-color:var(--warn)}
+
+.canvas{position:relative;background:#0b0d12;overflow:hidden}
+.canvas iframe{width:100%;height:100%;border:0;background:#fff}
+.loader,.errbox{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);padding:30px;text-align:center}
+.errbox{background:var(--panel);color:var(--fg)}
+.errbox .actions{margin-top:14px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+
+.sidebar{background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column;overflow:hidden}
+.sidebar h3{padding:14px 14px 6px;font-size:13px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted)}
+.sidebar .tools{padding:0 14px 12px;display:flex;gap:8px;flex-wrap:wrap}
+.sidebar .tools button{padding:6px 10px;font-size:12.5px}
+.sidebar .empty{padding:20px 14px;color:var(--muted);font-size:13px}
+.list{flex:1;overflow:auto;padding:0 8px 8px}
+.item{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:6px;cursor:pointer;transition:.15s}
+.item:hover{border-color:var(--accent)}
+.item.active{border-color:var(--accent);box-shadow:0 0 0 2px rgba(124,92,255,.25)}
+.item .h{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.item .n{background:var(--accent);color:#fff;border-radius:99px;width:22px;height:22px;font-size:12px;display:grid;place-items:center;font-weight:600}
+.item .sel{font-size:11.5px;color:var(--muted);word-break:break-all}
+.item .txt{margin-top:6px;font-size:13px;white-space:pre-wrap}
+.item .meta{margin-top:6px;font-size:11px;color:var(--muted);display:flex;gap:10px}
+.item .del{background:transparent;border:0;color:var(--muted);padding:0;font-size:12px;cursor:pointer}
+.item .del:hover{color:var(--danger)}
+
+/* Modal */
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);display:grid;place-items:center;z-index:9999;padding:20px}
+.modal{background:var(--panel);border:1px solid var(--line);border-radius:12px;width:100%;max-width:520px;padding:20px;box-shadow:var(--shadow)}
+.modal h3{margin-bottom:10px}
+.modal .snip{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px;max-height:130px;overflow:auto;margin:6px 0 12px}
+.modal .snip code{white-space:pre-wrap;word-break:break-all}
+.modal .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+.badge-key{display:inline-block;background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-size:11px;margin-right:6px;color:var(--muted)}
+
+/* Toast */
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--panel2);border:1px solid var(--line);color:var(--fg);padding:10px 16px;border-radius:8px;box-shadow:var(--shadow);z-index:10000;font-size:13px}
+
+@media(max-width:900px){
+  .app{grid-template-columns:1fr;grid-template-rows:52px 55vh 1fr}
+  .sidebar{border-left:0;border-top:1px solid var(--line)}
+}
+</style>
+</head>
+<body>
+
+<!-- ============ SETUP VIEW ============ -->
+<div id="view-setup" class="setup hidden">
+  <h1>VibeFeedback <span class="tag">PoC</span></h1>
+  <p>Teile eine Live-URL deines Vibecoding-Projekts. Feedback-Geber:innen klicken direkt auf die Elemente, die sie kommentieren wollen. Am Ende bekommst du alles gesammelt als Markdown-Prompt zurück.</p>
+
+  <div class="card">
+    <h2 style="font-size:18px;margin-bottom:14px">Sharing-Link erzeugen</h2>
+    <div class="step"><div class="n">1</div><div>Deploye dein Projekt (z.&nbsp;B. GitHub Pages, Vercel, Netlify) und kopiere die URL zur HTML-Seite.</div></div>
+    <div class="step"><div class="n">2</div><div>Füge sie unten ein — VibeFeedback verpackt sie in einen teilbaren Feedback-Link.</div></div>
+    <div class="step"><div class="n">3</div><div>Schicke den Link an deine Tester. Sammle das Feedback später als Markdown und füttere damit deinen nächsten Prompt.</div></div>
+
+    <div style="margin-top:18px">
+      <label class="muted" style="font-size:12px">Projekt-URL</label>
+      <div class="row" style="margin-top:6px">
+        <input type="url" id="src-input" placeholder="https://username.github.io/projekt/index.html">
+        <button class="primary" id="btn-generate">Link erzeugen</button>
+      </div>
+      <div id="src-error" class="muted" style="color:var(--danger);margin-top:6px;font-size:12.5px"></div>
+    </div>
+
+    <div id="share-result" class="hidden" style="margin-top:18px">
+      <label class="muted" style="font-size:12px">Feedback-Link (kopieren &amp; teilen)</label>
+      <div class="link-box" style="margin-top:6px">
+        <code id="share-link"></code>
+        <button id="btn-copy">Kopieren</button>
+      </div>
+      <div class="row" style="margin-top:12px;gap:10px">
+        <button id="btn-preview" class="primary">Selbst testen &rarr;</button>
+        <span class="muted" style="font-size:12.5px">Öffnet den Link im Owner-Modus. Feedback wird im Browser gespeichert (localStorage).</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="font-size:14px">Wie das PoC funktioniert</h3>
+    <ul style="color:var(--muted);padding-left:18px;margin:8px 0 0">
+      <li>Die geteilte HTML wird per <code>fetch()</code> geladen und in ein Iframe eingebettet — das erlaubt Klick-Zuordnung zu konkreten DOM-Elementen.</li>
+      <li>Klicks im Iframe öffnen ein Kommentarfeld. Der CSS-Selector + HTML-Auszug des Elements wird als Referenz gespeichert.</li>
+      <li>Kommentare liegen im <code>localStorage</code> pro Browser. Kein Server, kein Login.</li>
+      <li>Kommentierer exportiert am Ende ein Markdown und schickt es dir (Mail/Chat) — direkt Prompt-tauglich.</li>
+      <li>CORS-Hinweis: Das Ziel muss GET-Requests via CORS erlauben (GitHub Pages tut das). Sonst Fallback: HTML-Datei paste-in.</li>
+    </ul>
+  </div>
+
+  <p class="muted" style="text-align:center;margin-top:30px;font-size:12px">
+    Repo: <a href="https://github.com/CeeKay1901/vibefeedback">github.com/CeeKay1901/vibefeedback</a>
+  </p>
+</div>
+
+<!-- ============ FEEDBACK VIEW ============ -->
+<div id="view-app" class="app hidden">
+  <div class="topbar">
+    <span class="brand">VibeFeedback</span>
+    <span class="src" id="topbar-src"></span>
+    <span class="role" id="topbar-role">Feedback-Modus</span>
+    <button id="btn-back" class="ghost" title="Neue Session">Neu</button>
+  </div>
+  <div class="canvas" id="canvas">
+    <div class="loader" id="loader">Lade Projekt…</div>
+    <iframe id="frame" class="hidden" sandbox="allow-same-origin allow-scripts allow-forms allow-popups"></iframe>
+    <div class="errbox hidden" id="errbox"></div>
+  </div>
+  <div class="sidebar">
+    <h3>Kommentare (<span id="cmt-count">0</span>)</h3>
+    <div class="tools">
+      <button id="btn-export" class="primary">Als Markdown</button>
+      <button id="btn-copy-md">In Zwischenablage</button>
+      <button id="btn-clear" class="danger">Alle löschen</button>
+    </div>
+    <div id="cmt-empty" class="empty">
+      Noch keine Kommentare. <br><br>
+      <span class="badge-key">Klick</span> auf ein beliebiges Element im linken Bereich, um es zu kommentieren.
+    </div>
+    <div class="list" id="cmt-list"></div>
+  </div>
+</div>
+
+<!-- Modal template inserted via JS -->
+
+<script>
+"use strict";
+
+// ---------- Utils ----------
+const $ = (s,r=document)=>r.querySelector(s);
+const $$ = (s,r=document)=>[...r.querySelectorAll(s)];
+const esc = s => (s??"").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const truncate = (s,n=200) => s.length<=n?s:s.slice(0,n)+"…";
+const toast = (msg,ms=2200) => {
+  const t = document.createElement("div");
+  t.className="toast"; t.textContent=msg; document.body.appendChild(t);
+  setTimeout(()=>t.remove(), ms);
+};
+
+function cssPath(el){
+  if(!el || el.nodeType!==1) return "";
+  const parts = [];
+  while(el && el.nodeType===1 && el.tagName.toLowerCase()!=="html"){
+    let sel = el.tagName.toLowerCase();
+    if(el.id){ sel += "#"+CSS.escape(el.id); parts.unshift(sel); break; }
+    const parent = el.parentNode;
+    if(parent){
+      const sibs = [...parent.children].filter(c=>c.tagName===el.tagName);
+      if(sibs.length>1) sel += `:nth-of-type(${sibs.indexOf(el)+1})`;
+    }
+    parts.unshift(sel);
+    el = el.parentNode;
+  }
+  return parts.join(" > ");
+}
+
+function shortHtml(el){
+  try{
+    const clone = el.cloneNode(true);
+    // Strip long inline scripts/styles from snippet for readability
+    return truncate(clone.outerHTML.replace(/\s+/g," ").trim(), 400);
+  }catch(e){ return "[unbekannt]"; }
+}
+
+// ---------- Storage ----------
+const storeKey = src => "vibefeedback:v1:"+src;
+function loadComments(src){
+  try{ return JSON.parse(localStorage.getItem(storeKey(src))||"[]"); }catch(e){ return []; }
+}
+function saveComments(src, arr){
+  localStorage.setItem(storeKey(src), JSON.stringify(arr));
+}
+
+// ---------- Setup view ----------
+function initSetup(){
+  $("#view-setup").classList.remove("hidden");
+  const input = $("#src-input");
+  const err = $("#src-error");
+  const result = $("#share-result");
+  const link = $("#share-link");
+
+  $("#btn-generate").addEventListener("click", ()=>{
+    err.textContent="";
+    let val = input.value.trim();
+    if(!val){ err.textContent="Bitte eine URL eingeben."; return; }
+    try{
+      const u = new URL(val);
+      if(!/^https?:$/.test(u.protocol)) throw 0;
+    }catch(e){ err.textContent="Ungültige URL."; return; }
+    const feedbackUrl = location.origin + location.pathname + "?src=" + encodeURIComponent(val);
+    link.textContent = feedbackUrl;
+    result.classList.remove("hidden");
+    $("#btn-preview").onclick = ()=> location.href = feedbackUrl + "&owner=1";
+    $("#btn-copy").onclick = async ()=>{
+      try{ await navigator.clipboard.writeText(feedbackUrl); toast("Link kopiert."); }
+      catch(e){ toast("Kopieren fehlgeschlagen — bitte manuell markieren."); }
+    };
+  });
+
+  input.addEventListener("keydown", e=>{ if(e.key==="Enter") $("#btn-generate").click(); });
+}
+
+// ---------- Feedback view ----------
+let STATE = { src:"", isOwner:false, comments:[], activeId:null, frameDoc:null };
+
+async function initApp(src, isOwner){
+  $("#view-app").classList.remove("hidden");
+  STATE.src = src;
+  STATE.isOwner = isOwner;
+  STATE.comments = loadComments(src);
+
+  $("#topbar-src").textContent = src;
+  const roleEl = $("#topbar-role");
+  roleEl.textContent = isOwner ? "Owner (Vorschau)" : "Feedback-Modus";
+  roleEl.classList.add(isOwner ? "owner" : "commenter");
+
+  $("#btn-back").onclick = ()=> location.href = location.origin + location.pathname;
+  $("#btn-export").onclick = ()=> exportMarkdown(false);
+  $("#btn-copy-md").onclick = ()=> exportMarkdown(true);
+  $("#btn-clear").onclick = ()=>{
+    if(!STATE.comments.length){ toast("Nichts zu löschen."); return; }
+    if(confirm("Alle Kommentare unwiderruflich löschen?")){
+      STATE.comments = [];
+      saveComments(STATE.src, STATE.comments);
+      renderList();
+      refreshFrameBadges();
+    }
+  };
+
+  renderList();
+  await loadIntoFrame(src);
+}
+
+async function loadIntoFrame(src){
+  const loader = $("#loader"), frame = $("#frame"), errbox = $("#errbox");
+  loader.classList.remove("hidden"); frame.classList.add("hidden"); errbox.classList.add("hidden");
+  try{
+    const res = await fetch(src, { redirect:"follow" });
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    let html = await res.text();
+    html = injectBase(html, src);
+    frame.srcdoc = html;
+    frame.classList.remove("hidden");
+    frame.onload = ()=>{
+      loader.classList.add("hidden");
+      hookFrame(frame.contentDocument);
+    };
+  }catch(e){
+    loader.classList.add("hidden");
+    showError(e);
+  }
+}
+
+function injectBase(html, src){
+  const baseHref = new URL("./", src).href;
+  const baseTag = `<base href="${baseHref}">`;
+  if(/<head[^>]*>/i.test(html)){
+    return html.replace(/<head[^>]*>/i, m => m + baseTag);
+  }
+  if(/<html[^>]*>/i.test(html)){
+    return html.replace(/<html[^>]*>/i, m => m + "<head>"+baseTag+"</head>");
+  }
+  return "<head>"+baseTag+"</head>"+html;
+}
+
+function showError(e){
+  const box = $("#errbox");
+  box.classList.remove("hidden");
+  box.innerHTML = `
+    <div>
+      <h3>Projekt konnte nicht geladen werden</h3>
+      <p class="muted">${esc(String(e && e.message || e))}</p>
+      <p class="muted" style="max-width:520px">
+        Wahrscheinlich blockiert CORS den Abruf. Das Ziel muss <code>Access-Control-Allow-Origin</code> erlauben
+        (GitHub Pages, Netlify, Vercel u.v.m. tun das). Alternativ: HTML-Quelltext direkt einfügen.
+      </p>
+      <div class="actions">
+        <button class="primary" id="btn-paste">HTML einfügen</button>
+        <button id="btn-retry">Erneut versuchen</button>
+      </div>
+    </div>`;
+  $("#btn-retry").onclick = ()=> loadIntoFrame(STATE.src);
+  $("#btn-paste").onclick = ()=>{
+    const raw = prompt("HTML-Quelltext einfügen:");
+    if(!raw) return;
+    const html = injectBase(raw, STATE.src);
+    const frame = $("#frame");
+    frame.srcdoc = html;
+    frame.classList.remove("hidden");
+    box.classList.add("hidden");
+    frame.onload = ()=> hookFrame(frame.contentDocument);
+  };
+}
+
+function hookFrame(doc){
+  STATE.frameDoc = doc;
+  // Inject styling for highlight + badge
+  const style = doc.createElement("style");
+  style.textContent = `
+    .__vf_hover{outline:2px dashed #7c5cff !important;outline-offset:2px;cursor:crosshair!important}
+    .__vf_marked{position:relative;outline:2px solid #3ddc97 !important;outline-offset:1px}
+    .__vf_badge{position:absolute;top:-10px;left:-10px;background:#3ddc97;color:#0f1115;border-radius:99px;
+      width:22px;height:22px;font:600 12px system-ui,sans-serif;display:grid;place-items:center;z-index:2147483647;
+      pointer-events:none;box-shadow:0 2px 6px rgba(0,0,0,.35)}
+    a,button,input,textarea,select{pointer-events:auto}
+  `;
+  doc.head && doc.head.appendChild(style);
+
+  let hovered = null;
+  doc.addEventListener("mouseover", e=>{
+    if(hovered) hovered.classList.remove("__vf_hover");
+    hovered = e.target;
+    if(hovered && hovered.nodeType===1) hovered.classList.add("__vf_hover");
+  }, true);
+  doc.addEventListener("mouseout", e=>{
+    if(e.target && e.target.classList) e.target.classList.remove("__vf_hover");
+  }, true);
+  doc.addEventListener("click", e=>{
+    e.preventDefault(); e.stopPropagation();
+    openCommentModal(e.target);
+  }, true);
+
+  refreshFrameBadges();
+}
+
+function refreshFrameBadges(){
+  const doc = STATE.frameDoc; if(!doc) return;
+  $$(".__vf_marked", doc).forEach(el=>{ el.classList.remove("__vf_marked"); el.style.position=""; });
+  $$(".__vf_badge", doc).forEach(el=>el.remove());
+  STATE.comments.forEach((c,i)=>{
+    let el;
+    try{ el = doc.querySelector(c.selector); }catch(e){ el=null; }
+    if(!el) return;
+    el.classList.add("__vf_marked");
+    const cs = doc.defaultView.getComputedStyle(el);
+    if(cs.position === "static") el.style.position = "relative";
+    const badge = doc.createElement("span");
+    badge.className = "__vf_badge";
+    badge.textContent = i+1;
+    badge.dataset.vfId = c.id;
+    el.appendChild(badge);
+  });
+}
+
+// ---------- Comment modal ----------
+function openCommentModal(el){
+  if(!el || el.nodeType!==1) return;
+  const selector = cssPath(el);
+  const snippet = shortHtml(el);
+  const tag = el.tagName.toLowerCase();
+
+  const wrap = document.createElement("div");
+  wrap.className = "modal-backdrop";
+  wrap.innerHTML = `
+    <div class="modal" role="dialog" aria-modal="true">
+      <h3>Kommentar zu <code>&lt;${esc(tag)}&gt;</code></h3>
+      <div class="muted" style="font-size:12px">Selector</div>
+      <div class="snip"><code>${esc(selector)}</code></div>
+      <div class="muted" style="font-size:12px">Element</div>
+      <div class="snip"><code>${esc(snippet)}</code></div>
+      <label class="muted" style="font-size:12px">Dein Kommentar</label>
+      <textarea placeholder="Was ist dir an diesem Element aufgefallen? Was sollte anders sein?"></textarea>
+      <div class="actions">
+        <button class="ghost" data-act="cancel">Abbrechen</button>
+        <button class="primary" data-act="save">Speichern</button>
+      </div>
+    </div>`;
+  document.body.appendChild(wrap);
+  const ta = $("textarea", wrap);
+  setTimeout(()=>ta.focus(), 30);
+  const close = ()=> wrap.remove();
+  wrap.addEventListener("click", e=>{ if(e.target===wrap) close(); });
+  $("[data-act=cancel]", wrap).onclick = close;
+  $("[data-act=save]", wrap).onclick = ()=>{
+    const txt = ta.value.trim();
+    if(!txt){ ta.focus(); return; }
+    STATE.comments.push({
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
+      selector, snippet, tag,
+      text: txt,
+      ts: new Date().toISOString()
+    });
+    saveComments(STATE.src, STATE.comments);
+    renderList();
+    refreshFrameBadges();
+    close();
+    toast("Kommentar gespeichert.");
+  };
+  ta.addEventListener("keydown", e=>{
+    if((e.ctrlKey||e.metaKey) && e.key==="Enter") $("[data-act=save]", wrap).click();
+    if(e.key==="Escape") close();
+  });
+}
+
+// ---------- Sidebar list ----------
+function renderList(){
+  const list = $("#cmt-list"), empty = $("#cmt-empty"), count = $("#cmt-count");
+  count.textContent = STATE.comments.length;
+  if(!STATE.comments.length){ empty.classList.remove("hidden"); list.innerHTML=""; return; }
+  empty.classList.add("hidden");
+  list.innerHTML = STATE.comments.map((c,i)=>`
+    <div class="item" data-id="${c.id}">
+      <div class="h">
+        <div class="n">${i+1}</div>
+        <button class="del" title="Löschen" data-del="${c.id}">✕</button>
+      </div>
+      <div class="sel mono">${esc(truncate(c.selector,80))}</div>
+      <div class="txt">${esc(c.text)}</div>
+      <div class="meta">
+        <span>&lt;${esc(c.tag)}&gt;</span>
+        <span>${new Date(c.ts).toLocaleString("de-DE")}</span>
+      </div>
+    </div>`).join("");
+  $$("[data-del]", list).forEach(b=>b.addEventListener("click", e=>{
+    e.stopPropagation();
+    const id = b.dataset.del;
+    STATE.comments = STATE.comments.filter(c=>c.id!==id);
+    saveComments(STATE.src, STATE.comments);
+    renderList(); refreshFrameBadges();
+  }));
+  $$(".item", list).forEach(it=>it.addEventListener("click", ()=>{
+    const id = it.dataset.id;
+    const c = STATE.comments.find(x=>x.id===id);
+    if(!c) return;
+    scrollToSelector(c.selector);
+    $$(".item", list).forEach(x=>x.classList.remove("active"));
+    it.classList.add("active");
+  }));
+}
+
+function scrollToSelector(sel){
+  const doc = STATE.frameDoc; if(!doc) return;
+  let el;
+  try{ el = doc.querySelector(sel); }catch(e){ el=null; }
+  if(!el){ toast("Element nicht mehr im DOM gefunden."); return; }
+  el.scrollIntoView({behavior:"smooth", block:"center"});
+  el.animate([
+    {boxShadow:"0 0 0 0 rgba(124,92,255,.9)"},
+    {boxShadow:"0 0 0 12px rgba(124,92,255,0)"}
+  ], {duration:800});
+}
+
+// ---------- Markdown export ----------
+function buildMarkdown(){
+  const src = STATE.src, cs = STATE.comments;
+  const now = new Date().toLocaleString("de-DE");
+  let md = `# Feedback zu ${src}\n\n`;
+  md += `> Gesammeltes Feedback aus VibeFeedback (${cs.length} Kommentar${cs.length===1?"":"e"}, exportiert ${now}).\n`;
+  md += `> Verwende diese Liste als Prompt-Grundlage: jeder Eintrag enthält Selector + HTML-Auszug + Feedback-Text.\n\n`;
+  md += `---\n\n`;
+  cs.forEach((c,i)=>{
+    md += `## ${i+1}. \`<${c.tag}>\`\n\n`;
+    md += `- **CSS-Selector:** \`${c.selector}\`\n`;
+    md += `- **Zeitstempel:** ${new Date(c.ts).toLocaleString("de-DE")}\n\n`;
+    md += `**Element:**\n\n\`\`\`html\n${c.snippet}\n\`\`\`\n\n`;
+    md += `**Feedback:**\n\n${c.text.split("\n").map(l=>"> "+l).join("\n")}\n\n`;
+    md += `---\n\n`;
+  });
+  if(!cs.length) md += `_Noch keine Kommentare vorhanden._\n`;
+  return md;
+}
+
+async function exportMarkdown(copyOnly){
+  const md = buildMarkdown();
+  if(copyOnly){
+    try{ await navigator.clipboard.writeText(md); toast("Markdown in Zwischenablage."); }
+    catch(e){ toast("Kopieren fehlgeschlagen."); }
+    return;
+  }
+  const blob = new Blob([md], {type:"text/markdown;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const stamp = new Date().toISOString().slice(0,10);
+  a.href = url; a.download = `vibefeedback-${stamp}.md`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 1000);
+}
+
+// ---------- Router ----------
+(function main(){
+  const params = new URLSearchParams(location.search);
+  const src = params.get("src");
+  const owner = params.get("owner")==="1";
+  if(src){ initApp(src, owner); }
+  else { initSetup(); }
+})();
+</script>
+</body>
+</html>
