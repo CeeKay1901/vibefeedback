@@ -574,7 +574,7 @@ body:has(.mode-toggle button[data-mode=nav].active) .canvas iframe{outline:2px s
   </div>
   <div class="canvas" id="canvas">
     <div class="loader" id="loader"><div><div class="spinner"></div>Lade Projekt…</div></div>
-    <iframe id="frame" class="hidden" sandbox="allow-same-origin allow-scripts allow-forms allow-popups"></iframe>
+    <iframe id="frame" class="hidden"></iframe>
     <div class="errbox hidden" id="errbox"></div>
   </div>
   <div class="sidebar">
@@ -982,12 +982,31 @@ async function loadIntoFrame(src){
 
 function injectBase(html, src){
   const baseHref = new URL("./", src).href;
-  const baseTag = `<base href="${baseHref}"><meta name="referrer" content="no-referrer-when-downgrade">`;
+  const safety = `<script>(function(){
+    // history.pushState/replaceState würden auf about:srcdoc SecurityError werfen — swallow
+    try{
+      const _r = history.replaceState.bind(history);
+      history.replaceState = function(s,t,u){ try{ _r(s,t,u); }catch(e){} };
+      const _p = history.pushState.bind(history);
+      history.pushState = function(s,t,u){ try{ _p(s,t,u); }catch(e){} };
+    }catch(e){}
+    // Fehler an Parent melden, damit Debug im Owner-Log möglich ist
+    window.addEventListener("error", e => { try{ parent.postMessage({__vf:"err", msg:String(e.message), src:e.filename, line:e.lineno}, "*"); }catch(_){} });
+    window.addEventListener("unhandledrejection", e => { try{ parent.postMessage({__vf:"rej", msg:String(e.reason && (e.reason.message||e.reason)) }, "*"); }catch(_){} });
+  })();<\/script>`;
+  const baseTag = `<base href="${baseHref}"><meta name="referrer" content="no-referrer-when-downgrade">${safety}`;
   if(/<base[^>]*>/i.test(html)) return html; // Seite hat schon eigenes <base>
   if(/<head[^>]*>/i.test(html)) return html.replace(/<head[^>]*>/i, m => m + baseTag);
   if(/<html[^>]*>/i.test(html)) return html.replace(/<html[^>]*>/i, m => m + "<head>"+baseTag+"</head>");
   return "<head>"+baseTag+"</head>"+html;
 }
+
+window.addEventListener("message", e => {
+  const d = e.data;
+  if(!d || typeof d !== "object") return;
+  if(d.__vf === "err") console.warn("[iframe error]", d.msg, d.src+":"+d.line);
+  if(d.__vf === "rej") console.warn("[iframe promise rejection]", d.msg);
+});
 
 function showError(e){
   const box = $("#errbox");
