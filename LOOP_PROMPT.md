@@ -72,3 +72,4 @@ Regel: **maximal eine sinnvolle Verbesserung pro Iteration.** Nicht refaktoriere
 | 0 | 2026-07-07 | init | MVP mit allen Kern-Features geschrieben |
 | 1 | 2026-07-07 | C5, B4, E2/E3 | Storage-Quota-Handling, Modal-Shortcuts document-level, Autor-Feld persistiert, Autor im Sidebar-Item + MD-Export |
 | 2 | 2026-07-07 | C1, D2, UX | CORS-Precheck bereits im Setup, Content-Type-Warnung, Clipboard-Fallback via execCommand |
+| 3 | 2026-07-07 | final QA | Alle 35 Kriterien ✅, Live-URL verifiziert (HTTP 200, CORS offen). **Loop STOPP: all-green.** |
