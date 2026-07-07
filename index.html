@@ -183,6 +183,7 @@ textarea{resize:vertical;min-height:110px;line-height:1.5}
 body:has(.mode-toggle button[data-mode=nav].active) .canvas iframe{outline:2px solid rgba(61,220,151,.35);outline-offset:-2px}
 
 .canvas{position:relative;background:#f6f7fa;overflow:hidden}
+#render-banner{position:absolute;top:0;left:0;right:0;background:linear-gradient(90deg,rgba(255,184,77,.98),rgba(255,154,193,.95));color:#1a1c22;padding:8px 14px;font-size:12.5px;font-weight:500;z-index:3;box-shadow:0 2px 8px rgba(0,0,0,.2);text-align:center;line-height:1.4}
 .canvas iframe{width:100%;height:100%;border:0;background:#fff;display:block}
 .loader,.errbox{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);padding:30px;text-align:center;background:var(--panel);z-index:2}
 .loader .spinner{width:32px;height:32px;border:3px solid var(--line);border-top-color:var(--accent);border-radius:99px;animation:spin 1s linear infinite;margin:0 auto 14px}
@@ -561,6 +562,9 @@ body:has(.mode-toggle button[data-mode=nav].active) .canvas iframe{outline:2px s
       <button type="button" data-mode="comment" class="active" title="Klicks öffnen den Kommentar-Dialog">💬 Kommentieren</button>
       <button type="button" data-mode="nav" title="Klicks navigieren die Seite normal">🖱 Navigieren</button>
     </div>
+    <label class="precision-toggle" id="render-toggle-wrap" title="Original-Rendering: Seite wird 1:1 wie im Browser geladen. Klick-Kommentare deaktiviert.">
+      <input type="checkbox" id="tgl-render"><span class="slider"></span><span class="lbl">🖥 Original</span>
+    </label>
     <label class="precision-toggle" title="Präzisionsmodus: Zeigt Details zum Hover-Element">
       <input type="checkbox" id="tgl-precision"><span class="slider"></span><span class="lbl">🎯 Präzision</span>
     </label>
@@ -846,10 +850,13 @@ function initLanding(){
 }
 
 // ============ App View ============
-const STATE = { src:"", isOwner:false, comments:[], filter:"all", frameDoc:null, precision:false, frameInfoBox:null, mode:"comment" };
+const STATE = { src:"", isOwner:false, comments:[], filter:"all", frameDoc:null, precision:false, frameInfoBox:null, mode:"comment", renderMode:"mirror" };
 const MODE_KEY = "vibefeedback:v2:mode";
 const getMode = ()=> { try{ const v = localStorage.getItem(MODE_KEY); return v==="nav" ? "nav" : "comment"; }catch(e){ return "comment"; } };
 const setMode = v => { try{ localStorage.setItem(MODE_KEY, v); }catch(e){} };
+const RENDER_KEY = "vibefeedback:v2:render";
+const getRender = ()=> { try{ const v = localStorage.getItem(RENDER_KEY); return v==="direct" ? "direct" : "mirror"; }catch(e){ return "mirror"; } };
+const setRender = v => { try{ localStorage.setItem(RENDER_KEY, v); }catch(e){} };
 
 async function initApp(src, isOwner){
   $("#view-app").classList.remove("hidden");
@@ -883,6 +890,7 @@ async function initApp(src, isOwner){
     applyPrecisionState();
   };
   $$("#mode-toggle button").forEach(b => b.addEventListener("click", ()=>{
+    if(STATE.renderMode === "direct"){ toast("Im Original-Modus sind Klick-Kommentare deaktiviert."); return; }
     if(STATE.mode === b.dataset.mode) return;
     STATE.mode = b.dataset.mode;
     setMode(STATE.mode);
@@ -890,6 +898,32 @@ async function initApp(src, isOwner){
     toast(STATE.mode === "nav" ? "Navigationsmodus — Klicks gehen an die Seite." : "Kommentiermodus — Klicks öffnen Feedback.");
   }));
   applyMode();
+
+  STATE.renderMode = getRender();
+  const rtgl = $("#tgl-render");
+  rtgl.checked = STATE.renderMode === "direct";
+  const applyRenderUi = () => {
+    const direct = STATE.renderMode === "direct";
+    $("#mode-toggle").style.opacity = direct ? ".5" : "1";
+    $("#mode-toggle").style.pointerEvents = direct ? "none" : "";
+    tgl.disabled = direct;
+    tgl.closest(".precision-toggle").style.opacity = direct ? ".5" : "1";
+    let banner = $("#render-banner");
+    if(direct && !banner){
+      banner = document.createElement("div");
+      banner.id = "render-banner";
+      banner.innerHTML = `🖥 <b>Original-Rendering aktiv</b> — Seite lädt 1:1 wie im echten Browser. Klick-Kommentieren ist hier nicht möglich (Cross-Origin). Zurück in den Mirror-Modus für Feedback.`;
+      $("#canvas").appendChild(banner);
+    }else if(!direct && banner){ banner.remove(); }
+  };
+  rtgl.addEventListener("change", async ()=>{
+    STATE.renderMode = rtgl.checked ? "direct" : "mirror";
+    setRender(STATE.renderMode);
+    applyRenderUi();
+    toast(STATE.renderMode === "direct" ? "Original-Rendering — 1:1 wie im Browser." : "Mirror-Modus — Klick-Kommentieren aktiv.");
+    await loadIntoFrame(STATE.src);
+  });
+  applyRenderUi();
   $("#btn-clear").onclick = ()=>{
     if(!STATE.comments.length){ toast("Nichts zu löschen."); return; }
     if(confirm("Alle Kommentare unwiderruflich löschen?")){
@@ -909,11 +943,31 @@ async function initApp(src, isOwner){
 async function loadIntoFrame(src){
   const loader = $("#loader"), frame = $("#frame"), errbox = $("#errbox");
   loader.classList.remove("hidden"); frame.classList.add("hidden"); errbox.classList.add("hidden");
+  frame.removeAttribute("src"); frame.removeAttribute("srcdoc");
+
+  if(STATE.renderMode === "direct"){
+    // Original-Rendering: echter iframe.src, pixelgenau — aber kein Klick-Hook (cross-origin)
+    frame.setAttribute("referrerpolicy", "no-referrer-when-downgrade");
+    frame.src = src;
+    frame.classList.remove("hidden");
+    frame.onload = ()=>{
+      loader.classList.add("hidden");
+      STATE.frameDoc = null;
+      try{ hookFrame(frame.contentDocument); }catch(e){ /* cross-origin — expected */ }
+      refreshFrameBadges();
+    };
+    // Timeout-Fallback: falls X-Frame-Options blockt sehen wir keinen onload
+    setTimeout(()=>{ if(!loader.classList.contains("hidden")){ loader.classList.add("hidden"); }}, 4000);
+    return;
+  }
+
   try{
     const res = await fetch(src, { redirect:"follow" });
     if(!res.ok) throw new Error("HTTP "+res.status);
     let html = await res.text();
-    html = injectBase(html, src);
+    const finalUrl = res.url || src;
+    html = injectBase(html, finalUrl);
+    frame.setAttribute("referrerpolicy", "no-referrer-when-downgrade");
     frame.srcdoc = html;
     frame.classList.remove("hidden");
     frame.onload = ()=>{
@@ -928,7 +982,8 @@ async function loadIntoFrame(src){
 
 function injectBase(html, src){
   const baseHref = new URL("./", src).href;
-  const baseTag = `<base href="${baseHref}">`;
+  const baseTag = `<base href="${baseHref}"><meta name="referrer" content="no-referrer-when-downgrade">`;
+  if(/<base[^>]*>/i.test(html)) return html; // Seite hat schon eigenes <base>
   if(/<head[^>]*>/i.test(html)) return html.replace(/<head[^>]*>/i, m => m + baseTag);
   if(/<html[^>]*>/i.test(html)) return html.replace(/<html[^>]*>/i, m => m + "<head>"+baseTag+"</head>");
   return "<head>"+baseTag+"</head>"+html;
