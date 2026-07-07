@@ -238,21 +238,55 @@ function initSetup(){
   const result = $("#share-result");
   const link = $("#share-link");
 
-  $("#btn-generate").addEventListener("click", ()=>{
-    err.textContent="";
+  const corsHint = document.createElement("div");
+  corsHint.className = "muted";
+  corsHint.style.cssText = "margin-top:8px;font-size:12.5px";
+  result.parentNode.insertBefore(corsHint, result);
+
+  $("#btn-generate").addEventListener("click", async ()=>{
+    err.textContent=""; corsHint.textContent="";
     let val = input.value.trim();
     if(!val){ err.textContent="Bitte eine URL eingeben."; return; }
     try{
       const u = new URL(val);
       if(!/^https?:$/.test(u.protocol)) throw 0;
-    }catch(e){ err.textContent="Ungültige URL."; return; }
+    }catch(e){ err.textContent="Ungültige URL (muss mit http/https beginnen)."; return; }
+
     const feedbackUrl = location.origin + location.pathname + "?src=" + encodeURIComponent(val);
     link.textContent = feedbackUrl;
     result.classList.remove("hidden");
+
+    corsHint.innerHTML = "⏳ CORS-Check läuft…";
+    try{
+      const r = await fetch(val, { method:"GET", redirect:"follow" });
+      if(!r.ok) throw new Error("HTTP "+r.status);
+      const ct = r.headers.get("content-type")||"";
+      if(!/text\/html|application\/xhtml/i.test(ct)){
+        corsHint.innerHTML = `⚠️ URL antwortet mit <code>${esc(ct||"unbekannt")}</code> — evtl. keine HTML-Seite.`;
+        corsHint.style.color = "var(--warn)";
+      }else{
+        corsHint.innerHTML = "✅ CORS OK — Tester können die Seite laden.";
+        corsHint.style.color = "var(--accent2)";
+      }
+    }catch(e){
+      corsHint.innerHTML = `⚠️ CORS blockiert oder Ziel nicht erreichbar (${esc(String(e.message||e))}). Tester sehen einen Fehler mit Fallback zum Einfügen des HTML-Quelltexts.`;
+      corsHint.style.color = "var(--warn)";
+    }
+
     $("#btn-preview").onclick = ()=> location.href = feedbackUrl + "&owner=1";
     $("#btn-copy").onclick = async ()=>{
-      try{ await navigator.clipboard.writeText(feedbackUrl); toast("Link kopiert."); }
-      catch(e){ toast("Kopieren fehlgeschlagen — bitte manuell markieren."); }
+      try{
+        await navigator.clipboard.writeText(feedbackUrl);
+        toast("Link kopiert.");
+      }catch(e){
+        // Fallback für unsichere Kontexte
+        const ta = document.createElement("textarea");
+        ta.value = feedbackUrl; document.body.appendChild(ta);
+        ta.select();
+        try{ document.execCommand("copy"); toast("Link kopiert."); }
+        catch(e2){ toast("Kopieren fehlgeschlagen — bitte manuell markieren."); }
+        ta.remove();
+      }
     };
   });
 
