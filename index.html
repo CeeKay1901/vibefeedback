@@ -307,7 +307,11 @@ textarea{resize:vertical;min-height:110px;line-height:1.5}
   .canvas{min-height:0}
   .present-body{grid-template-columns:1fr;grid-template-rows:45vh 1fr;overflow-y:auto}
   .modal-backdrop{padding:0;align-items:flex-end}
-  .modal{max-width:100%;width:100%;max-height:92vh;overflow-y:auto;border-radius:18px 18px 0 0;padding:18px}
+  .modal{max-width:100%;width:100%;max-height:92dvh;overflow-y:auto;border-radius:18px 18px 0 0;padding:18px 18px 22px;padding-bottom:max(22px, env(safe-area-inset-bottom))}
+  .modal .actions-row{flex-wrap:wrap;gap:10px;margin-top:10px;position:sticky;bottom:0;background:var(--panel);padding:10px 0 4px;border-top:1px solid var(--line)}
+  .modal .actions-row .hint{display:none}
+  .modal .actions-row .ghost,.modal .actions-row .primary{flex:1;padding:12px 14px;font-size:14px;min-height:44px}
+  .modal .actions-row .primary{flex:2}
   .coach .card{padding:20px}
   .coach .steps{grid-template-columns:1fr;gap:8px}
   .coach .steps>div{padding:10px}
