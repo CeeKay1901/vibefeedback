@@ -302,9 +302,73 @@ textarea{resize:vertical;min-height:110px;line-height:1.5}
 .present-bot .dots span.on{background:var(--accent);width:24px;border-radius:4px}
 
 @media(max-width:900px){
-  .app{grid-template-columns:1fr;grid-template-rows:56px 50vh 1fr}
-  .sidebar{border-left:0;border-top:1px solid var(--line)}
-  .present-body{grid-template-columns:1fr;grid-template-rows:1fr 1fr}
+  .app{grid-template-columns:1fr;grid-template-rows:56px minmax(280px,1fr) minmax(240px,1fr);height:100dvh}
+  .sidebar{border-left:0;border-top:1px solid var(--line);min-height:0}
+  .canvas{min-height:0}
+  .present-body{grid-template-columns:1fr;grid-template-rows:45vh 1fr;overflow-y:auto}
+  .modal-backdrop{padding:0;align-items:flex-end}
+  .modal{max-width:100%;width:100%;max-height:92vh;overflow-y:auto;border-radius:18px 18px 0 0;padding:18px}
+  .coach .card{padding:20px}
+  .coach .steps{grid-template-columns:1fr;gap:8px}
+  .coach .steps>div{padding:10px}
+}
+
+@media(max-width:640px){
+  /* Topbar: nur Essenzielles, Rest als Icons */
+  .topbar{padding:0 10px;gap:8px;overflow-x:auto}
+  .topbar .src{display:none}
+  .topbar .brand span{display:none}
+  .topbar .role{padding:3px 8px;font-size:10.5px}
+  .precision-toggle{padding:4px 8px;gap:5px}
+  .precision-toggle .lbl{font-size:11px}
+  .topbar #btn-present{padding:5px 8px;font-size:11.5px}
+  .topbar #btn-back{padding:5px 8px;font-size:11.5px}
+
+  /* Sidebar-Tools kompakter */
+  .sb-header{padding:10px 12px 8px}
+  .filter{padding:8px 10px 6px;gap:4px}
+  .chip{padding:3px 8px;font-size:11px}
+  .tools{padding:8px 10px;gap:5px}
+  .tools button{flex:1;padding:8px 6px;font-size:12px;min-width:0}
+  .list{padding:4px}
+  .item{margin:5px 2px;padding:10px}
+
+  /* Landing */
+  .landing-inner{padding:24px 16px 60px}
+  .hero{padding:20px 0 40px}
+  .hero h1{font-size:34px}
+  .hero p.lead{font-size:15px}
+  .section{margin-top:60px}
+  .section-h{margin-bottom:28px}
+  .section-h h2{font-size:24px}
+  .setup-card{padding:20px}
+  .setup-card .row{flex-direction:column;align-items:stretch;gap:8px}
+  .link-box{flex-wrap:wrap}
+  .link-box code{width:100%;overflow-x:auto}
+  .mock{margin:20px -6px 0}
+  .demo-card{padding:18px;flex-direction:column;align-items:stretch;text-align:left;gap:12px}
+  .demo-card button{width:100%}
+  .features{gap:12px}
+  .feat-card{padding:18px}
+  .cta-row button{width:100%}
+
+  /* Presentation Mode kompakt */
+  .present-top{padding:10px 14px;gap:8px;flex-wrap:wrap}
+  .present-top .title{font-size:13px}
+  .present-top .counter{font-size:12px}
+  .present-body{padding:12px;gap:12px;grid-template-rows:40vh 1fr}
+  .present-detail{padding:16px}
+  .present-detail h2{font-size:18px}
+  .present-detail .qtext{font-size:14px;padding-left:12px}
+  .present-bot{padding:10px 14px;flex-wrap:wrap}
+  .present-bot button{flex:1;min-width:100px}
+}
+
+@media(max-width:400px){
+  /* Sehr schmal — Toggle & Präsentation als Icon */
+  .precision-toggle .lbl{display:none}
+  .topbar #btn-present{font-size:0;padding:6px 10px;position:relative;min-width:32px}
+  .topbar #btn-present::before{content:"🎬";font-size:14px;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)}
 }
 </style>
 </head>
