@@ -184,6 +184,19 @@ body:has(.mode-toggle button[data-mode=nav].active) .canvas iframe{outline:2px s
 
 .canvas{position:relative;background:#f6f7fa;overflow:hidden}
 #render-banner{position:absolute;top:0;left:0;right:0;background:linear-gradient(90deg,rgba(255,184,77,.98),rgba(255,154,193,.95));color:#1a1c22;padding:8px 14px;font-size:12.5px;font-weight:500;z-index:3;box-shadow:0 2px 8px rgba(0,0,0,.2);text-align:center;line-height:1.4}
+#dbg-toggle{position:absolute;bottom:14px;right:14px;background:rgba(15,18,27,.92);color:#ff9ac1;border:1px solid rgba(255,107,107,.5);border-radius:99px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;z-index:4;box-shadow:0 4px 14px rgba(0,0,0,.4);display:none;align-items:center;gap:6px;font-family:inherit}
+#dbg-toggle.on{display:inline-flex}
+#dbg-toggle #dbg-badge{background:var(--danger);color:#fff;padding:1px 7px;border-radius:99px;font-size:11px;min-width:18px;text-align:center}
+#dbg-panel{position:absolute;bottom:52px;right:14px;width:min(400px,calc(100vw - 28px));max-height:60vh;overflow-y:auto;background:rgba(15,18,27,.98);border:1px solid #2a3145;border-radius:10px;padding:12px;z-index:4;box-shadow:0 12px 40px rgba(0,0,0,.6);font-size:12px;display:none}
+#dbg-panel.on{display:block}
+#dbg-panel .dbg-item{padding:8px 10px;border-radius:6px;margin-bottom:6px;background:rgba(255,255,255,.03)}
+#dbg-panel .dbg-item.error{border-left:3px solid var(--danger)}
+#dbg-panel .dbg-item.rejection{border-left:3px solid var(--warn)}
+#dbg-panel .dbg-item.info{border-left:3px solid var(--accent-3)}
+#dbg-panel .dbg-kind{font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:2px}
+#dbg-panel .dbg-msg{color:#eef1f8;font-family:ui-monospace,monospace;word-break:break-word}
+#dbg-panel .dbg-extra{color:var(--muted);font-family:ui-monospace,monospace;font-size:11px;margin-top:3px;word-break:break-all}
+#dbg-panel .dbg-empty{color:var(--muted);text-align:center;padding:12px}
 .canvas iframe{width:100%;height:100%;border:0;background:#fff;display:block}
 .loader,.errbox{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);padding:30px;text-align:center;background:var(--panel);z-index:2}
 .loader .spinner{width:32px;height:32px;border:3px solid var(--line);border-top-color:var(--accent);border-radius:99px;animation:spin 1s linear infinite;margin:0 auto 14px}
@@ -576,6 +589,8 @@ body:has(.mode-toggle button[data-mode=nav].active) .canvas iframe{outline:2px s
     <div class="loader" id="loader"><div><div class="spinner"></div>Lade Projekt…</div></div>
     <iframe id="frame" class="hidden"></iframe>
     <div class="errbox hidden" id="errbox"></div>
+    <button type="button" id="dbg-toggle" title="Iframe-Fehler anzeigen">🐞 Fehler <span id="dbg-badge">0</span></button>
+    <div id="dbg-panel"></div>
   </div>
   <div class="sidebar">
     <div class="sb-header">
@@ -924,6 +939,10 @@ async function initApp(src, isOwner){
     await loadIntoFrame(STATE.src);
   });
   applyRenderUi();
+
+  $("#dbg-toggle").addEventListener("click", ()=>{
+    $("#dbg-panel").classList.toggle("on");
+  });
   $("#btn-clear").onclick = ()=>{
     if(!STATE.comments.length){ toast("Nichts zu löschen."); return; }
     if(confirm("Alle Kommentare unwiderruflich löschen?")){
@@ -1001,11 +1020,28 @@ function injectBase(html, src){
   return "<head>"+baseTag+"</head>"+html;
 }
 
+const IFRAME_LOG = [];
+function pushIframeLog(kind, msg, extra){
+  IFRAME_LOG.push({ kind, msg, extra, ts:Date.now() });
+  if(IFRAME_LOG.length > 40) IFRAME_LOG.shift();
+  const badge = document.getElementById("dbg-badge");
+  const toggle = document.getElementById("dbg-toggle");
+  if(badge) badge.textContent = IFRAME_LOG.length;
+  if(toggle) toggle.classList.add("on");
+  renderDbgPanel();
+}
+function renderDbgPanel(){
+  const panel = document.getElementById("dbg-panel"); if(!panel) return;
+  panel.innerHTML = IFRAME_LOG.slice().reverse().map(e =>
+    `<div class="dbg-item ${e.kind}"><div class="dbg-kind">${e.kind}</div><div class="dbg-msg">${esc(e.msg)}</div>${e.extra?`<div class="dbg-extra">${esc(e.extra)}</div>`:""}</div>`
+  ).join("") || `<div class="dbg-empty">Keine Iframe-Fehler bisher.</div>`;
+}
 window.addEventListener("message", e => {
   const d = e.data;
   if(!d || typeof d !== "object") return;
-  if(d.__vf === "err") console.warn("[iframe error]", d.msg, d.src+":"+d.line);
-  if(d.__vf === "rej") console.warn("[iframe promise rejection]", d.msg);
+  if(d.__vf === "err"){ console.warn("[iframe error]", d.msg, d.src+":"+d.line); pushIframeLog("error", d.msg, (d.src||"")+":"+(d.line||"")); }
+  if(d.__vf === "rej"){ console.warn("[iframe promise rejection]", d.msg); pushIframeLog("rejection", d.msg); }
+  if(d.__vf === "log"){ console.info("[iframe]", d.msg); pushIframeLog("info", d.msg); }
 });
 
 function showError(e){
