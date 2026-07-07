@@ -3,185 +3,523 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>VibeFeedback — Kommentare auf Vibecoding-Projekte</title>
+<title>VibeFeedback — Klick. Kommentiere. Iteriere.</title>
+<meta name="description" content="Sammle präzises, DOM-verankertes Feedback auf deine Vibecoding-Projekte — und exportiere es als Prompt-fertiges Markdown.">
+<meta property="og:title" content="VibeFeedback — Klick. Kommentiere. Iteriere.">
+<meta property="og:description" content="Sammle präzises, DOM-verankertes Feedback auf deine Vibecoding-Projekte — und exportiere es als Prompt-fertiges Markdown.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%237c5cff'/%3E%3Ctext x='16' y='22' font-size='18' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='700'%3EV%3C/text%3E%3C/svg%3E">
 <style>
+/* ============ Design Tokens ============ */
 :root{
-  --bg:#0f1115; --panel:#161a22; --panel2:#1d2230; --line:#2a3040;
-  --fg:#e8ecf3; --muted:#8892a6; --accent:#7c5cff; --accent2:#3ddc97;
-  --danger:#ff6b6b; --warn:#ffb84d;
-  --shadow:0 8px 24px rgba(0,0,0,.35);
-  --radius:10px;
+  --bg:#0a0c12;
+  --bg-2:#0f121b;
+  --panel:#151926;
+  --panel-2:#1c2131;
+  --panel-3:#252b3f;
+  --line:#2a3145;
+  --line-2:#3a4360;
+  --fg:#eef1f8;
+  --fg-2:#c6cce0;
+  --muted:#8892a6;
+  --dim:#6a7385;
+  --accent:#7c5cff;
+  --accent-2:#3ddc97;
+  --accent-3:#5cc0ff;
+  --warn:#ffb84d;
+  --danger:#ff6b6b;
+  --praise:#ff9ac1;
+
+  --cat-bug:#ff6b6b;
+  --cat-feature:#7c5cff;
+  --cat-design:#3ddc97;
+  --cat-copy:#ffb84d;
+  --cat-question:#5cc0ff;
+  --cat-praise:#ff9ac1;
+
+  --shadow-sm:0 2px 6px rgba(0,0,0,.25);
+  --shadow:0 8px 28px rgba(0,0,0,.4);
+  --shadow-lg:0 24px 60px rgba(0,0,0,.55);
+  --radius:12px;
+  --radius-lg:18px;
 }
+
 *{box-sizing:border-box}
-html,body{margin:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;background:var(--bg);color:var(--fg);font-size:14px;line-height:1.5}
-a{color:var(--accent2)}
-button{font-family:inherit;font-size:14px;cursor:pointer;border:1px solid var(--line);background:var(--panel2);color:var(--fg);padding:8px 14px;border-radius:8px;transition:.15s}
-button:hover{border-color:var(--accent);background:var(--panel)}
-button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
-button.primary:hover{filter:brightness(1.1)}
-button.ghost{background:transparent}
-button.danger{border-color:var(--danger);color:var(--danger)}
-input[type=text],input[type=url],textarea{font-family:inherit;font-size:14px;width:100%;background:var(--panel);border:1px solid var(--line);color:var(--fg);padding:10px 12px;border-radius:8px;outline:none}
-input:focus,textarea:focus{border-color:var(--accent)}
-textarea{resize:vertical;min-height:100px}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,"Helvetica Neue",Arial,sans-serif;font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased}
+a{color:var(--accent-2);text-decoration:none}
+a:hover{text-decoration:underline}
+h1,h2,h3,h4{margin:0 0 8px;font-weight:700;letter-spacing:-.2px}
 code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px}
-h1,h2,h3{margin:0 0 8px}
 .muted{color:var(--muted)}
+.dim{color:var(--dim)}
 .hidden{display:none!important}
 
-/* Setup layout */
-.setup{max-width:720px;margin:60px auto;padding:0 20px}
-.setup h1{font-size:28px;letter-spacing:-.2px}
-.setup p{color:var(--muted)}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:22px;margin-top:20px;box-shadow:var(--shadow)}
-.row{display:flex;gap:10px;align-items:center}
-.row>*:first-child{flex:1}
-.tag{display:inline-block;padding:2px 8px;border-radius:99px;background:var(--panel2);color:var(--muted);font-size:11px;border:1px solid var(--line)}
-.step{display:flex;gap:12px;margin:14px 0}
-.step .n{flex:0 0 26px;height:26px;border-radius:99px;background:var(--accent);color:#fff;display:grid;place-items:center;font-weight:600}
-.link-box{display:flex;gap:8px;align-items:center;background:var(--panel2);border:1px dashed var(--line);border-radius:8px;padding:10px 12px}
-.link-box code{flex:1;overflow:auto;white-space:nowrap}
+button{font-family:inherit;font-size:14px;cursor:pointer;border:1px solid var(--line);background:var(--panel-2);color:var(--fg);padding:9px 14px;border-radius:9px;transition:all .15s ease;font-weight:500}
+button:hover{border-color:var(--accent);background:var(--panel-3);transform:translateY(-1px)}
+button:active{transform:translateY(0)}
+button.primary{background:linear-gradient(135deg,var(--accent),#9b7dff);border-color:transparent;color:#fff;box-shadow:0 4px 12px rgba(124,92,255,.35)}
+button.primary:hover{filter:brightness(1.08);box-shadow:0 8px 20px rgba(124,92,255,.5)}
+button.ghost{background:transparent}
+button.danger{border-color:var(--danger);color:var(--danger)}
+button.danger:hover{background:rgba(255,107,107,.1)}
+button.tiny{padding:4px 10px;font-size:12px}
+button.icon{padding:6px 8px;background:transparent;border:1px solid transparent}
+button.icon:hover{background:var(--panel-3);border-color:var(--line)}
 
-/* Feedback layout */
-.app{display:grid;grid-template-columns:1fr 380px;grid-template-rows:52px 1fr;height:100vh}
-.topbar{grid-column:1/-1;display:flex;align-items:center;gap:14px;padding:0 14px;background:var(--panel);border-bottom:1px solid var(--line)}
-.topbar .brand{font-weight:600}
-.topbar .src{color:var(--muted);flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-.topbar .role{padding:3px 10px;border-radius:99px;font-size:11px;border:1px solid var(--line);background:var(--panel2)}
-.topbar .role.commenter{color:var(--accent2);border-color:var(--accent2)}
-.topbar .role.owner{color:var(--warn);border-color:var(--warn)}
+input[type=text],input[type=url],input[type=email],textarea{font-family:inherit;font-size:14px;width:100%;background:var(--panel);border:1px solid var(--line);color:var(--fg);padding:11px 13px;border-radius:9px;outline:none;transition:border-color .15s}
+input:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(124,92,255,.15)}
+textarea{resize:vertical;min-height:110px;line-height:1.5}
+::placeholder{color:var(--dim)}
 
-.canvas{position:relative;background:#0b0d12;overflow:hidden}
-.canvas iframe{width:100%;height:100%;border:0;background:#fff}
-.loader,.errbox{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);padding:30px;text-align:center}
-.errbox{background:var(--panel);color:var(--fg)}
+/* ============ Landing ============ */
+.landing{min-height:100%;background:radial-gradient(1200px 700px at 50% -100px,rgba(124,92,255,.25),transparent 60%),radial-gradient(900px 500px at 90% 300px,rgba(61,220,151,.12),transparent 60%),var(--bg)}
+.landing-inner{max-width:1080px;margin:0 auto;padding:40px 24px 80px}
+.nav{display:flex;justify-content:space-between;align-items:center;padding-bottom:40px}
+.nav .logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:15px}
+.nav .logo .mark{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:grid;place-items:center;color:#fff;font-weight:800}
+.nav .tag{padding:2px 8px;border-radius:99px;background:rgba(124,92,255,.15);color:var(--accent);font-size:11px;font-weight:600;border:1px solid rgba(124,92,255,.3)}
+.nav a{color:var(--muted);font-size:13px}
+.nav a:hover{color:var(--fg)}
+
+.hero{text-align:center;padding:40px 0 60px}
+.hero .kicker{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;background:rgba(124,92,255,.12);border:1px solid rgba(124,92,255,.3);border-radius:99px;font-size:12px;color:var(--accent);font-weight:600;margin-bottom:24px}
+.hero h1{font-size:56px;line-height:1.05;letter-spacing:-1.2px;margin-bottom:22px;background:linear-gradient(135deg,#fff 0%,#c6cce0 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.hero h1 .accent{background:linear-gradient(135deg,var(--accent),var(--accent-2));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.hero p.lead{font-size:19px;color:var(--fg-2);max-width:640px;margin:0 auto 36px;line-height:1.5}
+.hero .cta-row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.hero .cta-row button{font-size:15px;padding:13px 22px}
+
+.mock{max-width:960px;margin:24px auto 0;position:relative}
+.mock .frame{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:var(--shadow-lg)}
+.mock .frame-bar{background:var(--panel-2);padding:10px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--line)}
+.mock .frame-bar .dot{width:11px;height:11px;border-radius:99px;background:#ff6060}
+.mock .frame-bar .dot:nth-child(2){background:#ffb84d}
+.mock .frame-bar .dot:nth-child(3){background:#3ddc97}
+.mock .frame-bar .urlbar{flex:1;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:4px 10px;font-size:11.5px;color:var(--muted);margin-left:8px}
+.mock .frame-body{display:grid;grid-template-columns:1fr 260px;min-height:280px}
+.mock .frame-view{position:relative;background:linear-gradient(180deg,#f6f7fa,#eef0f5);color:#1a1c22;padding:20px;text-align:left}
+.mock .frame-view h4{color:#1a1c22;font-size:16px;margin-bottom:6px}
+.mock .frame-view p{color:#555;font-size:12px;margin:0 0 12px}
+.mock .frame-view .fake-btn{display:inline-block;background:#6e56cf;color:#fff;padding:8px 14px;border-radius:6px;font-size:12px;font-weight:600;position:relative}
+.mock .frame-view .fake-btn::after{content:"1";position:absolute;top:-8px;left:-8px;background:#3ddc97;color:#0a0c12;border-radius:99px;width:20px;height:20px;font-size:11px;display:grid;place-items:center;font-weight:700}
+.mock .frame-view .fake-hint{margin-top:14px;padding:10px;background:#fff;border-radius:6px;font-size:11px;color:#666;border:1px dashed #bbb}
+.mock .frame-sidebar{background:var(--panel-2);border-left:1px solid var(--line);padding:14px 12px}
+.mock .frame-sidebar h5{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:10px}
+.mock .frame-sidebar .m-item{background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:8px 10px;margin-bottom:6px;font-size:11.5px}
+.mock .frame-sidebar .m-item .m-cat{display:inline-block;padding:1px 6px;border-radius:99px;font-size:10px;margin-right:6px}
+.mock .frame-sidebar .m-item.b .m-cat{background:rgba(255,107,107,.2);color:#ff6b6b}
+.mock .frame-sidebar .m-item.f .m-cat{background:rgba(124,92,255,.2);color:#7c5cff}
+.mock .frame-sidebar .m-item.d .m-cat{background:rgba(61,220,151,.2);color:#3ddc97}
+.mock-caption{text-align:center;color:var(--muted);font-size:12.5px;margin-top:14px}
+
+.section{margin-top:100px}
+.section-h{text-align:center;margin-bottom:44px}
+.section-h .eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:1.6px;color:var(--accent);font-weight:700;margin-bottom:10px}
+.section-h h2{font-size:36px;letter-spacing:-.6px}
+.section-h p{color:var(--muted);max-width:560px;margin:12px auto 0;font-size:16px}
+
+.features{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+.feat-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);padding:22px;transition:all .2s ease}
+.feat-card:hover{transform:translateY(-3px);border-color:var(--line-2);box-shadow:var(--shadow)}
+.feat-card .fi{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,rgba(124,92,255,.25),rgba(61,220,151,.15));display:grid;place-items:center;margin-bottom:14px;font-size:20px}
+.feat-card h3{font-size:16px;margin-bottom:6px}
+.feat-card p{color:var(--muted);font-size:13.5px;line-height:1.55;margin:0}
+
+.flow{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:44px}
+.flow-step{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden}
+.flow-step .n{position:absolute;top:14px;right:16px;font-size:56px;font-weight:800;color:var(--panel-3);line-height:1;letter-spacing:-2px}
+.flow-step h4{margin-bottom:6px;font-size:15px;position:relative;z-index:1}
+.flow-step p{color:var(--muted);font-size:13px;margin:0;position:relative;z-index:1}
+
+.setup-card{background:linear-gradient(135deg,var(--panel),var(--panel-2));border:1px solid var(--line);border-radius:var(--radius-lg);padding:30px;margin-top:44px;box-shadow:var(--shadow)}
+.setup-card h3{font-size:18px;margin-bottom:6px}
+.setup-card .muted{margin-bottom:18px;font-size:13.5px}
+.setup-card .row{display:flex;gap:10px;align-items:center}
+.setup-card .row>*:first-child{flex:1}
+.link-box{display:flex;gap:8px;align-items:center;background:var(--bg);border:1px dashed var(--line-2);border-radius:9px;padding:11px 13px;margin-top:6px}
+.link-box code{flex:1;overflow:auto;white-space:nowrap;color:var(--accent-2)}
+.err-inline{color:var(--danger);margin-top:6px;font-size:12.5px}
+.status-inline{margin-top:8px;font-size:12.5px}
+
+.demo-card{background:linear-gradient(135deg,rgba(61,220,151,.06),rgba(124,92,255,.06));border:1px solid var(--line);border-radius:var(--radius-lg);padding:22px;margin-top:24px;display:flex;gap:20px;align-items:center;flex-wrap:wrap}
+.demo-card .txt{flex:1;min-width:240px}
+.demo-card h4{margin-bottom:4px;font-size:15px}
+.demo-card p{margin:0;color:var(--muted);font-size:13px}
+
+.foot{text-align:center;color:var(--dim);margin-top:80px;font-size:12.5px}
+
+@media(max-width:720px){
+  .hero h1{font-size:38px}
+  .hero p.lead{font-size:16px}
+  .section-h h2{font-size:26px}
+  .flow{grid-template-columns:1fr}
+  .mock .frame-body{grid-template-columns:1fr}
+  .mock .frame-sidebar{border-left:0;border-top:1px solid var(--line)}
+}
+
+/* ============ App View ============ */
+.app{display:grid;grid-template-columns:1fr 400px;grid-template-rows:56px 1fr;height:100vh;overflow:hidden}
+.topbar{grid-column:1/-1;display:flex;align-items:center;gap:14px;padding:0 16px;background:var(--panel);border-bottom:1px solid var(--line)}
+.topbar .brand{display:flex;align-items:center;gap:10px;font-weight:600}
+.topbar .brand .mark{width:24px;height:24px;border-radius:6px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:grid;place-items:center;color:#fff;font-weight:800;font-size:13px}
+.topbar .src{color:var(--muted);flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:12.5px;min-width:0}
+.topbar .role{padding:4px 11px;border-radius:99px;font-size:11px;font-weight:600;border:1px solid var(--line);background:var(--panel-2)}
+.topbar .role.commenter{color:var(--accent-2);border-color:rgba(61,220,151,.4);background:rgba(61,220,151,.08)}
+.topbar .role.owner{color:var(--warn);border-color:rgba(255,184,77,.4);background:rgba(255,184,77,.08)}
+
+.canvas{position:relative;background:#f6f7fa;overflow:hidden}
+.canvas iframe{width:100%;height:100%;border:0;background:#fff;display:block}
+.loader,.errbox{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);padding:30px;text-align:center;background:var(--panel);z-index:2}
+.loader .spinner{width:32px;height:32px;border:3px solid var(--line);border-top-color:var(--accent);border-radius:99px;animation:spin 1s linear infinite;margin:0 auto 14px}
+.errbox{color:var(--fg)}
 .errbox .actions{margin-top:14px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+@keyframes spin{to{transform:rotate(360deg)}}
 
-.sidebar{background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column;overflow:hidden}
-.sidebar h3{padding:14px 14px 6px;font-size:13px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted)}
-.sidebar .tools{padding:0 14px 12px;display:flex;gap:8px;flex-wrap:wrap}
-.sidebar .tools button{padding:6px 10px;font-size:12.5px}
-.sidebar .empty{padding:20px 14px;color:var(--muted);font-size:13px}
-.list{flex:1;overflow:auto;padding:0 8px 8px}
-.item{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:6px;cursor:pointer;transition:.15s}
-.item:hover{border-color:var(--accent)}
-.item.active{border-color:var(--accent);box-shadow:0 0 0 2px rgba(124,92,255,.25)}
-.item .h{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
-.item .n{background:var(--accent);color:#fff;border-radius:99px;width:22px;height:22px;font-size:12px;display:grid;place-items:center;font-weight:600}
-.item .sel{font-size:11.5px;color:var(--muted);word-break:break-all}
-.item .txt{margin-top:6px;font-size:13px;white-space:pre-wrap}
-.item .meta{margin-top:6px;font-size:11px;color:var(--muted);display:flex;gap:10px}
-.item .del{background:transparent;border:0;color:var(--muted);padding:0;font-size:12px;cursor:pointer}
-.item .del:hover{color:var(--danger)}
+.sidebar{background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.sb-header{padding:14px 14px 10px;border-bottom:1px solid var(--line)}
+.sb-header .row{display:flex;justify-content:space-between;align-items:center}
+.sb-header h3{font-size:14px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin:0}
+.stats{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.stat{background:var(--panel-2);border:1px solid var(--line);border-radius:99px;padding:3px 10px;font-size:11px;color:var(--fg-2);display:inline-flex;align-items:center;gap:5px}
+.stat b{color:var(--fg);font-weight:700}
+.filter{padding:10px 14px 8px;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:5px}
+.chip{background:var(--panel-2);border:1px solid var(--line);color:var(--fg-2);padding:4px 9px;border-radius:99px;font-size:11.5px;cursor:pointer;font-weight:500;transition:all .12s;display:inline-flex;align-items:center;gap:4px;user-select:none}
+.chip:hover{border-color:var(--line-2);color:var(--fg)}
+.chip.active{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.chip .count{opacity:.7;font-size:10.5px}
+.tools{padding:10px 14px;display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+.tools button{padding:6px 10px;font-size:12.5px}
+.empty{padding:40px 24px;color:var(--muted);font-size:13px;text-align:center}
+.empty svg{opacity:.5;margin-bottom:12px}
+.list{flex:1;overflow:auto;padding:6px}
+.item{background:var(--panel-2);border:1px solid var(--line);border-left-width:3px;border-radius:8px;padding:11px 12px;margin:6px 4px;cursor:pointer;transition:all .15s;position:relative}
+.item:hover{border-color:var(--line-2);background:var(--panel-3)}
+.item.active{border-color:var(--accent);box-shadow:0 0 0 2px rgba(124,92,255,.2)}
+.item[data-cat=bug]{border-left-color:var(--cat-bug)}
+.item[data-cat=feature]{border-left-color:var(--cat-feature)}
+.item[data-cat=design]{border-left-color:var(--cat-design)}
+.item[data-cat=copy]{border-left-color:var(--cat-copy)}
+.item[data-cat=question]{border-left-color:var(--cat-question)}
+.item[data-cat=praise]{border-left-color:var(--cat-praise)}
+.item .h{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:4px}
+.item .num{background:var(--fg);color:var(--bg);border-radius:99px;width:22px;height:22px;font-size:11.5px;display:grid;place-items:center;font-weight:700;flex-shrink:0}
+.item .actions{display:flex;gap:2px;opacity:.4;transition:opacity .15s}
+.item:hover .actions{opacity:1}
+.item .actions button{padding:2px 6px;font-size:11px;background:transparent;border:0;color:var(--muted)}
+.item .actions button:hover{color:var(--fg);background:var(--panel);transform:none}
+.item .actions .del:hover{color:var(--danger)}
+.item .row2{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px}
+.item .cat{padding:1px 8px;border-radius:99px;font-size:10.5px;font-weight:600}
+.item .cat[data-cat=bug]{background:rgba(255,107,107,.18);color:var(--cat-bug)}
+.item .cat[data-cat=feature]{background:rgba(124,92,255,.2);color:var(--cat-feature)}
+.item .cat[data-cat=design]{background:rgba(61,220,151,.18);color:var(--cat-design)}
+.item .cat[data-cat=copy]{background:rgba(255,184,77,.18);color:var(--cat-copy)}
+.item .cat[data-cat=question]{background:rgba(92,192,255,.18);color:var(--cat-question)}
+.item .cat[data-cat=praise]{background:rgba(255,154,193,.18);color:var(--cat-praise)}
+.item .prio{padding:1px 7px;border-radius:99px;font-size:10.5px;font-weight:600;border:1px solid var(--line)}
+.item .prio[data-p=must]{color:var(--danger);border-color:rgba(255,107,107,.4)}
+.item .prio[data-p=should]{color:var(--warn);border-color:rgba(255,184,77,.4)}
+.item .prio[data-p=could]{color:var(--accent-3);border-color:rgba(92,192,255,.4)}
+.item .prio[data-p=nice]{color:var(--muted);border-color:var(--line)}
+.item .sel{font-size:11px;color:var(--muted);word-break:break-all;font-family:ui-monospace,monospace;margin-bottom:4px;opacity:.8}
+.item .txt{font-size:13px;color:var(--fg);white-space:pre-wrap;overflow-wrap:break-word}
+.item .meta{margin-top:6px;font-size:11px;color:var(--dim);display:flex;gap:8px;flex-wrap:wrap}
 
-/* Modal */
-.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);display:grid;place-items:center;z-index:9999;padding:20px}
-.modal{background:var(--panel);border:1px solid var(--line);border-radius:12px;width:100%;max-width:520px;padding:20px;box-shadow:var(--shadow)}
-.modal h3{margin-bottom:10px}
-.modal .snip{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px;max-height:130px;overflow:auto;margin:6px 0 12px}
-.modal .snip code{white-space:pre-wrap;word-break:break-all}
-.modal .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
-.badge-key{display:inline-block;background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-size:11px;margin-right:6px;color:var(--muted)}
+/* ============ Modal ============ */
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);display:grid;place-items:center;z-index:9999;padding:20px;animation:fadeIn .18s ease}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.modal{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);width:100%;max-width:560px;padding:22px;box-shadow:var(--shadow-lg);animation:slideUp .22s ease}
+@keyframes slideUp{from{transform:translateY(12px);opacity:0}to{transform:translateY(0);opacity:1}}
+.modal h3{font-size:16px;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.modal h3 .tag{font-family:ui-monospace,monospace;font-size:12px;background:var(--panel-2);border:1px solid var(--line);padding:2px 8px;border-radius:6px;color:var(--accent-2)}
+.modal .snip{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:10px;max-height:110px;overflow:auto;margin:0 0 14px}
+.modal .snip code{white-space:pre-wrap;word-break:break-all;font-size:12px}
+.modal .field{margin-bottom:12px}
+.modal .field label{display:block;font-size:11.5px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.6px;font-weight:600}
+.modal .chips{display:flex;gap:6px;flex-wrap:wrap}
+.modal .chips .pick{background:var(--panel-2);border:1px solid var(--line);color:var(--fg-2);padding:6px 11px;border-radius:99px;font-size:12.5px;cursor:pointer;transition:all .12s;display:inline-flex;align-items:center;gap:5px;user-select:none;font-weight:500}
+.modal .chips .pick:hover{border-color:var(--line-2)}
+.modal .chips .pick[data-active=true]{transform:translateY(-1px)}
+.modal .chips .pick[data-active=true][data-cat=bug]{background:rgba(255,107,107,.18);border-color:var(--cat-bug);color:var(--cat-bug)}
+.modal .chips .pick[data-active=true][data-cat=feature]{background:rgba(124,92,255,.22);border-color:var(--cat-feature);color:var(--cat-feature)}
+.modal .chips .pick[data-active=true][data-cat=design]{background:rgba(61,220,151,.18);border-color:var(--cat-design);color:var(--cat-design)}
+.modal .chips .pick[data-active=true][data-cat=copy]{background:rgba(255,184,77,.18);border-color:var(--cat-copy);color:var(--cat-copy)}
+.modal .chips .pick[data-active=true][data-cat=question]{background:rgba(92,192,255,.18);border-color:var(--cat-question);color:var(--cat-question)}
+.modal .chips .pick[data-active=true][data-cat=praise]{background:rgba(255,154,193,.18);border-color:var(--cat-praise);color:var(--cat-praise)}
+.modal .chips .pick[data-active=true][data-p=must]{background:rgba(255,107,107,.18);border-color:var(--danger);color:var(--danger)}
+.modal .chips .pick[data-active=true][data-p=should]{background:rgba(255,184,77,.18);border-color:var(--warn);color:var(--warn)}
+.modal .chips .pick[data-active=true][data-p=could]{background:rgba(92,192,255,.18);border-color:var(--accent-3);color:var(--accent-3)}
+.modal .chips .pick[data-active=true][data-p=nice]{background:var(--panel-3);border-color:var(--line-2);color:var(--fg)}
+.modal .row-inputs{display:grid;grid-template-columns:1fr;gap:0}
+.modal .actions-row{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:6px}
+.modal .actions-row .hint{margin-right:auto;font-size:11px;color:var(--dim)}
+.badge-key{display:inline-block;background:var(--panel-2);border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-size:10.5px;margin-right:4px;color:var(--muted);font-family:ui-monospace,monospace}
 
-/* Toast */
-.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--panel2);border:1px solid var(--line);color:var(--fg);padding:10px 16px;border-radius:8px;box-shadow:var(--shadow);z-index:10000;font-size:13px}
+/* ============ Toast ============ */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--panel-2);border:1px solid var(--line);color:var(--fg);padding:10px 18px;border-radius:10px;box-shadow:var(--shadow);z-index:10000;font-size:13px;animation:slideUp .2s ease}
+
+/* ============ Coach Mark ============ */
+.coach{position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);z-index:9998;display:grid;place-items:center;padding:20px}
+.coach .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);max-width:480px;padding:26px;text-align:center;box-shadow:var(--shadow-lg);animation:slideUp .3s ease}
+.coach h3{font-size:20px;margin-bottom:10px}
+.coach p{color:var(--muted);font-size:14px;margin:0 0 20px}
+.coach .steps{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px;text-align:left}
+.coach .steps>div{background:var(--panel-2);border:1px solid var(--line);border-radius:9px;padding:12px}
+.coach .steps h4{font-size:12px;margin-bottom:4px;color:var(--fg)}
+.coach .steps p{font-size:11.5px;color:var(--muted);margin:0}
+.coach .steps .icon{font-size:18px;margin-bottom:6px}
+.coach button{font-size:14px;padding:10px 20px}
+
+/* ============ Presentation Mode ============ */
+.present{position:fixed;inset:0;background:rgba(10,12,18,.96);z-index:9997;display:flex;flex-direction:column;animation:fadeIn .25s ease}
+.present-top{padding:14px 20px;display:flex;align-items:center;gap:14px;border-bottom:1px solid var(--line)}
+.present-top .title{font-weight:700;flex:1}
+.present-top .counter{color:var(--muted);font-size:13px}
+.present-body{flex:1;display:grid;grid-template-columns:1.4fr 1fr;gap:20px;padding:20px;overflow:hidden;min-height:0}
+.present-view{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;position:relative;min-height:0}
+.present-view iframe{width:100%;height:100%;border:0;background:#fff}
+.present-detail{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:24px;overflow:auto;min-height:0}
+.present-detail .badges{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.present-detail .badges .cat,.present-detail .badges .prio{padding:4px 12px;border-radius:99px;font-size:12px;font-weight:600}
+.present-detail h2{font-size:22px;margin-bottom:14px;line-height:1.3}
+.present-detail .qtext{font-size:16px;line-height:1.6;color:var(--fg);border-left:3px solid var(--accent);padding-left:16px;margin-bottom:20px;white-space:pre-wrap}
+.present-detail .snipwrap{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:12px;margin-bottom:14px}
+.present-detail .snipwrap label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:6px}
+.present-detail .snipwrap code{font-size:12px;white-space:pre-wrap;word-break:break-all}
+.present-detail .meta{color:var(--muted);font-size:12.5px;margin-top:12px}
+.present-bot{padding:14px 20px;display:flex;align-items:center;gap:10px;border-top:1px solid var(--line);justify-content:center}
+.present-bot .dots{flex:1;display:flex;justify-content:center;gap:6px}
+.present-bot .dots span{width:6px;height:6px;border-radius:99px;background:var(--line);transition:all .15s}
+.present-bot .dots span.on{background:var(--accent);width:24px;border-radius:4px}
 
 @media(max-width:900px){
-  .app{grid-template-columns:1fr;grid-template-rows:52px 55vh 1fr}
+  .app{grid-template-columns:1fr;grid-template-rows:56px 50vh 1fr}
   .sidebar{border-left:0;border-top:1px solid var(--line)}
+  .present-body{grid-template-columns:1fr;grid-template-rows:1fr 1fr}
 }
 </style>
 </head>
 <body>
 
-<!-- ============ SETUP VIEW ============ -->
-<div id="view-setup" class="setup hidden">
-  <h1>VibeFeedback <span class="tag">PoC</span></h1>
-  <p>Teile eine Live-URL deines Vibecoding-Projekts. Feedback-Geber:innen klicken direkt auf die Elemente, die sie kommentieren wollen. Am Ende bekommst du alles gesammelt als Markdown-Prompt zurück.</p>
-
-  <div class="card">
-    <h2 style="font-size:18px;margin-bottom:14px">Sharing-Link erzeugen</h2>
-    <div class="step"><div class="n">1</div><div>Deploye dein Projekt (z.&nbsp;B. GitHub Pages, Vercel, Netlify) und kopiere die URL zur HTML-Seite.</div></div>
-    <div class="step"><div class="n">2</div><div>Füge sie unten ein — VibeFeedback verpackt sie in einen teilbaren Feedback-Link.</div></div>
-    <div class="step"><div class="n">3</div><div>Schicke den Link an deine Tester. Sammle das Feedback später als Markdown und füttere damit deinen nächsten Prompt.</div></div>
-
-    <div style="margin-top:18px">
-      <label class="muted" style="font-size:12px">Projekt-URL</label>
-      <div class="row" style="margin-top:6px">
-        <input type="url" id="src-input" placeholder="https://username.github.io/projekt/index.html">
-        <button class="primary" id="btn-generate">Link erzeugen</button>
+<!-- ============ LANDING ============ -->
+<div id="view-landing" class="landing hidden">
+  <div class="landing-inner">
+    <nav class="nav">
+      <div class="logo">
+        <div class="mark">V</div>
+        <span>VibeFeedback</span>
+        <span class="tag">PoC</span>
       </div>
-      <div id="src-error" class="muted" style="color:var(--danger);margin-top:6px;font-size:12.5px"></div>
-    </div>
+      <a href="https://github.com/CeeKay1901/vibefeedback" target="_blank" rel="noopener">GitHub →</a>
+    </nav>
 
-    <div id="share-result" class="hidden" style="margin-top:18px">
-      <label class="muted" style="font-size:12px">Feedback-Link (kopieren &amp; teilen)</label>
-      <div class="link-box" style="margin-top:6px">
-        <code id="share-link"></code>
-        <button id="btn-copy">Kopieren</button>
+    <section class="hero">
+      <div class="kicker">Feedback für Vibecoding-Projekte</div>
+      <h1>Klick. Kommentiere.<br><span class="accent">Iteriere.</span></h1>
+      <p class="lead">
+        Teile dein Vibecoding-Projekt per Link. Deine Tester klicken direkt auf die Elemente, die sie kommentieren wollen — und du bekommst ihre Kritik prompt-tauglich als Markdown zurück.
+      </p>
+      <div class="cta-row">
+        <button class="primary" onclick="document.querySelector('#src-input').focus();document.querySelector('#setup').scrollIntoView({behavior:'smooth',block:'center'})">Los geht's</button>
+        <button onclick="location.href='?src=' + encodeURIComponent(location.origin+location.pathname.replace(/index\.html$/,'')+'demo.html') + '&owner=1&presentation-hint=1'">Live-Demo öffnen →</button>
       </div>
-      <div class="row" style="margin-top:12px;gap:10px">
-        <button id="btn-preview" class="primary">Selbst testen &rarr;</button>
-        <span class="muted" style="font-size:12.5px">Öffnet den Link im Owner-Modus. Feedback wird im Browser gespeichert (localStorage).</span>
+
+      <div class="mock" aria-hidden="true">
+        <div class="frame">
+          <div class="frame-bar">
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            <span class="urlbar">vibefeedback.app/?src=…</span>
+          </div>
+          <div class="frame-body">
+            <div class="frame-view">
+              <h4>Deine Landing Page</h4>
+              <p>Deine Tester sehen deine Seite ganz normal — nur klickbar.</p>
+              <span class="fake-btn">Jetzt starten</span>
+              <div class="fake-hint">👆 Klick auf ein Element → Kommentar hinterlassen</div>
+            </div>
+            <div class="frame-sidebar">
+              <h5>Feedback (3)</h5>
+              <div class="m-item b"><span class="m-cat">🐛 Bug</span> Button reagiert nicht auf Klick</div>
+              <div class="m-item f"><span class="m-cat">✨ Feature</span> Preis prominenter zeigen</div>
+              <div class="m-item d"><span class="m-cat">🎨 Design</span> Kontrast zu schwach</div>
+            </div>
+          </div>
+        </div>
+        <p class="mock-caption">So sieht's aus, wenn dein Tester kommentiert.</p>
       </div>
-    </div>
+    </section>
+
+    <section class="section">
+      <div class="section-h">
+        <div class="eyebrow">Features</div>
+        <h2>Feedback, das direkt in den nächsten Prompt fließt</h2>
+      </div>
+      <div class="features">
+        <div class="feat-card">
+          <div class="fi">🎯</div>
+          <h3>DOM-verankert</h3>
+          <p>Jeder Kommentar ist an einen CSS-Selector + HTML-Snippet gebunden. Kein „irgendwo auf der Seite".</p>
+        </div>
+        <div class="feat-card">
+          <div class="fi">🏷️</div>
+          <h3>Kategorisiert</h3>
+          <p>Bug, Feature, Design, Copy, Frage oder Lob — direkt beim Kommentieren. Plus Priorität.</p>
+        </div>
+        <div class="feat-card">
+          <div class="fi">📝</div>
+          <h3>Prompt-fertig</h3>
+          <p>Ein-Klick-Export als Markdown mit Selector, Snippet, Kategorie und Priorität. Rein in den nächsten KI-Prompt.</p>
+        </div>
+        <div class="feat-card">
+          <div class="fi">⚡</div>
+          <h3>Zero-Setup</h3>
+          <p>Kein Backend, kein Login, kein Signup. Nur ein Link — für dich und deine Tester.</p>
+        </div>
+        <div class="feat-card">
+          <div class="fi">🎬</div>
+          <h3>Presentation-Mode</h3>
+          <p>Führe durch das gesammelte Feedback wie durch eine Slideshow. Perfekt für Team-Reviews.</p>
+        </div>
+        <div class="feat-card">
+          <div class="fi">🔍</div>
+          <h3>Filterbar</h3>
+          <p>Filter nach Kategorie mit Live-Counts. Ein Klick, und du siehst nur die Bugs. Oder nur das Lob.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-h">
+        <div class="eyebrow">Workflow</div>
+        <h2>In 3 Schritten von Feedback zu Iteration</h2>
+      </div>
+      <div class="flow">
+        <div class="flow-step">
+          <div class="n">1</div>
+          <h4>Link erzeugen</h4>
+          <p>Deine Projekt-URL einfügen, Sharing-Link kopieren. Fertig.</p>
+        </div>
+        <div class="flow-step">
+          <div class="n">2</div>
+          <h4>Tester klicken</h4>
+          <p>Tester öffnen den Link, klicken auf Elemente, hinterlassen Kommentare. Ohne Signup.</p>
+        </div>
+        <div class="flow-step">
+          <div class="n">3</div>
+          <h4>Markdown exportieren</h4>
+          <p>Aggregiertes Feedback als Markdown herunterladen. Ab damit in deinen nächsten KI-Prompt.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="setup">
+      <div class="section-h">
+        <div class="eyebrow">Starten</div>
+        <h2>Sharing-Link erzeugen</h2>
+      </div>
+      <div class="setup-card">
+        <h3>Deine Projekt-URL</h3>
+        <div class="muted">Öffentlich erreichbare HTML-Seite. GitHub Pages, Netlify, Vercel, alles was CORS erlaubt.</div>
+        <div class="row">
+          <input type="url" id="src-input" placeholder="https://username.github.io/projekt/index.html">
+          <button class="primary" id="btn-generate">Link erzeugen</button>
+        </div>
+        <div id="src-error" class="err-inline"></div>
+        <div id="cors-hint" class="status-inline muted"></div>
+
+        <div id="share-result" class="hidden" style="margin-top:16px">
+          <div class="muted" style="font-size:12px">Feedback-Link (kopieren &amp; teilen)</div>
+          <div class="link-box">
+            <code id="share-link"></code>
+            <button id="btn-copy">Kopieren</button>
+          </div>
+          <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+            <button id="btn-preview" class="primary">Als Owner öffnen →</button>
+            <span class="muted" style="font-size:12.5px">Dashboard-Modus mit Presentation, Export, Filtern.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="demo-card">
+        <div class="txt">
+          <h4>Kein eigenes Projekt zur Hand?</h4>
+          <p>Probier VibeFeedback mit unserer Demo-Seite — komplette Runde durchspielen in 60 Sekunden.</p>
+        </div>
+        <button onclick="location.href='?src=' + encodeURIComponent(location.origin+location.pathname.replace(/index\.html$/,'')+'demo.html') + '&owner=1'">Demo starten →</button>
+      </div>
+    </section>
+
+    <p class="foot">
+      Open-Source · <a href="https://github.com/CeeKay1901/vibefeedback" target="_blank" rel="noopener">github.com/CeeKay1901/vibefeedback</a>
+    </p>
   </div>
-
-  <div class="card">
-    <h3 style="font-size:14px">Wie das PoC funktioniert</h3>
-    <ul style="color:var(--muted);padding-left:18px;margin:8px 0 0">
-      <li>Die geteilte HTML wird per <code>fetch()</code> geladen und in ein Iframe eingebettet — das erlaubt Klick-Zuordnung zu konkreten DOM-Elementen.</li>
-      <li>Klicks im Iframe öffnen ein Kommentarfeld. Der CSS-Selector + HTML-Auszug des Elements wird als Referenz gespeichert.</li>
-      <li>Kommentare liegen im <code>localStorage</code> pro Browser. Kein Server, kein Login.</li>
-      <li>Kommentierer exportiert am Ende ein Markdown und schickt es dir (Mail/Chat) — direkt Prompt-tauglich.</li>
-      <li>CORS-Hinweis: Das Ziel muss GET-Requests via CORS erlauben (GitHub Pages tut das). Sonst Fallback: HTML-Datei paste-in.</li>
-    </ul>
-  </div>
-
-  <p class="muted" style="text-align:center;margin-top:30px;font-size:12px">
-    Repo: <a href="https://github.com/CeeKay1901/vibefeedback">github.com/CeeKay1901/vibefeedback</a>
-  </p>
 </div>
 
-<!-- ============ FEEDBACK VIEW ============ -->
+<!-- ============ APP ============ -->
 <div id="view-app" class="app hidden">
   <div class="topbar">
-    <span class="brand">VibeFeedback</span>
+    <div class="brand"><div class="mark">V</div><span>VibeFeedback</span></div>
     <span class="src" id="topbar-src"></span>
-    <span class="role" id="topbar-role">Feedback-Modus</span>
-    <button id="btn-back" class="ghost" title="Neue Session">Neu</button>
+    <span class="role" id="topbar-role">Feedback</span>
+    <button id="btn-present" class="tiny" title="Presentation Mode">🎬 Präsentieren</button>
+    <button id="btn-back" class="ghost tiny">Neu</button>
   </div>
   <div class="canvas" id="canvas">
-    <div class="loader" id="loader">Lade Projekt…</div>
+    <div class="loader" id="loader"><div><div class="spinner"></div>Lade Projekt…</div></div>
     <iframe id="frame" class="hidden" sandbox="allow-same-origin allow-scripts allow-forms allow-popups"></iframe>
     <div class="errbox hidden" id="errbox"></div>
   </div>
   <div class="sidebar">
-    <h3>Kommentare (<span id="cmt-count">0</span>)</h3>
+    <div class="sb-header">
+      <div class="row">
+        <h3>Feedback</h3>
+        <span class="muted mono" id="cmt-count">0</span>
+      </div>
+      <div class="stats" id="stats"></div>
+    </div>
+    <div class="filter" id="filter"></div>
     <div class="tools">
       <button id="btn-export" class="primary">Als Markdown</button>
-      <button id="btn-copy-md">In Zwischenablage</button>
+      <button id="btn-copy-md">Kopieren</button>
       <button id="btn-clear" class="danger">Alle löschen</button>
     </div>
     <div id="cmt-empty" class="empty">
-      Noch keine Kommentare. <br><br>
-      <span class="badge-key">Klick</span> auf ein beliebiges Element im linken Bereich, um es zu kommentieren.
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <div>Noch keine Kommentare.</div>
+      <div style="margin-top:10px;font-size:12px" class="dim">Klick auf ein Element im linken Bereich, um es zu kommentieren.</div>
     </div>
     <div class="list" id="cmt-list"></div>
   </div>
 </div>
 
-<!-- Modal template inserted via JS -->
-
 <script>
 "use strict";
 
-// ---------- Utils ----------
+// ============ Config ============
+const CATEGORIES = [
+  { id:"bug",      label:"Bug",       emoji:"🐛" },
+  { id:"feature",  label:"Feature",   emoji:"✨" },
+  { id:"design",   label:"Design",    emoji:"🎨" },
+  { id:"copy",     label:"Copy",      emoji:"📝" },
+  { id:"question", label:"Frage",     emoji:"❓" },
+  { id:"praise",   label:"Lob",       emoji:"❤️" },
+];
+const CAT_MAP = Object.fromEntries(CATEGORIES.map(c=>[c.id,c]));
+const PRIORITIES = [
+  { id:"must",   label:"Muss" },
+  { id:"should", label:"Sollte" },
+  { id:"could",  label:"Könnte" },
+  { id:"nice",   label:"Nice-to-have" },
+];
+const PRI_MAP = Object.fromEntries(PRIORITIES.map(p=>[p.id,p]));
+
+// ============ Utils ============
 const $ = (s,r=document)=>r.querySelector(s);
 const $$ = (s,r=document)=>[...r.querySelectorAll(s)];
 const esc = s => (s??"").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const truncate = (s,n=200) => s.length<=n?s:s.slice(0,n)+"…";
+const truncate = (s,n=200) => (s??"").length<=n?s:s.slice(0,n)+"…";
 const toast = (msg,ms=2200) => {
+  $$(".toast").forEach(t=>t.remove());
   const t = document.createElement("div");
   t.className="toast"; t.textContent=msg; document.body.appendChild(t);
   setTimeout(()=>t.remove(), ms);
@@ -203,45 +541,46 @@ function cssPath(el){
   }
   return parts.join(" > ");
 }
-
 function shortHtml(el){
-  try{
-    const clone = el.cloneNode(true);
-    // Strip long inline scripts/styles from snippet for readability
-    return truncate(clone.outerHTML.replace(/\s+/g," ").trim(), 400);
-  }catch(e){ return "[unbekannt]"; }
+  try{ return truncate(el.cloneNode(true).outerHTML.replace(/\s+/g," ").trim(), 400); }
+  catch(e){ return "[unbekannt]"; }
 }
 
-// ---------- Storage ----------
-const storeKey = src => "vibefeedback:v1:"+src;
+// ============ Storage ============
+const storeKey = src => "vibefeedback:v2:"+src;
 function loadComments(src){
-  try{ return JSON.parse(localStorage.getItem(storeKey(src))||"[]"); }catch(e){ return []; }
+  try{
+    const raw = localStorage.getItem(storeKey(src));
+    if(raw) return JSON.parse(raw);
+    // Migration: v1 → v2
+    const oldRaw = localStorage.getItem("vibefeedback:v1:"+src);
+    if(oldRaw){
+      const arr = JSON.parse(oldRaw).map(c => ({...c, category:c.category||"feature", priority:c.priority||"could"}));
+      localStorage.setItem(storeKey(src), JSON.stringify(arr));
+      return arr;
+    }
+    return [];
+  }catch(e){ return []; }
 }
 function saveComments(src, arr){
-  try{
-    localStorage.setItem(storeKey(src), JSON.stringify(arr));
-    return true;
-  }catch(e){
-    toast("Speicher voll oder blockiert — Kommentar konnte nicht persistiert werden.", 4000);
-    return false;
-  }
+  try{ localStorage.setItem(storeKey(src), JSON.stringify(arr)); return true; }
+  catch(e){ toast("Speicher voll — Kommentar konnte nicht persistiert werden.", 4000); return false; }
 }
-const AUTHOR_KEY = "vibefeedback:v1:author";
-function getAuthor(){ try{ return localStorage.getItem(AUTHOR_KEY)||""; }catch(e){ return ""; } }
-function setAuthor(v){ try{ localStorage.setItem(AUTHOR_KEY, v||""); }catch(e){} }
+const AUTHOR_KEY = "vibefeedback:v2:author";
+const getAuthor = ()=> { try{ return localStorage.getItem(AUTHOR_KEY)||""; }catch(e){ return ""; } };
+const setAuthor = v => { try{ localStorage.setItem(AUTHOR_KEY, v||""); }catch(e){} };
+const COACH_KEY = "vibefeedback:v2:coach-seen";
+const seenCoach = ()=> { try{ return localStorage.getItem(COACH_KEY)==="1"; }catch(e){ return true; } };
+const setSeenCoach = ()=> { try{ localStorage.setItem(COACH_KEY,"1"); }catch(e){} };
 
-// ---------- Setup view ----------
-function initSetup(){
-  $("#view-setup").classList.remove("hidden");
+// ============ Setup View ============
+function initLanding(){
+  $("#view-landing").classList.remove("hidden");
   const input = $("#src-input");
   const err = $("#src-error");
   const result = $("#share-result");
   const link = $("#share-link");
-
-  const corsHint = document.createElement("div");
-  corsHint.className = "muted";
-  corsHint.style.cssText = "margin-top:8px;font-size:12.5px";
-  result.parentNode.insertBefore(corsHint, result);
+  const corsHint = $("#cors-hint");
 
   $("#btn-generate").addEventListener("click", async ()=>{
     err.textContent=""; corsHint.textContent="";
@@ -256,45 +595,41 @@ function initSetup(){
     link.textContent = feedbackUrl;
     result.classList.remove("hidden");
 
-    corsHint.innerHTML = "⏳ CORS-Check läuft…";
+    corsHint.textContent = "⏳ CORS-Check läuft…"; corsHint.style.color = "var(--muted)";
     try{
       const r = await fetch(val, { method:"GET", redirect:"follow" });
       if(!r.ok) throw new Error("HTTP "+r.status);
       const ct = r.headers.get("content-type")||"";
       if(!/text\/html|application\/xhtml/i.test(ct)){
-        corsHint.innerHTML = `⚠️ URL antwortet mit <code>${esc(ct||"unbekannt")}</code> — evtl. keine HTML-Seite.`;
+        corsHint.innerHTML = `⚠️ Response-Content-Type ist <code>${esc(ct||"unbekannt")}</code> — evtl. keine HTML-Seite.`;
         corsHint.style.color = "var(--warn)";
       }else{
-        corsHint.innerHTML = "✅ CORS OK — Tester können die Seite laden.";
-        corsHint.style.color = "var(--accent2)";
+        corsHint.textContent = "✅ CORS OK — Tester können die Seite laden.";
+        corsHint.style.color = "var(--accent-2)";
       }
     }catch(e){
-      corsHint.innerHTML = `⚠️ CORS blockiert oder Ziel nicht erreichbar (${esc(String(e.message||e))}). Tester sehen einen Fehler mit Fallback zum Einfügen des HTML-Quelltexts.`;
+      corsHint.innerHTML = `⚠️ CORS blockiert oder Ziel nicht erreichbar (${esc(String(e.message||e))}). Tester bekommen im Fehlerfall einen Fallback zum HTML-Einfügen.`;
       corsHint.style.color = "var(--warn)";
     }
 
     $("#btn-preview").onclick = ()=> location.href = feedbackUrl + "&owner=1";
     $("#btn-copy").onclick = async ()=>{
-      try{
-        await navigator.clipboard.writeText(feedbackUrl);
-        toast("Link kopiert.");
-      }catch(e){
-        // Fallback für unsichere Kontexte
+      const t = feedbackUrl;
+      try{ await navigator.clipboard.writeText(t); toast("Link kopiert."); }
+      catch(e){
         const ta = document.createElement("textarea");
-        ta.value = feedbackUrl; document.body.appendChild(ta);
-        ta.select();
+        ta.value = t; document.body.appendChild(ta); ta.select();
         try{ document.execCommand("copy"); toast("Link kopiert."); }
-        catch(e2){ toast("Kopieren fehlgeschlagen — bitte manuell markieren."); }
+        catch(e2){ toast("Kopieren fehlgeschlagen — manuell markieren."); }
         ta.remove();
       }
     };
   });
-
   input.addEventListener("keydown", e=>{ if(e.key==="Enter") $("#btn-generate").click(); });
 }
 
-// ---------- Feedback view ----------
-let STATE = { src:"", isOwner:false, comments:[], activeId:null, frameDoc:null };
+// ============ App View ============
+const STATE = { src:"", isOwner:false, comments:[], filter:"all", frameDoc:null };
 
 async function initApp(src, isOwner){
   $("#view-app").classList.remove("hidden");
@@ -304,24 +639,27 @@ async function initApp(src, isOwner){
 
   $("#topbar-src").textContent = src;
   const roleEl = $("#topbar-role");
-  roleEl.textContent = isOwner ? "Owner (Vorschau)" : "Feedback-Modus";
+  roleEl.textContent = isOwner ? "Owner-Dashboard" : "Feedback-Modus";
   roleEl.classList.add(isOwner ? "owner" : "commenter");
 
   $("#btn-back").onclick = ()=> location.href = location.origin + location.pathname;
   $("#btn-export").onclick = ()=> exportMarkdown(false);
   $("#btn-copy-md").onclick = ()=> exportMarkdown(true);
+  $("#btn-present").onclick = ()=> openPresentation();
   $("#btn-clear").onclick = ()=>{
     if(!STATE.comments.length){ toast("Nichts zu löschen."); return; }
     if(confirm("Alle Kommentare unwiderruflich löschen?")){
       STATE.comments = [];
       saveComments(STATE.src, STATE.comments);
-      renderList();
-      refreshFrameBadges();
+      renderAll(); refreshFrameBadges();
     }
   };
 
-  renderList();
+  renderAll();
   await loadIntoFrame(src);
+  if(!isOwner && !seenCoach() && !STATE.comments.length){
+    showCoachMark();
+  }
 }
 
 async function loadIntoFrame(src){
@@ -347,12 +685,8 @@ async function loadIntoFrame(src){
 function injectBase(html, src){
   const baseHref = new URL("./", src).href;
   const baseTag = `<base href="${baseHref}">`;
-  if(/<head[^>]*>/i.test(html)){
-    return html.replace(/<head[^>]*>/i, m => m + baseTag);
-  }
-  if(/<html[^>]*>/i.test(html)){
-    return html.replace(/<html[^>]*>/i, m => m + "<head>"+baseTag+"</head>");
-  }
+  if(/<head[^>]*>/i.test(html)) return html.replace(/<head[^>]*>/i, m => m + baseTag);
+  if(/<html[^>]*>/i.test(html)) return html.replace(/<html[^>]*>/i, m => m + "<head>"+baseTag+"</head>");
   return "<head>"+baseTag+"</head>"+html;
 }
 
@@ -360,10 +694,10 @@ function showError(e){
   const box = $("#errbox");
   box.classList.remove("hidden");
   box.innerHTML = `
-    <div>
+    <div style="max-width:520px">
       <h3>Projekt konnte nicht geladen werden</h3>
       <p class="muted">${esc(String(e && e.message || e))}</p>
-      <p class="muted" style="max-width:520px">
+      <p class="muted">
         Wahrscheinlich blockiert CORS den Abruf. Das Ziel muss <code>Access-Control-Allow-Origin</code> erlauben
         (GitHub Pages, Netlify, Vercel u.v.m. tun das). Alternativ: HTML-Quelltext direkt einfügen.
       </p>
@@ -387,15 +721,13 @@ function showError(e){
 
 function hookFrame(doc){
   STATE.frameDoc = doc;
-  // Inject styling for highlight + badge
   const style = doc.createElement("style");
   style.textContent = `
     .__vf_hover{outline:2px dashed #7c5cff !important;outline-offset:2px;cursor:crosshair!important}
-    .__vf_marked{position:relative;outline:2px solid #3ddc97 !important;outline-offset:1px}
-    .__vf_badge{position:absolute;top:-10px;left:-10px;background:#3ddc97;color:#0f1115;border-radius:99px;
-      width:22px;height:22px;font:600 12px system-ui,sans-serif;display:grid;place-items:center;z-index:2147483647;
+    .__vf_marked{outline:2px solid var(--vf-c, #3ddc97) !important;outline-offset:1px}
+    .__vf_badge{position:absolute;top:-11px;left:-11px;background:var(--vf-c, #3ddc97);color:#0a0c12;border-radius:99px;
+      min-width:22px;height:22px;padding:0 5px;font:600 11px system-ui,sans-serif;display:inline-flex;align-items:center;justify-content:center;gap:3px;z-index:2147483647;
       pointer-events:none;box-shadow:0 2px 6px rgba(0,0,0,.35)}
-    a,button,input,textarea,select{pointer-events:auto}
   `;
   doc.head && doc.head.appendChild(style);
 
@@ -412,88 +744,137 @@ function hookFrame(doc){
     e.preventDefault(); e.stopPropagation();
     openCommentModal(e.target);
   }, true);
+  doc.addEventListener("submit", e=>{ e.preventDefault(); }, true);
 
   refreshFrameBadges();
 }
 
+function catColorVar(catId){
+  const map = { bug:"#ff6b6b", feature:"#7c5cff", design:"#3ddc97", copy:"#ffb84d", question:"#5cc0ff", praise:"#ff9ac1" };
+  return map[catId] || "#3ddc97";
+}
 function refreshFrameBadges(){
   const doc = STATE.frameDoc; if(!doc) return;
-  $$(".__vf_marked", doc).forEach(el=>{ el.classList.remove("__vf_marked"); el.style.position=""; });
+  $$(".__vf_marked", doc).forEach(el=>{ el.classList.remove("__vf_marked"); el.style.removeProperty("--vf-c"); if(el.style.position==="relative" && el.dataset.vfPosSet==="1"){ el.style.position=""; delete el.dataset.vfPosSet; } });
   $$(".__vf_badge", doc).forEach(el=>el.remove());
-  STATE.comments.forEach((c,i)=>{
+  const visibleComments = filteredComments();
+  visibleComments.forEach((c,i)=>{
     let el;
     try{ el = doc.querySelector(c.selector); }catch(e){ el=null; }
     if(!el) return;
+    const color = catColorVar(c.category);
     el.classList.add("__vf_marked");
+    el.style.setProperty("--vf-c", color);
     const cs = doc.defaultView.getComputedStyle(el);
-    if(cs.position === "static") el.style.position = "relative";
+    if(cs.position === "static"){ el.style.position = "relative"; el.dataset.vfPosSet = "1"; }
     const badge = doc.createElement("span");
     badge.className = "__vf_badge";
-    badge.textContent = i+1;
+    badge.style.setProperty("--vf-c", color);
+    const cat = CAT_MAP[c.category];
+    badge.textContent = (cat?cat.emoji:"") + " " + (i+1);
     badge.dataset.vfId = c.id;
     el.appendChild(badge);
   });
 }
 
-// ---------- Comment modal ----------
-function openCommentModal(el){
-  if(!el || el.nodeType!==1) return;
-  const selector = cssPath(el);
-  const snippet = shortHtml(el);
-  const tag = el.tagName.toLowerCase();
+// ============ Comment Modal ============
+function openCommentModal(el, existing){
+  const isEdit = !!existing;
+  if(!el && !isEdit) return;
+  let selector, snippet, tag;
+  if(isEdit){
+    selector = existing.selector; snippet = existing.snippet; tag = existing.tag;
+  }else{
+    if(el.nodeType!==1) return;
+    selector = cssPath(el); snippet = shortHtml(el); tag = el.tagName.toLowerCase();
+  }
+
+  let currentCat = existing?.category || "feature";
+  let currentPri = existing?.priority || "could";
 
   const wrap = document.createElement("div");
   wrap.className = "modal-backdrop";
   wrap.innerHTML = `
     <div class="modal" role="dialog" aria-modal="true">
-      <h3>Kommentar zu <code>&lt;${esc(tag)}&gt;</code></h3>
-      <div class="muted" style="font-size:12px">Selector</div>
-      <div class="snip"><code>${esc(selector)}</code></div>
-      <div class="muted" style="font-size:12px">Element</div>
-      <div class="snip"><code>${esc(snippet)}</code></div>
-      <label class="muted" style="font-size:12px">Von (optional)</label>
-      <input type="text" data-field="author" placeholder="Dein Name — erleichtert später die Zuordnung" style="margin-bottom:10px">
-      <label class="muted" style="font-size:12px">Dein Kommentar</label>
-      <textarea placeholder="Was ist dir an diesem Element aufgefallen? Was sollte anders sein?"></textarea>
-      <div class="actions">
-        <span class="muted" style="font-size:11.5px;margin-right:auto">
-          <span class="badge-key">Esc</span> abbrechen
-          <span class="badge-key" style="margin-left:6px">⌘/Ctrl + ⏎</span> speichern
-        </span>
+      <h3>${isEdit?"Kommentar bearbeiten":"Kommentar"} <span class="tag">&lt;${esc(tag)}&gt;</span></h3>
+      <div class="field">
+        <label>Element (Selector)</label>
+        <div class="snip"><code>${esc(selector)}</code></div>
+      </div>
+      <div class="field">
+        <label>Kategorie</label>
+        <div class="chips" data-role="cats">
+          ${CATEGORIES.map(c=>`<span class="pick" data-cat="${c.id}" data-active="${c.id===currentCat}">${c.emoji} ${c.label}</span>`).join("")}
+        </div>
+      </div>
+      <div class="field">
+        <label>Priorität</label>
+        <div class="chips" data-role="prios">
+          ${PRIORITIES.map(p=>`<span class="pick" data-p="${p.id}" data-active="${p.id===currentPri}">${p.label}</span>`).join("")}
+        </div>
+      </div>
+      <div class="field">
+        <label>Von (optional)</label>
+        <input type="text" data-field="author" placeholder="Dein Name">
+      </div>
+      <div class="field">
+        <label>Kommentar</label>
+        <textarea placeholder="Was ist dir aufgefallen? Was sollte anders sein?"></textarea>
+      </div>
+      <div class="actions-row">
+        <span class="hint"><span class="badge-key">Esc</span>Abbrechen <span class="badge-key">⌘/Ctrl+⏎</span>Speichern</span>
         <button class="ghost" data-act="cancel">Abbrechen</button>
-        <button class="primary" data-act="save">Speichern</button>
+        <button class="primary" data-act="save">${isEdit?"Aktualisieren":"Speichern"}</button>
       </div>
     </div>`;
   document.body.appendChild(wrap);
   const ta = $("textarea", wrap);
   const authorInput = $("[data-field=author]", wrap);
-  authorInput.value = getAuthor();
-  setTimeout(()=>ta.focus(), 30);
+  authorInput.value = existing?.author || getAuthor();
+  if(isEdit) ta.value = existing.text;
+  setTimeout(()=>ta.focus(), 40);
+
+  $$("[data-role=cats] .pick", wrap).forEach(chip => {
+    chip.addEventListener("click", ()=>{
+      currentCat = chip.dataset.cat;
+      $$("[data-role=cats] .pick", wrap).forEach(c=> c.dataset.active = (c===chip));
+    });
+  });
+  $$("[data-role=prios] .pick", wrap).forEach(chip => {
+    chip.addEventListener("click", ()=>{
+      currentPri = chip.dataset.p;
+      $$("[data-role=prios] .pick", wrap).forEach(c=> c.dataset.active = (c===chip));
+    });
+  });
+
   const close = ()=>{ wrap.remove(); document.removeEventListener("keydown", onKey, true); };
   const save = ()=>{
     const txt = ta.value.trim();
     if(!txt){ ta.focus(); toast("Kommentar darf nicht leer sein."); return; }
     const author = authorInput.value.trim();
     setAuthor(author);
-    STATE.comments.push({
-      id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
-      selector, snippet, tag,
-      text: txt,
-      author: author || null,
-      ts: new Date().toISOString()
-    });
-    if(saveComments(STATE.src, STATE.comments)){
-      renderList();
-      refreshFrameBadges();
-      close();
-      toast("Kommentar gespeichert.");
+    if(isEdit){
+      Object.assign(existing, { text:txt, author:author||null, category:currentCat, priority:currentPri, updatedAt:new Date().toISOString() });
     }else{
-      STATE.comments.pop();
+      STATE.comments.push({
+        id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
+        selector, snippet, tag,
+        text: txt,
+        author: author || null,
+        category: currentCat,
+        priority: currentPri,
+        ts: new Date().toISOString()
+      });
     }
+    if(saveComments(STATE.src, STATE.comments)){
+      renderAll(); refreshFrameBadges();
+      close();
+      toast(isEdit?"Aktualisiert.":"Kommentar gespeichert.");
+    }else if(!isEdit){ STATE.comments.pop(); }
   };
-  const onKey = (e)=>{
+  const onKey = e=>{
     if(e.key==="Escape"){ e.preventDefault(); close(); }
-    else if((e.ctrlKey||e.metaKey) && e.key==="Enter"){ e.preventDefault(); save(); }
+    else if((e.ctrlKey||e.metaKey)&&e.key==="Enter"){ e.preventDefault(); save(); }
   };
   document.addEventListener("keydown", onKey, true);
   wrap.addEventListener("click", e=>{ if(e.target===wrap) close(); });
@@ -501,36 +882,97 @@ function openCommentModal(el){
   $("[data-act=save]", wrap).onclick = save;
 }
 
-// ---------- Sidebar list ----------
-function renderList(){
-  const list = $("#cmt-list"), empty = $("#cmt-empty"), count = $("#cmt-count");
-  count.textContent = STATE.comments.length;
-  if(!STATE.comments.length){ empty.classList.remove("hidden"); list.innerHTML=""; return; }
+// ============ Sidebar / Filter ============
+function filteredComments(){
+  if(STATE.filter==="all") return STATE.comments;
+  return STATE.comments.filter(c=>c.category===STATE.filter);
+}
+function counts(){
+  const c = { all: STATE.comments.length };
+  CATEGORIES.forEach(k=>c[k.id]=0);
+  STATE.comments.forEach(x=>{ if(c[x.category]!==undefined) c[x.category]++; });
+  return c;
+}
+function renderAll(){
+  const c = counts();
+  $("#cmt-count").textContent = c.all;
+
+  // Stats badges
+  const stats = $("#stats");
+  const priosCount = {};
+  PRIORITIES.forEach(p=>priosCount[p.id]=0);
+  STATE.comments.forEach(x=>{ if(priosCount[x.priority]!==undefined) priosCount[x.priority]++; });
+  const parts = [];
+  if(priosCount.must) parts.push(`<span class="stat" style="color:var(--danger)"><b>${priosCount.must}</b> Muss</span>`);
+  if(priosCount.should) parts.push(`<span class="stat" style="color:var(--warn)"><b>${priosCount.should}</b> Sollte</span>`);
+  if(priosCount.could) parts.push(`<span class="stat"><b>${priosCount.could}</b> Könnte</span>`);
+  if(priosCount.nice) parts.push(`<span class="stat"><b>${priosCount.nice}</b> Nice</span>`);
+  stats.innerHTML = parts.join("");
+
+  // Filter chips
+  const filter = $("#filter");
+  const chips = [{id:"all",label:"Alle",emoji:""}].concat(CATEGORIES.map(x=>({id:x.id,label:x.label,emoji:x.emoji})));
+  filter.innerHTML = chips.map(k=>{
+    const n = c[k.id]||0;
+    const active = STATE.filter===k.id?"active":"";
+    if(k.id!=="all" && !n) return "";
+    return `<span class="chip ${active}" data-f="${k.id}">${k.emoji?k.emoji+" ":""}${k.label}<span class="count">${n}</span></span>`;
+  }).join("");
+  $$("#filter .chip").forEach(ch => ch.addEventListener("click", ()=>{
+    STATE.filter = ch.dataset.f; renderAll(); refreshFrameBadges();
+  }));
+
+  // List
+  const list = $("#cmt-list");
+  const items = filteredComments();
+  const empty = $("#cmt-empty");
+  if(!items.length && !STATE.comments.length){ empty.classList.remove("hidden"); list.innerHTML=""; return; }
   empty.classList.add("hidden");
-  list.innerHTML = STATE.comments.map((c,i)=>`
-    <div class="item" data-id="${c.id}">
+  if(!items.length){
+    list.innerHTML = `<div class="empty" style="padding:24px 12px">Keine Kommentare in dieser Kategorie.</div>`;
+    return;
+  }
+
+  list.innerHTML = items.map((c,i)=>{
+    const cat = CAT_MAP[c.category]||CAT_MAP.feature;
+    const pri = PRI_MAP[c.priority]||PRI_MAP.could;
+    return `<div class="item" data-id="${c.id}" data-cat="${c.category}">
       <div class="h">
-        <div class="n">${i+1}</div>
-        <button class="del" title="Löschen" data-del="${c.id}">✕</button>
+        <div style="display:flex;gap:8px;align-items:center">
+          <div class="num">${i+1}</div>
+        </div>
+        <div class="actions">
+          <button class="edit" data-edit="${c.id}" title="Bearbeiten">✎</button>
+          <button class="del" data-del="${c.id}" title="Löschen">✕</button>
+        </div>
       </div>
-      <div class="sel mono">${esc(truncate(c.selector,80))}</div>
+      <div class="row2">
+        <span class="cat" data-cat="${c.category}">${cat.emoji} ${cat.label}</span>
+        <span class="prio" data-p="${c.priority}">${pri.label}</span>
+      </div>
+      <div class="sel">${esc(truncate(c.selector,90))}</div>
       <div class="txt">${esc(c.text)}</div>
       <div class="meta">
-        <span>&lt;${esc(c.tag)}&gt;</span>
-        ${c.author?`<span>· ${esc(c.author)}</span>`:""}
+        ${c.author?`<span>${esc(c.author)}</span>`:""}
         <span>${new Date(c.ts).toLocaleString("de-DE")}</span>
       </div>
-    </div>`).join("");
+    </div>`;
+  }).join("");
+
   $$("[data-del]", list).forEach(b=>b.addEventListener("click", e=>{
     e.stopPropagation();
     const id = b.dataset.del;
-    STATE.comments = STATE.comments.filter(c=>c.id!==id);
+    STATE.comments = STATE.comments.filter(x=>x.id!==id);
     saveComments(STATE.src, STATE.comments);
-    renderList(); refreshFrameBadges();
+    renderAll(); refreshFrameBadges();
   }));
-  $$(".item", list).forEach(it=>it.addEventListener("click", ()=>{
-    const id = it.dataset.id;
-    const c = STATE.comments.find(x=>x.id===id);
+  $$("[data-edit]", list).forEach(b=>b.addEventListener("click", e=>{
+    e.stopPropagation();
+    const c = STATE.comments.find(x=>x.id===b.dataset.edit);
+    if(c) openCommentModal(null, c);
+  }));
+  $$(".item", list).forEach(it => it.addEventListener("click", ()=>{
+    const c = STATE.comments.find(x=>x.id===it.dataset.id);
     if(!c) return;
     scrollToSelector(c.selector);
     $$(".item", list).forEach(x=>x.classList.remove("active"));
@@ -540,38 +982,181 @@ function renderList(){
 
 function scrollToSelector(sel){
   const doc = STATE.frameDoc; if(!doc) return;
-  let el;
-  try{ el = doc.querySelector(sel); }catch(e){ el=null; }
-  if(!el){ toast("Element nicht mehr im DOM gefunden."); return; }
+  let el; try{ el = doc.querySelector(sel); }catch(e){ el=null; }
+  if(!el){ toast("Element nicht mehr im DOM."); return; }
   el.scrollIntoView({behavior:"smooth", block:"center"});
   el.animate([
     {boxShadow:"0 0 0 0 rgba(124,92,255,.9)"},
-    {boxShadow:"0 0 0 12px rgba(124,92,255,0)"}
-  ], {duration:800});
+    {boxShadow:"0 0 0 14px rgba(124,92,255,0)"}
+  ], {duration:900});
 }
 
-// ---------- Markdown export ----------
+// ============ Coach Mark ============
+function showCoachMark(){
+  const w = document.createElement("div");
+  w.className = "coach";
+  w.innerHTML = `
+    <div class="card">
+      <div style="font-size:32px;margin-bottom:8px">👋</div>
+      <h3>So gibst du Feedback</h3>
+      <p>Kein Signup, keine Konten. Nur klicken.</p>
+      <div class="steps">
+        <div>
+          <div class="icon">🖱️</div>
+          <h4>Klick auf ein Element</h4>
+          <p>Was auffällt: draufklicken. Selector wird automatisch erkannt.</p>
+        </div>
+        <div>
+          <div class="icon">🏷️</div>
+          <h4>Kategorisieren</h4>
+          <p>Bug? Feature-Wunsch? Design-Kritik? Ein Klick.</p>
+        </div>
+        <div>
+          <div class="icon">📤</div>
+          <h4>Exportieren &amp; senden</h4>
+          <p>Am Ende: Markdown-Datei runterladen und zurück an den Owner.</p>
+        </div>
+      </div>
+      <button class="primary" id="coach-ok">Los geht's</button>
+    </div>`;
+  document.body.appendChild(w);
+  $("#coach-ok", w).onclick = ()=>{ setSeenCoach(); w.remove(); };
+  w.addEventListener("click", e=>{ if(e.target===w){ setSeenCoach(); w.remove(); }});
+}
+
+// ============ Presentation Mode ============
+function openPresentation(){
+  if(!STATE.comments.length){ toast("Keine Kommentare zum Präsentieren."); return; }
+  let idx = 0;
+  const w = document.createElement("div");
+  w.className = "present";
+  w.innerHTML = `
+    <div class="present-top">
+      <span class="title">🎬 Feedback-Review</span>
+      <span class="counter"><span id="p-i">1</span> / ${STATE.comments.length}</span>
+      <button class="tiny" id="p-close">Schließen (Esc)</button>
+    </div>
+    <div class="present-body">
+      <div class="present-view">
+        <iframe id="p-frame" sandbox="allow-same-origin allow-scripts"></iframe>
+      </div>
+      <div class="present-detail" id="p-detail"></div>
+    </div>
+    <div class="present-bot">
+      <button id="p-prev">← Zurück</button>
+      <div class="dots" id="p-dots"></div>
+      <button class="primary" id="p-next">Weiter →</button>
+    </div>`;
+  document.body.appendChild(w);
+
+  const pframe = $("#p-frame", w);
+  // Re-use the loaded HTML from the main iframe
+  const mainFrame = $("#frame");
+  pframe.srcdoc = mainFrame.srcdoc;
+
+  const render = ()=>{
+    const c = STATE.comments[idx];
+    $("#p-i", w).textContent = idx+1;
+    const cat = CAT_MAP[c.category]||CAT_MAP.feature;
+    const pri = PRI_MAP[c.priority]||PRI_MAP.could;
+    $("#p-detail", w).innerHTML = `
+      <div class="badges">
+        <span class="cat" style="background:${catColorVar(c.category)}22;color:${catColorVar(c.category)}">${cat.emoji} ${cat.label}</span>
+        <span class="prio" style="border:1px solid var(--line);color:var(--fg-2);padding:4px 12px;border-radius:99px;font-size:12px">${pri.label}</span>
+      </div>
+      <h2>Kommentar ${idx+1}</h2>
+      <div class="qtext">${esc(c.text)}</div>
+      <div class="snipwrap">
+        <label>Element</label>
+        <code>${esc(c.snippet)}</code>
+      </div>
+      <div class="snipwrap">
+        <label>CSS-Selector</label>
+        <code>${esc(c.selector)}</code>
+      </div>
+      <div class="meta">
+        ${c.author?`Von <b>${esc(c.author)}</b> · `:""}${new Date(c.ts).toLocaleString("de-DE")}
+      </div>
+    `;
+    $("#p-dots", w).innerHTML = STATE.comments.map((_,i)=>`<span class="${i===idx?"on":""}"></span>`).join("");
+
+    // highlight in iframe
+    const doc = pframe.contentDocument;
+    if(doc){
+      $$(".__pv_hi", doc).forEach(el=>{ el.classList.remove("__pv_hi"); el.style.removeProperty("outline"); el.style.removeProperty("outline-offset"); });
+      let el; try{ el = doc.querySelector(c.selector); }catch(e){ el=null; }
+      if(el){
+        el.classList.add("__pv_hi");
+        el.style.outline = `3px solid ${catColorVar(c.category)}`;
+        el.style.outlineOffset = "3px";
+        el.scrollIntoView({behavior:"smooth", block:"center"});
+      }
+    }
+  };
+
+  pframe.onload = ()=>{
+    const doc = pframe.contentDocument;
+    if(doc){
+      // Prevent interaction inside presentation iframe
+      doc.addEventListener("click", e=>{ e.preventDefault(); e.stopPropagation(); }, true);
+      doc.addEventListener("submit", e=>e.preventDefault(), true);
+    }
+    render();
+  };
+
+  const close = ()=>{ w.remove(); document.removeEventListener("keydown", onKey, true); };
+  const onKey = e=>{
+    if(e.key==="Escape"){ close(); }
+    else if(e.key==="ArrowRight" || e.key==="ArrowDown" || e.key===" "){ e.preventDefault(); if(idx<STATE.comments.length-1){ idx++; render(); } }
+    else if(e.key==="ArrowLeft" || e.key==="ArrowUp"){ e.preventDefault(); if(idx>0){ idx--; render(); } }
+  };
+  document.addEventListener("keydown", onKey, true);
+  $("#p-close", w).onclick = close;
+  $("#p-next", w).onclick = ()=>{ if(idx<STATE.comments.length-1){ idx++; render(); } };
+  $("#p-prev", w).onclick = ()=>{ if(idx>0){ idx--; render(); } };
+}
+
+// ============ Markdown Export ============
 function buildMarkdown(){
   const src = STATE.src, cs = STATE.comments;
   const now = new Date().toLocaleString("de-DE");
+  const priOrder = { must:0, should:1, could:2, nice:3 };
+  const sorted = [...cs].sort((a,b)=>(priOrder[a.priority]??9)-(priOrder[b.priority]??9));
   let md = `# Feedback zu ${src}\n\n`;
-  md += `> Gesammeltes Feedback aus VibeFeedback (${cs.length} Kommentar${cs.length===1?"":"e"}, exportiert ${now}).\n`;
-  md += `> Verwende diese Liste als Prompt-Grundlage: jeder Eintrag enthält Selector + HTML-Auszug + Feedback-Text.\n\n`;
-  md += `---\n\n`;
-  cs.forEach((c,i)=>{
-    md += `## ${i+1}. \`<${c.tag}>\`\n\n`;
-    md += `- **CSS-Selector:** \`${c.selector}\`\n`;
-    if(c.author) md += `- **Von:** ${c.author}\n`;
-    md += `- **Zeitstempel:** ${new Date(c.ts).toLocaleString("de-DE")}\n\n`;
-    md += `**Element:**\n\n\`\`\`html\n${c.snippet}\n\`\`\`\n\n`;
-    md += `**Feedback:**\n\n${c.text.split("\n").map(l=>"> "+l).join("\n")}\n\n`;
-    md += `---\n\n`;
+  md += `> Gesammeltes Feedback aus VibeFeedback — ${cs.length} Kommentar${cs.length===1?"":"e"}, exportiert ${now}.\n`;
+  md += `> Nach Priorität sortiert. Verwende diesen Markdown als Prompt-Grundlage für die nächste Iteration.\n\n`;
+
+  const byCat = {};
+  CATEGORIES.forEach(k=>byCat[k.id]=[]);
+  sorted.forEach(c=>{ (byCat[c.category]||(byCat[c.category]=[])).push(c); });
+
+  const priCount = {};
+  PRIORITIES.forEach(p=>priCount[p.id]=0);
+  cs.forEach(c=>{ if(priCount[c.priority]!==undefined) priCount[c.priority]++; });
+  md += `**Übersicht:** ` + CATEGORIES.filter(k=>byCat[k.id]?.length).map(k=>`${k.emoji} ${byCat[k.id].length} ${k.label}`).join(" · ") + `\n`;
+  md += `**Prioritäten:** ` + PRIORITIES.filter(p=>priCount[p.id]).map(p=>`${priCount[p.id]} ${p.label}`).join(" · ") + `\n\n---\n\n`;
+
+  CATEGORIES.forEach(cat=>{
+    const list = byCat[cat.id]||[];
+    if(!list.length) return;
+    md += `## ${cat.emoji} ${cat.label} (${list.length})\n\n`;
+    list.forEach((c,i)=>{
+      const pri = PRI_MAP[c.priority]||PRI_MAP.could;
+      md += `### ${i+1}. \`<${c.tag}>\` — Priorität: ${pri.label}\n\n`;
+      md += `- **CSS-Selector:** \`${c.selector}\`\n`;
+      if(c.author) md += `- **Von:** ${c.author}\n`;
+      md += `- **Zeitstempel:** ${new Date(c.ts).toLocaleString("de-DE")}\n\n`;
+      md += `**Element:**\n\n\`\`\`html\n${c.snippet}\n\`\`\`\n\n`;
+      md += `**Feedback:**\n\n${c.text.split("\n").map(l=>"> "+l).join("\n")}\n\n---\n\n`;
+    });
   });
+
   if(!cs.length) md += `_Noch keine Kommentare vorhanden._\n`;
   return md;
 }
 
 async function exportMarkdown(copyOnly){
+  if(!STATE.comments.length){ toast("Keine Kommentare zum Exportieren."); return; }
   const md = buildMarkdown();
   if(copyOnly){
     try{ await navigator.clipboard.writeText(md); toast("Markdown in Zwischenablage."); }
@@ -585,15 +1170,15 @@ async function exportMarkdown(copyOnly){
   a.href = url; a.download = `vibefeedback-${stamp}.md`;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(()=>URL.revokeObjectURL(url), 1000);
+  toast("Markdown heruntergeladen.");
 }
 
-// ---------- Router ----------
+// ============ Router ============
 (function main(){
   const params = new URLSearchParams(location.search);
   const src = params.get("src");
   const owner = params.get("owner")==="1";
-  if(src){ initApp(src, owner); }
-  else { initSetup(); }
+  if(src){ initApp(src, owner); } else { initLanding(); }
 })();
 </script>
 </body>

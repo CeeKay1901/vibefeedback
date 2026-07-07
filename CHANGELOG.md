@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.2.0 — 2026-07-07 — Präsentations-Release
+
+**Landing:** komplettes Redesign — Hero, Feature-Cards, Mock-Preview, Workflow-Flow, Demo-Card. Gradient-Backdrops, hover-lift, glasmorphism-Modal.
+
+**Kommentar-Kategorien:** Bug, Feature, Design, Copy, Frage, Lob — jede mit Emoji + Farbe. Wählbar im Modal per Chip.
+
+**Priorität:** Muss / Sollte / Könnte / Nice — pro Kommentar.
+
+**Sidebar:**
+- Live-Statistik (Muss/Sollte-Zähler farbig)
+- Filter-Chips nach Kategorie mit Counts
+- Kommentar-Items mit farbigem Left-Border pro Kategorie
+- Edit-Button pro Kommentar
+- Hover-only Actions (weniger visuelles Rauschen)
+
+**Iframe-Badges:** Kategorie-Emoji + Nummer statt nur Nummer. Farbe folgt der Kategorie.
+
+**Presentation-Mode (🎬):** Vollbild-Slideshow, links das Element im Iframe (auto-scrolled, farb-highlighted), rechts der Kommentar in groß mit Kategorie-Badge + Priorität. Navigation per Pfeiltasten, Space, Esc.
+
+**Onboarding-Coach-Mark:** Erste Öffnung im Feedback-Modus zeigt 3-Schritte-Erklärung.
+
+**Kommentar-Bearbeiten:** ✎-Button pro Item.
+
+**Markdown-Export:** nach Kategorie gruppiert, nach Priorität sortiert, mit Übersichts-Header + Prioritäten-Zusammenfassung.
+
+**Datenmigration:** v1-Kommentare werden automatisch mit Default-Kategorie/Priorität in v2 überführt.
+
 ## 0.1.2 — 2026-07-07 — Iter 2
 
 - CORS-Precheck bereits im Setup-View (fetch-HEAD) mit Content-Type-Warnung
