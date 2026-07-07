@@ -166,6 +166,15 @@ textarea{resize:vertical;min-height:110px;line-height:1.5}
 .topbar .role{padding:4px 11px;border-radius:99px;font-size:11px;font-weight:600;border:1px solid var(--line);background:var(--panel-2)}
 .topbar .role.commenter{color:var(--accent-2);border-color:rgba(61,220,151,.4);background:rgba(61,220,151,.08)}
 .topbar .role.owner{color:var(--warn);border-color:rgba(255,184,77,.4);background:rgba(255,184,77,.08)}
+.precision-toggle{display:inline-flex;align-items:center;gap:8px;padding:5px 11px;border-radius:99px;border:1px solid var(--line);background:var(--panel-2);cursor:pointer;user-select:none;font-size:12px;transition:all .15s}
+.precision-toggle:hover{border-color:var(--line-2);background:var(--panel-3)}
+.precision-toggle input{position:absolute;opacity:0;pointer-events:none}
+.precision-toggle .slider{width:26px;height:14px;background:var(--panel-3);border-radius:99px;position:relative;transition:background .15s;border:1px solid var(--line)}
+.precision-toggle .slider::after{content:"";position:absolute;left:1px;top:1px;width:10px;height:10px;background:var(--fg);border-radius:99px;transition:transform .18s cubic-bezier(.4,0,.2,1)}
+.precision-toggle input:checked ~ .slider{background:var(--accent);border-color:var(--accent)}
+.precision-toggle input:checked ~ .slider::after{transform:translateX(12px)}
+.precision-toggle .lbl{color:var(--fg-2);font-weight:500}
+.precision-toggle input:checked ~ .lbl{color:var(--accent-2)}
 
 .canvas{position:relative;background:#f6f7fa;overflow:hidden}
 .canvas iframe{width:100%;height:100%;border:0;background:#fff;display:block}
@@ -381,9 +390,19 @@ textarea{resize:vertical;min-height:110px;line-height:1.5}
           <p>Führe durch das gesammelte Feedback wie durch eine Slideshow. Perfekt für Team-Reviews.</p>
         </div>
         <div class="feat-card">
+          <div class="fi">🎯</div>
+          <h3>Präzisionsmodus</h3>
+          <p>Ein Toggle zeigt Tester beim Hover Rolle, Größe und Text des Elements — damit die Referenz stimmt.</p>
+        </div>
+        <div class="feat-card">
           <div class="fi">🔍</div>
           <h3>Filterbar</h3>
           <p>Filter nach Kategorie mit Live-Counts. Ein Klick, und du siehst nur die Bugs. Oder nur das Lob.</p>
+        </div>
+        <div class="feat-card">
+          <div class="fi">🧠</div>
+          <h3>LLM-freundlicher Export</h3>
+          <p>Markdown enthält Element-Rolle, Position, Styles, Kontext-Chain — der Prompt weiß genau, wo er hinschauen muss.</p>
         </div>
       </div>
     </section>
@@ -460,6 +479,9 @@ textarea{resize:vertical;min-height:110px;line-height:1.5}
   <div class="topbar">
     <div class="brand"><div class="mark">V</div><span>VibeFeedback</span></div>
     <span class="src" id="topbar-src"></span>
+    <label class="precision-toggle" title="Präzisionsmodus: Zeigt Details zum Hover-Element">
+      <input type="checkbox" id="tgl-precision"><span class="slider"></span><span class="lbl">🎯 Präzision</span>
+    </label>
     <span class="role" id="topbar-role">Feedback</span>
     <button id="btn-present" class="tiny" title="Presentation Mode">🎬 Präsentieren</button>
     <button id="btn-back" class="ghost tiny">Neu</button>
@@ -527,23 +549,133 @@ const toast = (msg,ms=2200) => {
 
 function cssPath(el){
   if(!el || el.nodeType!==1) return "";
-  const parts = [];
-  while(el && el.nodeType===1 && el.tagName.toLowerCase()!=="html"){
-    let sel = el.tagName.toLowerCase();
-    if(el.id){ sel += "#"+CSS.escape(el.id); parts.unshift(sel); break; }
-    const parent = el.parentNode;
-    if(parent){
-      const sibs = [...parent.children].filter(c=>c.tagName===el.tagName);
-      if(sibs.length>1) sel += `:nth-of-type(${sibs.indexOf(el)+1})`;
+  const doc = el.ownerDocument;
+  const isUnique = s => { try{ return doc.querySelectorAll(s).length === 1; }catch(e){ return false; } };
+  const cleanClasses = n => (typeof n.className === "string" ? n.className : "")
+    .trim().split(/\s+/).filter(c => c && !c.startsWith("__vf_") && !c.startsWith("__pv_"));
+  const partFor = n => {
+    if(!n || n.nodeType!==1) return "";
+    if(n.id){
+      const s = "#" + CSS.escape(n.id);
+      if(isUnique(s)) return s;
     }
-    parts.unshift(sel);
-    el = el.parentNode;
+    const tid = n.getAttribute && (n.getAttribute("data-testid") || n.getAttribute("data-test-id") || n.getAttribute("data-test"));
+    if(tid){
+      const s = `[data-testid="${CSS.escape(tid)}"]`;
+      if(isUnique(s)) return s;
+    }
+    let sel = n.tagName.toLowerCase();
+    const classes = cleanClasses(n).slice(0,3);
+    if(classes.length) sel += "." + classes.map(c => CSS.escape(c)).join(".");
+    if(isUnique(sel)) return sel;
+    const parent = n.parentNode;
+    if(parent){
+      const sibs = [...parent.children].filter(c => c.tagName === n.tagName);
+      if(sibs.length > 1) sel += `:nth-of-type(${sibs.indexOf(n)+1})`;
+    }
+    return sel;
+  };
+
+  const parts = [];
+  let cur = el;
+  while(cur && cur.nodeType===1 && cur.tagName.toLowerCase()!=="html"){
+    parts.unshift(partFor(cur));
+    if(isUnique(parts.join(" > "))) return parts.join(" > ");
+    cur = cur.parentNode;
   }
   return parts.join(" > ");
 }
+
 function shortHtml(el){
-  try{ return truncate(el.cloneNode(true).outerHTML.replace(/\s+/g," ").trim(), 400); }
+  try{
+    const clone = el.cloneNode(true);
+    // strip our own instrumentation before serializing
+    clone.querySelectorAll?.(".__vf_badge, .__vf_hover, .__vf_marked, .__vf_precise, .__pv_hi, .__vf_infobox").forEach(n => n.remove());
+    clone.classList?.remove("__vf_hover","__vf_marked","__vf_precise","__pv_hi");
+    return truncate(clone.outerHTML.replace(/\s+/g," ").trim(), 400);
+  }
   catch(e){ return "[unbekannt]"; }
+}
+
+// Semantic role hint — helps LLMs classify what the element *does*
+function implicitRole(el){
+  const t = el.tagName.toLowerCase();
+  if(t==="a" && el.hasAttribute("href")) return "link";
+  if(t==="button" || (t==="input" && ["button","submit","reset"].includes(el.type))) return "button";
+  if(t==="input"){ return "input:" + (el.type||"text"); }
+  if(t==="textarea") return "textarea";
+  if(t==="select") return "select";
+  if(t==="img") return "image";
+  if(t==="svg") return "graphic";
+  if(/^h[1-6]$/.test(t)) return "heading:"+t;
+  if(t==="nav") return "navigation";
+  if(t==="header") return "banner";
+  if(t==="footer") return "contentinfo";
+  if(t==="main") return "main";
+  if(t==="section") return "section";
+  if(t==="article") return "article";
+  if(t==="form") return "form";
+  if(t==="label") return "label";
+  if(t==="li") return "listitem";
+  if(t==="ul" || t==="ol") return "list";
+  if(t==="p") return "paragraph";
+  return t;
+}
+
+// Extract rich, LLM-friendly metadata about the picked element
+function elementInfo(el){
+  if(!el || el.nodeType!==1) return null;
+  const doc = el.ownerDocument;
+  const win = doc.defaultView;
+  const rect = el.getBoundingClientRect();
+  const cs = win.getComputedStyle(el);
+
+  const ancestors = [];
+  let p = el.parentElement;
+  for(let i=0; i<6 && p && p.tagName.toLowerCase()!=="html"; i++, p=p.parentElement){
+    const tag = p.tagName.toLowerCase();
+    const id = p.id ? "#"+p.id : "";
+    const cls = (typeof p.className==="string"?p.className:"").trim().split(/\s+/).filter(c=>c && !c.startsWith("__vf_") && !c.startsWith("__pv_")).slice(0,2);
+    ancestors.unshift(tag + id + (cls.length?"."+cls.join("."):""));
+  }
+  const classes = (typeof el.className==="string"?el.className:"").trim().split(/\s+/).filter(c=>c && !c.startsWith("__vf_") && !c.startsWith("__pv_"));
+  const text = (el.innerText||el.textContent||"").trim().replace(/\s+/g," ").slice(0,220) || null;
+
+  const vw = win.innerWidth, vh = win.innerHeight;
+  const visible = rect.width>0 && rect.height>0 && cs.visibility!=="hidden" && cs.display!=="none" && parseFloat(cs.opacity)>0;
+  const inViewport = rect.bottom>0 && rect.top<vh && rect.right>0 && rect.left<vw;
+
+  return {
+    role: implicitRole(el),
+    id: el.id || null,
+    classes,
+    text,
+    attrs: {
+      href: el.getAttribute?.("href") || null,
+      src: el.getAttribute?.("src") || null,
+      alt: el.getAttribute?.("alt") || null,
+      title: el.getAttribute?.("title") || null,
+      placeholder: el.getAttribute?.("placeholder") || null,
+      value: (el.tagName==="INPUT"||el.tagName==="TEXTAREA") ? (el.value||null) : null,
+      type: el.getAttribute?.("type") || null,
+      ariaLabel: el.getAttribute?.("aria-label") || null,
+      dataTestid: el.getAttribute?.("data-testid") || el.getAttribute?.("data-test-id") || null,
+    },
+    rect: {
+      x: Math.round(rect.x), y: Math.round(rect.y),
+      w: Math.round(rect.width), h: Math.round(rect.height),
+      viewport: inViewport ? (rect.top < vh*0.5 ? "above-fold" : "below-fold-but-in-view") : "off-screen",
+      visible
+    },
+    style: {
+      color: cs.color, backgroundColor: cs.backgroundColor,
+      fontSize: cs.fontSize, fontWeight: cs.fontWeight, fontFamily: cs.fontFamily.split(",")[0].replace(/["']/g,""),
+      display: cs.display, position: cs.position,
+      borderRadius: cs.borderRadius
+    },
+    ancestors,
+    docTitle: doc.title || null
+  };
 }
 
 // ============ Storage ============
@@ -572,6 +704,9 @@ const setAuthor = v => { try{ localStorage.setItem(AUTHOR_KEY, v||""); }catch(e)
 const COACH_KEY = "vibefeedback:v2:coach-seen";
 const seenCoach = ()=> { try{ return localStorage.getItem(COACH_KEY)==="1"; }catch(e){ return true; } };
 const setSeenCoach = ()=> { try{ localStorage.setItem(COACH_KEY,"1"); }catch(e){} };
+const PRECISION_KEY = "vibefeedback:v2:precision";
+const getPrecision = ()=> { try{ return localStorage.getItem(PRECISION_KEY)==="1"; }catch(e){ return false; } };
+const setPrecision = v => { try{ localStorage.setItem(PRECISION_KEY, v?"1":"0"); }catch(e){} };
 
 // ============ Setup View ============
 function initLanding(){
@@ -629,7 +764,7 @@ function initLanding(){
 }
 
 // ============ App View ============
-const STATE = { src:"", isOwner:false, comments:[], filter:"all", frameDoc:null };
+const STATE = { src:"", isOwner:false, comments:[], filter:"all", frameDoc:null, precision:false, frameInfoBox:null };
 
 async function initApp(src, isOwner){
   $("#view-app").classList.remove("hidden");
@@ -646,6 +781,16 @@ async function initApp(src, isOwner){
   $("#btn-export").onclick = ()=> exportMarkdown(false);
   $("#btn-copy-md").onclick = ()=> exportMarkdown(true);
   $("#btn-present").onclick = ()=> openPresentation();
+
+  STATE.precision = getPrecision();
+  const tgl = $("#tgl-precision");
+  tgl.checked = STATE.precision;
+  tgl.addEventListener("change", ()=>{
+    STATE.precision = tgl.checked;
+    setPrecision(STATE.precision);
+    applyPrecisionState();
+    toast(STATE.precision ? "Präzisionsmodus aktiv." : "Präzisionsmodus aus.");
+  });
   $("#btn-clear").onclick = ()=>{
     if(!STATE.comments.length){ toast("Nichts zu löschen."); return; }
     if(confirm("Alle Kommentare unwiderruflich löschen?")){
@@ -723,30 +868,88 @@ function hookFrame(doc){
   STATE.frameDoc = doc;
   const style = doc.createElement("style");
   style.textContent = `
-    .__vf_hover{outline:2px dashed #7c5cff !important;outline-offset:2px;cursor:crosshair!important}
+    .__vf_hover{outline:2px dashed #7c5cff !important;outline-offset:2px;cursor:crosshair!important;transition:outline-color .1s}
+    .__vf_hover.__vf_precise{outline:3px solid #7c5cff !important;outline-offset:2px;box-shadow:0 0 0 6px rgba(124,92,255,.18),0 0 30px rgba(124,92,255,.35) !important}
     .__vf_marked{outline:2px solid var(--vf-c, #3ddc97) !important;outline-offset:1px}
     .__vf_badge{position:absolute;top:-11px;left:-11px;background:var(--vf-c, #3ddc97);color:#0a0c12;border-radius:99px;
       min-width:22px;height:22px;padding:0 5px;font:600 11px system-ui,sans-serif;display:inline-flex;align-items:center;justify-content:center;gap:3px;z-index:2147483647;
       pointer-events:none;box-shadow:0 2px 6px rgba(0,0,0,.35)}
+    .__vf_infobox{position:fixed;background:rgba(15,18,27,.96);color:#eef1f8;border:1px solid #2a3145;border-radius:8px;
+      padding:8px 10px;font:12px/1.4 -apple-system,system-ui,sans-serif;pointer-events:none;z-index:2147483646;
+      max-width:320px;box-shadow:0 8px 24px rgba(0,0,0,.5);backdrop-filter:blur(4px)}
+    .__vf_infobox .row{display:flex;gap:8px;align-items:baseline;margin-top:2px}
+    .__vf_infobox .k{color:#8892a6;font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;min-width:52px}
+    .__vf_infobox .v{color:#eef1f8;font-family:ui-monospace,monospace;font-size:11.5px;word-break:break-word}
+    .__vf_infobox .tag{color:#3ddc97;font-weight:700;font-size:13px}
+    .__vf_infobox .id{color:#ffb84d}
+    .__vf_infobox .cls{color:#7c5cff}
+    .__vf_infobox .txt{color:#c6cce0;font-style:italic;font-size:11.5px;margin-top:4px;padding-top:4px;border-top:1px solid #2a3145}
   `;
   doc.head && doc.head.appendChild(style);
 
+  // Info-Overlay (nur bei Precision-Mode)
+  const info = doc.createElement("div");
+  info.className = "__vf_infobox";
+  info.style.display = "none";
+  doc.body && doc.body.appendChild(info);
+
+  const updateInfoPos = (e) => {
+    const pad = 14, w = info.offsetWidth || 200, h = info.offsetHeight || 60;
+    let x = e.clientX + pad, y = e.clientY + pad;
+    if(x + w > doc.defaultView.innerWidth) x = e.clientX - w - pad;
+    if(y + h > doc.defaultView.innerHeight) y = e.clientY - h - pad;
+    info.style.left = Math.max(4, x) + "px";
+    info.style.top  = Math.max(4, y) + "px";
+  };
+  const fillInfo = (el) => {
+    const inf = elementInfo(el);
+    if(!inf){ info.style.display="none"; return; }
+    const tag = el.tagName.toLowerCase();
+    const rows = [];
+    rows.push(`<div><span class="tag">&lt;${tag}&gt;</span>${inf.id?` <span class="id">#${esc(inf.id)}</span>`:""}${inf.classes.length?` <span class="cls">.${inf.classes.slice(0,3).map(esc).join(".")}</span>`:""}</div>`);
+    rows.push(`<div class="row"><span class="k">Rolle</span><span class="v">${esc(inf.role)}</span></div>`);
+    rows.push(`<div class="row"><span class="k">Größe</span><span class="v">${inf.rect.w}×${inf.rect.h} px · ${inf.rect.viewport}</span></div>`);
+    if(inf.attrs.href) rows.push(`<div class="row"><span class="k">Href</span><span class="v">${esc(truncate(inf.attrs.href,60))}</span></div>`);
+    if(inf.attrs.src) rows.push(`<div class="row"><span class="k">Src</span><span class="v">${esc(truncate(inf.attrs.src,60))}</span></div>`);
+    if(inf.attrs.ariaLabel) rows.push(`<div class="row"><span class="k">Aria</span><span class="v">${esc(inf.attrs.ariaLabel)}</span></div>`);
+    if(inf.text) rows.push(`<div class="txt">"${esc(truncate(inf.text,110))}"</div>`);
+    info.innerHTML = rows.join("");
+  };
+
   let hovered = null;
   doc.addEventListener("mouseover", e=>{
-    if(hovered) hovered.classList.remove("__vf_hover");
+    if(hovered) hovered.classList.remove("__vf_hover","__vf_precise");
     hovered = e.target;
-    if(hovered && hovered.nodeType===1) hovered.classList.add("__vf_hover");
+    if(hovered && hovered.nodeType===1){
+      hovered.classList.add("__vf_hover");
+      if(STATE.precision){
+        hovered.classList.add("__vf_precise");
+        fillInfo(hovered);
+        info.style.display = "block";
+      }
+    }
+  }, true);
+  doc.addEventListener("mousemove", e=>{
+    if(STATE.precision && info.style.display !== "none") updateInfoPos(e);
   }, true);
   doc.addEventListener("mouseout", e=>{
-    if(e.target && e.target.classList) e.target.classList.remove("__vf_hover");
+    if(e.target && e.target.classList) e.target.classList.remove("__vf_hover","__vf_precise");
+    info.style.display = "none";
   }, true);
   doc.addEventListener("click", e=>{
     e.preventDefault(); e.stopPropagation();
+    info.style.display = "none";
     openCommentModal(e.target);
   }, true);
   doc.addEventListener("submit", e=>{ e.preventDefault(); }, true);
 
+  STATE.frameInfoBox = info;
   refreshFrameBadges();
+}
+
+function applyPrecisionState(){
+  const doc = STATE.frameDoc; if(!doc) return;
+  if(!STATE.precision && STATE.frameInfoBox) STATE.frameInfoBox.style.display = "none";
 }
 
 function catColorVar(catId){
@@ -781,12 +984,13 @@ function refreshFrameBadges(){
 function openCommentModal(el, existing){
   const isEdit = !!existing;
   if(!el && !isEdit) return;
-  let selector, snippet, tag;
+  let selector, snippet, tag, info;
   if(isEdit){
-    selector = existing.selector; snippet = existing.snippet; tag = existing.tag;
+    selector = existing.selector; snippet = existing.snippet; tag = existing.tag; info = existing.info || null;
   }else{
     if(el.nodeType!==1) return;
     selector = cssPath(el); snippet = shortHtml(el); tag = el.tagName.toLowerCase();
+    info = elementInfo(el);
   }
 
   let currentCat = existing?.category || "feature";
@@ -794,12 +998,20 @@ function openCommentModal(el, existing){
 
   const wrap = document.createElement("div");
   wrap.className = "modal-backdrop";
+  const infoBits = info ? [
+    info.role && info.role !== tag ? `Rolle: <b>${esc(info.role)}</b>` : "",
+    info.text ? `Text: <span style="color:var(--fg)">"${esc(truncate(info.text,80))}"</span>` : "",
+    info.rect ? `${info.rect.w}×${info.rect.h}px · ${info.rect.viewport}` : "",
+    info.attrs.href ? `→ ${esc(truncate(info.attrs.href,50))}` : ""
+  ].filter(Boolean).join(" &nbsp;·&nbsp; ") : "";
+
   wrap.innerHTML = `
     <div class="modal" role="dialog" aria-modal="true">
       <h3>${isEdit?"Kommentar bearbeiten":"Kommentar"} <span class="tag">&lt;${esc(tag)}&gt;</span></h3>
       <div class="field">
         <label>Element (Selector)</label>
         <div class="snip"><code>${esc(selector)}</code></div>
+        ${infoBits ? `<div class="muted" style="font-size:11.5px;margin-top:-8px;margin-bottom:12px;line-height:1.5">${infoBits}</div>` : ""}
       </div>
       <div class="field">
         <label>Kategorie</label>
@@ -858,7 +1070,7 @@ function openCommentModal(el, existing){
     }else{
       STATE.comments.push({
         id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
-        selector, snippet, tag,
+        selector, snippet, tag, info,
         text: txt,
         author: author || null,
         category: currentCat,
@@ -1004,7 +1216,7 @@ function showCoachMark(){
         <div>
           <div class="icon">🖱️</div>
           <h4>Klick auf ein Element</h4>
-          <p>Was auffällt: draufklicken. Selector wird automatisch erkannt.</p>
+          <p>Was auffällt: draufklicken. Tipp: <b>🎯 Präzision</b> oben aktivieren, um beim Hover Details zu sehen.</p>
         </div>
         <div>
           <div class="icon">🏷️</div>
@@ -1145,8 +1357,37 @@ function buildMarkdown(){
       md += `### ${i+1}. \`<${c.tag}>\` — Priorität: ${pri.label}\n\n`;
       md += `- **CSS-Selector:** \`${c.selector}\`\n`;
       if(c.author) md += `- **Von:** ${c.author}\n`;
-      md += `- **Zeitstempel:** ${new Date(c.ts).toLocaleString("de-DE")}\n\n`;
-      md += `**Element:**\n\n\`\`\`html\n${c.snippet}\n\`\`\`\n\n`;
+      md += `- **Zeitstempel:** ${new Date(c.ts).toLocaleString("de-DE")}\n`;
+
+      // Element-Kontext für das LLM
+      const info = c.info;
+      if(info){
+        const contextLines = [];
+        contextLines.push(`  - Rolle: \`${info.role}\``);
+        if(info.id) contextLines.push(`  - ID: \`#${info.id}\``);
+        if(info.classes && info.classes.length) contextLines.push(`  - Klassen: \`${info.classes.map(x=>"."+x).join(" ")}\``);
+        if(info.text) contextLines.push(`  - Sichtbarer Text: "${info.text.replace(/"/g,'\\"')}"`);
+        if(info.attrs.href) contextLines.push(`  - Href: \`${info.attrs.href}\``);
+        if(info.attrs.src) contextLines.push(`  - Src: \`${info.attrs.src}\``);
+        if(info.attrs.alt) contextLines.push(`  - Alt-Text: "${info.attrs.alt}"`);
+        if(info.attrs.title) contextLines.push(`  - Title: "${info.attrs.title}"`);
+        if(info.attrs.placeholder) contextLines.push(`  - Placeholder: "${info.attrs.placeholder}"`);
+        if(info.attrs.ariaLabel) contextLines.push(`  - ARIA-Label: "${info.attrs.ariaLabel}"`);
+        if(info.attrs.dataTestid) contextLines.push(`  - data-testid: \`${info.attrs.dataTestid}\``);
+        if(info.rect) contextLines.push(`  - Position/Größe: ${info.rect.w}×${info.rect.h}px bei (${info.rect.x}, ${info.rect.y}), ${info.rect.viewport}${info.rect.visible===false?" · aktuell unsichtbar":""}`);
+        if(info.style){
+          const s = info.style;
+          contextLines.push(`  - Styling: Farbe \`${s.color}\`, Hintergrund \`${s.backgroundColor}\`, Font \`${s.fontSize} ${s.fontWeight} ${s.fontFamily}\`, Display \`${s.display}\``);
+        }
+        if(info.ancestors && info.ancestors.length){
+          contextLines.push(`  - Ancestor-Chain: \`${info.ancestors.join(" > ")}\``);
+        }
+        if(info.docTitle) contextLines.push(`  - Seitentitel: "${info.docTitle}"`);
+        if(contextLines.length){
+          md += `- **Element-Kontext:**\n${contextLines.join("\n")}\n`;
+        }
+      }
+      md += `\n**HTML-Auszug:**\n\n\`\`\`html\n${c.snippet}\n\`\`\`\n\n`;
       md += `**Feedback:**\n\n${c.text.split("\n").map(l=>"> "+l).join("\n")}\n\n---\n\n`;
     });
   });
