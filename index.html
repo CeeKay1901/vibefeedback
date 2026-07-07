@@ -218,8 +218,17 @@ function loadComments(src){
   try{ return JSON.parse(localStorage.getItem(storeKey(src))||"[]"); }catch(e){ return []; }
 }
 function saveComments(src, arr){
-  localStorage.setItem(storeKey(src), JSON.stringify(arr));
+  try{
+    localStorage.setItem(storeKey(src), JSON.stringify(arr));
+    return true;
+  }catch(e){
+    toast("Speicher voll oder blockiert — Kommentar konnte nicht persistiert werden.", 4000);
+    return false;
+  }
 }
+const AUTHOR_KEY = "vibefeedback:v1:author";
+function getAuthor(){ try{ return localStorage.getItem(AUTHOR_KEY)||""; }catch(e){ return ""; } }
+function setAuthor(v){ try{ localStorage.setItem(AUTHOR_KEY, v||""); }catch(e){} }
 
 // ---------- Setup view ----------
 function initSetup(){
@@ -408,38 +417,54 @@ function openCommentModal(el){
       <div class="snip"><code>${esc(selector)}</code></div>
       <div class="muted" style="font-size:12px">Element</div>
       <div class="snip"><code>${esc(snippet)}</code></div>
+      <label class="muted" style="font-size:12px">Von (optional)</label>
+      <input type="text" data-field="author" placeholder="Dein Name — erleichtert später die Zuordnung" style="margin-bottom:10px">
       <label class="muted" style="font-size:12px">Dein Kommentar</label>
       <textarea placeholder="Was ist dir an diesem Element aufgefallen? Was sollte anders sein?"></textarea>
       <div class="actions">
+        <span class="muted" style="font-size:11.5px;margin-right:auto">
+          <span class="badge-key">Esc</span> abbrechen
+          <span class="badge-key" style="margin-left:6px">⌘/Ctrl + ⏎</span> speichern
+        </span>
         <button class="ghost" data-act="cancel">Abbrechen</button>
         <button class="primary" data-act="save">Speichern</button>
       </div>
     </div>`;
   document.body.appendChild(wrap);
   const ta = $("textarea", wrap);
+  const authorInput = $("[data-field=author]", wrap);
+  authorInput.value = getAuthor();
   setTimeout(()=>ta.focus(), 30);
-  const close = ()=> wrap.remove();
-  wrap.addEventListener("click", e=>{ if(e.target===wrap) close(); });
-  $("[data-act=cancel]", wrap).onclick = close;
-  $("[data-act=save]", wrap).onclick = ()=>{
+  const close = ()=>{ wrap.remove(); document.removeEventListener("keydown", onKey, true); };
+  const save = ()=>{
     const txt = ta.value.trim();
-    if(!txt){ ta.focus(); return; }
+    if(!txt){ ta.focus(); toast("Kommentar darf nicht leer sein."); return; }
+    const author = authorInput.value.trim();
+    setAuthor(author);
     STATE.comments.push({
       id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
       selector, snippet, tag,
       text: txt,
+      author: author || null,
       ts: new Date().toISOString()
     });
-    saveComments(STATE.src, STATE.comments);
-    renderList();
-    refreshFrameBadges();
-    close();
-    toast("Kommentar gespeichert.");
+    if(saveComments(STATE.src, STATE.comments)){
+      renderList();
+      refreshFrameBadges();
+      close();
+      toast("Kommentar gespeichert.");
+    }else{
+      STATE.comments.pop();
+    }
   };
-  ta.addEventListener("keydown", e=>{
-    if((e.ctrlKey||e.metaKey) && e.key==="Enter") $("[data-act=save]", wrap).click();
-    if(e.key==="Escape") close();
-  });
+  const onKey = (e)=>{
+    if(e.key==="Escape"){ e.preventDefault(); close(); }
+    else if((e.ctrlKey||e.metaKey) && e.key==="Enter"){ e.preventDefault(); save(); }
+  };
+  document.addEventListener("keydown", onKey, true);
+  wrap.addEventListener("click", e=>{ if(e.target===wrap) close(); });
+  $("[data-act=cancel]", wrap).onclick = close;
+  $("[data-act=save]", wrap).onclick = save;
 }
 
 // ---------- Sidebar list ----------
@@ -458,6 +483,7 @@ function renderList(){
       <div class="txt">${esc(c.text)}</div>
       <div class="meta">
         <span>&lt;${esc(c.tag)}&gt;</span>
+        ${c.author?`<span>· ${esc(c.author)}</span>`:""}
         <span>${new Date(c.ts).toLocaleString("de-DE")}</span>
       </div>
     </div>`).join("");
@@ -501,6 +527,7 @@ function buildMarkdown(){
   cs.forEach((c,i)=>{
     md += `## ${i+1}. \`<${c.tag}>\`\n\n`;
     md += `- **CSS-Selector:** \`${c.selector}\`\n`;
+    if(c.author) md += `- **Von:** ${c.author}\n`;
     md += `- **Zeitstempel:** ${new Date(c.ts).toLocaleString("de-DE")}\n\n`;
     md += `**Element:**\n\n\`\`\`html\n${c.snippet}\n\`\`\`\n\n`;
     md += `**Feedback:**\n\n${c.text.split("\n").map(l=>"> "+l).join("\n")}\n\n`;
