@@ -175,6 +175,12 @@ textarea{resize:vertical;min-height:110px;line-height:1.5}
 .precision-toggle input:checked ~ .slider::after{transform:translateX(12px)}
 .precision-toggle .lbl{color:var(--fg-2);font-weight:500}
 .precision-toggle input:checked ~ .lbl{color:var(--accent-2)}
+.mode-toggle{display:inline-flex;border:1px solid var(--line);background:var(--panel-2);border-radius:99px;padding:3px;gap:2px;user-select:none}
+.mode-toggle button{background:transparent;border:0;color:var(--muted);padding:5px 12px;border-radius:99px;font-size:12px;cursor:pointer;font-weight:500;display:inline-flex;align-items:center;gap:5px;transition:all .15s}
+.mode-toggle button:hover{color:var(--fg)}
+.mode-toggle button.active[data-mode=comment]{background:rgba(124,92,255,.18);color:#c9baff;box-shadow:0 0 0 1px rgba(124,92,255,.4)}
+.mode-toggle button.active[data-mode=nav]{background:rgba(61,220,151,.18);color:var(--accent-2);box-shadow:0 0 0 1px rgba(61,220,151,.4)}
+body:has(.mode-toggle button[data-mode=nav].active) .canvas iframe{outline:2px solid rgba(61,220,151,.35);outline-offset:-2px}
 
 .canvas{position:relative;background:#f6f7fa;overflow:hidden}
 .canvas iframe{width:100%;height:100%;border:0;background:#fff;display:block}
@@ -325,6 +331,7 @@ textarea{resize:vertical;min-height:110px;line-height:1.5}
   .topbar .role{padding:3px 8px;font-size:10.5px}
   .precision-toggle{padding:4px 8px;gap:5px}
   .precision-toggle .lbl{font-size:11px}
+  .mode-toggle button{padding:5px 9px;font-size:11.5px}
   .topbar #btn-present{padding:5px 8px;font-size:11.5px}
   .topbar #btn-back{padding:5px 8px;font-size:11.5px}
 
@@ -371,6 +378,9 @@ textarea{resize:vertical;min-height:110px;line-height:1.5}
 @media(max-width:400px){
   /* Sehr schmal — Toggle & Präsentation als Icon */
   .precision-toggle .lbl{display:none}
+  .mode-toggle button{font-size:0;padding:6px 10px;position:relative;min-width:34px}
+  .mode-toggle button[data-mode=comment]::before{content:"💬";font-size:13px}
+  .mode-toggle button[data-mode=nav]::before{content:"🖱";font-size:13px}
   .topbar #btn-present{font-size:0;padding:6px 10px;position:relative;min-width:32px}
   .topbar #btn-present::before{content:"🎬";font-size:14px;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)}
 }
@@ -547,6 +557,10 @@ textarea{resize:vertical;min-height:110px;line-height:1.5}
   <div class="topbar">
     <div class="brand"><div class="mark">V</div><span>VibeFeedback</span></div>
     <span class="src" id="topbar-src"></span>
+    <div class="mode-toggle" id="mode-toggle" role="tablist" aria-label="Interaktionsmodus">
+      <button type="button" data-mode="comment" class="active" title="Klicks öffnen den Kommentar-Dialog">💬 Kommentieren</button>
+      <button type="button" data-mode="nav" title="Klicks navigieren die Seite normal">🖱 Navigieren</button>
+    </div>
     <label class="precision-toggle" title="Präzisionsmodus: Zeigt Details zum Hover-Element">
       <input type="checkbox" id="tgl-precision"><span class="slider"></span><span class="lbl">🎯 Präzision</span>
     </label>
@@ -832,7 +846,10 @@ function initLanding(){
 }
 
 // ============ App View ============
-const STATE = { src:"", isOwner:false, comments:[], filter:"all", frameDoc:null, precision:false, frameInfoBox:null };
+const STATE = { src:"", isOwner:false, comments:[], filter:"all", frameDoc:null, precision:false, frameInfoBox:null, mode:"comment" };
+const MODE_KEY = "vibefeedback:v2:mode";
+const getMode = ()=> { try{ const v = localStorage.getItem(MODE_KEY); return v==="nav" ? "nav" : "comment"; }catch(e){ return "comment"; } };
+const setMode = v => { try{ localStorage.setItem(MODE_KEY, v); }catch(e){} };
 
 async function initApp(src, isOwner){
   $("#view-app").classList.remove("hidden");
@@ -859,6 +876,20 @@ async function initApp(src, isOwner){
     applyPrecisionState();
     toast(STATE.precision ? "Präzisionsmodus aktiv." : "Präzisionsmodus aus.");
   });
+
+  STATE.mode = getMode();
+  const applyMode = () => {
+    $$("#mode-toggle button").forEach(b => b.classList.toggle("active", b.dataset.mode === STATE.mode));
+    applyPrecisionState();
+  };
+  $$("#mode-toggle button").forEach(b => b.addEventListener("click", ()=>{
+    if(STATE.mode === b.dataset.mode) return;
+    STATE.mode = b.dataset.mode;
+    setMode(STATE.mode);
+    applyMode();
+    toast(STATE.mode === "nav" ? "Navigationsmodus — Klicks gehen an die Seite." : "Kommentiermodus — Klicks öffnen Feedback.");
+  }));
+  applyMode();
   $("#btn-clear").onclick = ()=>{
     if(!STATE.comments.length){ toast("Nichts zu löschen."); return; }
     if(confirm("Alle Kommentare unwiderruflich löschen?")){
@@ -987,6 +1018,7 @@ function hookFrame(doc){
   let hovered = null;
   doc.addEventListener("mouseover", e=>{
     if(hovered) hovered.classList.remove("__vf_hover","__vf_precise");
+    if(STATE.mode !== "comment") return;
     hovered = e.target;
     if(hovered && hovered.nodeType===1){
       hovered.classList.add("__vf_hover");
@@ -998,18 +1030,19 @@ function hookFrame(doc){
     }
   }, true);
   doc.addEventListener("mousemove", e=>{
-    if(STATE.precision && info.style.display !== "none") updateInfoPos(e);
+    if(STATE.mode === "comment" && STATE.precision && info.style.display !== "none") updateInfoPos(e);
   }, true);
   doc.addEventListener("mouseout", e=>{
     if(e.target && e.target.classList) e.target.classList.remove("__vf_hover","__vf_precise");
     info.style.display = "none";
   }, true);
   doc.addEventListener("click", e=>{
+    if(STATE.mode !== "comment") return;
     e.preventDefault(); e.stopPropagation();
     info.style.display = "none";
     openCommentModal(e.target);
   }, true);
-  doc.addEventListener("submit", e=>{ e.preventDefault(); }, true);
+  doc.addEventListener("submit", e=>{ if(STATE.mode === "comment") e.preventDefault(); }, true);
 
   STATE.frameInfoBox = info;
   refreshFrameBadges();
@@ -1017,7 +1050,10 @@ function hookFrame(doc){
 
 function applyPrecisionState(){
   const doc = STATE.frameDoc; if(!doc) return;
-  if(!STATE.precision && STATE.frameInfoBox) STATE.frameInfoBox.style.display = "none";
+  if((!STATE.precision || STATE.mode !== "comment") && STATE.frameInfoBox) STATE.frameInfoBox.style.display = "none";
+  if(STATE.mode !== "comment"){
+    doc.querySelectorAll(".__vf_hover, .__vf_precise").forEach(n => n.classList.remove("__vf_hover","__vf_precise"));
+  }
 }
 
 function catColorVar(catId){
@@ -1284,7 +1320,7 @@ function showCoachMark(){
         <div>
           <div class="icon">🖱️</div>
           <h4>Klick auf ein Element</h4>
-          <p>Was auffällt: draufklicken. Tipp: <b>🎯 Präzision</b> oben aktivieren, um beim Hover Details zu sehen.</p>
+          <p>Was auffällt: draufklicken. Zum Navigieren (Links, Formulare) oben auf <b>🖱 Navigieren</b> umschalten.</p>
         </div>
         <div>
           <div class="icon">🏷️</div>
