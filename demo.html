@@ -3,59 +3,986 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Demo — Fiktive Landing Page</title>
+<title>Flowly — Smarter Task Flow</title>
 <style>
-  *{box-sizing:border-box}
-  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#1a1c22;background:#fafbfc;line-height:1.55}
-  header{background:linear-gradient(135deg,#6e56cf,#3ddc97);color:#fff;padding:80px 24px 100px;text-align:center}
-  header h1{margin:0 0 14px;font-size:44px;letter-spacing:-.5px}
-  header p{max-width:520px;margin:0 auto 24px;font-size:17px;opacity:.92}
-  header button{background:#fff;color:#6e56cf;border:0;padding:12px 28px;font-size:16px;font-weight:600;border-radius:99px;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.15)}
-  main{max-width:960px;margin:-40px auto 60px;padding:0 24px}
-  .features{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px;margin-bottom:40px}
-  .feat{background:#fff;border-radius:12px;padding:22px;box-shadow:0 4px 16px rgba(0,0,0,.06)}
-  .feat h3{margin:0 0 8px;font-size:17px}
-  .feat p{margin:0;color:#555;font-size:14px}
-  .cta-block{background:#fff;border-radius:14px;padding:36px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,.06)}
-  .cta-block h2{margin:0 0 12px}
-  .cta-block input{padding:12px 16px;font-size:15px;border:1px solid #ddd;border-radius:8px;width:280px;max-width:100%;margin-right:8px}
-  .cta-block button{padding:12px 22px;font-size:15px;background:#6e56cf;color:#fff;border:0;border-radius:8px;cursor:pointer;font-weight:600}
-  footer{text-align:center;color:#888;font-size:13px;padding:30px 20px 60px}
+/* ===== RESET & BASE ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --brand: #5b4fcf;
+  --brand-light: #7c6fe0;
+  --brand-dark: #3d34a0;
+  --accent: #22d3a4;
+  --text: #1a1c2e;
+  --text-muted: #6b7280;
+  --bg: #f8f9fc;
+  --surface: #ffffff;
+  --border: #e5e7eb;
+  --shadow-sm: 0 1px 4px rgba(0,0,0,.07);
+  --shadow-md: 0 4px 16px rgba(0,0,0,.09);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,.12);
+  --radius: 12px;
+  --radius-lg: 20px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --brand: #7c6fe0;
+    --brand-light: #9d93ec;
+    --brand-dark: #5b4fcf;
+    --accent: #22d3a4;
+    --text: #f0f1f8;
+    --text-muted: #9ca3af;
+    --bg: #0f1018;
+    --surface: #1a1c2e;
+    --border: #2d2f45;
+    --shadow-sm: 0 1px 4px rgba(0,0,0,.3);
+    --shadow-md: 0 4px 16px rgba(0,0,0,.35);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,.45);
+  }
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  line-height: 1.6;
+  font-size: 16px;
+}
+
+a { color: var(--brand); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+img { max-width: 100%; display: block; }
+
+/* ===== BUTTONS ===== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 11px 22px;
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: 99px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform .15s, box-shadow .15s, background .15s;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); text-decoration: none; }
+.btn-primary { background: var(--brand); color: #fff; }
+.btn-primary:hover { background: var(--brand-light); }
+.btn-ghost { background: transparent; color: var(--brand); border-color: var(--brand); }
+.btn-ghost:hover { background: var(--brand); color: #fff; }
+.btn-sm { padding: 8px 16px; font-size: 14px; }
+
+/* ===== NAV ===== */
+nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+
+.nav-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 24px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.nav-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--brand);
+  letter-spacing: -.5px;
+}
+
+.nav-logo-icon {
+  width: 32px;
+  height: 32px;
+  background: var(--brand);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  list-style: none;
+}
+
+.nav-links a {
+  color: var(--text-muted);
+  font-size: 15px;
+  font-weight: 500;
+  transition: color .15s;
+}
+.nav-links a:hover { color: var(--text); text-decoration: none; }
+
+.nav-actions { display: flex; align-items: center; gap: 10px; }
+
+/* DEMO-FEHLER: Nav-Links verschwinden bei <768px komplett ohne Hamburger-Menü */
+@media (max-width: 640px) {
+  .nav-links { display: none; }
+  .nav-actions .btn-ghost { display: none; }
+}
+
+/* ===== HERO ===== */
+.hero {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 72px 24px 64px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 48px;
+  align-items: center;
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  padding: 4px 12px;
+  border-radius: 99px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+
+.hero h1 {
+  font-size: clamp(32px, 5vw, 52px);
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -.5px;
+  margin-bottom: 18px;
+}
+
+.hero h1 span { color: var(--brand); }
+
+.hero-sub {
+  font-size: 18px;
+  color: var(--text-muted);
+  margin-bottom: 32px;
+  max-width: 480px;
+  line-height: 1.65;
+}
+
+.hero-ctas { display: flex; gap: 12px; flex-wrap: wrap; }
+
+.hero-social-proof {
+  margin-top: 28px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.avatars {
+  display: flex;
+}
+.avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--surface);
+  margin-left: -8px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--brand-light);
+}
+.avatar:first-child { margin-left: 0; }
+
+/* Mockup */
+.hero-visual {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+
+.mockup-bar {
+  background: var(--border);
+  padding: 10px 14px;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.mockup-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+}
+.mockup-dot:nth-child(1) { background: #ff5f57; }
+.mockup-dot:nth-child(2) { background: #febc2e; }
+.mockup-dot:nth-child(3) { background: #28c840; }
+
+.mockup-body { padding: 20px; }
+
+.mockup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.mockup-title {
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.mockup-tag {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-weight: 600;
+}
+.tag-blue { background: #dbeafe; color: #1d4ed8; }
+.tag-green { background: #dcfce7; color: #15803d; }
+.tag-amber { background: #fef3c7; color: #b45309; }
+
+@media (prefers-color-scheme: dark) {
+  .tag-blue { background: #1e3a5f; color: #93c5fd; }
+  .tag-green { background: #14532d; color: #86efac; }
+  .tag-amber { background: #451a03; color: #fcd34d; }
+}
+
+.task-list { display: flex; flex-direction: column; gap: 8px; }
+
+.task-item {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.task-check {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 2px solid var(--border);
+  flex-shrink: 0;
+}
+.task-check.done {
+  background: var(--brand);
+  border-color: var(--brand);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 10px;
+}
+
+.task-name { flex: 1; }
+.task-name.done { text-decoration: line-through; color: var(--text-muted); }
+
+.task-progress {
+  margin-top: 16px;
+}
+.progress-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+.progress-bar {
+  height: 6px;
+  background: var(--border);
+  border-radius: 99px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  width: 66%;
+  background: linear-gradient(90deg, var(--brand), var(--accent));
+  border-radius: 99px;
+}
+
+@media (max-width: 768px) {
+  .hero {
+    grid-template-columns: 1fr;
+    padding: 48px 24px;
+    gap: 36px;
+  }
+  .hero-visual { order: -1; }
+}
+
+/* ===== SECTION WRAPPER ===== */
+.section {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 72px 24px;
+}
+
+.section-label {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--brand);
+  margin-bottom: 12px;
+}
+
+.section-title {
+  font-size: clamp(24px, 4vw, 38px);
+  font-weight: 800;
+  letter-spacing: -.3px;
+  line-height: 1.2;
+  margin-bottom: 14px;
+}
+
+.section-sub {
+  font-size: 17px;
+  color: var(--text-muted);
+  max-width: 560px;
+  margin-bottom: 48px;
+}
+
+/* ===== FEATURES ===== */
+.features-bg {
+  background: color-mix(in srgb, var(--brand) 4%, var(--bg));
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 20px;
+}
+
+.feat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow .2s, transform .2s;
+}
+
+.feat-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.feat-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--brand) 12%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  margin-bottom: 14px;
+}
+
+.feat-card h3 {
+  font-size: 17px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+/* DEMO-FEHLER: Dieser Text ist absichtlich unklar/vage formuliert */
+.feat-card p {
+  font-size: 14px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+/* ===== PRICING ===== */
+.pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
+  max-width: 700px;
+}
+
+.pricing-card {
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  box-shadow: var(--shadow-sm);
+  position: relative;
+}
+
+.pricing-card.featured {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand) 12%, transparent), var(--shadow-md);
+}
+
+.pricing-badge {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--brand);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  padding: 3px 12px;
+  border-radius: 99px;
+}
+
+.pricing-name {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.pricing-price {
+  font-size: 42px;
+  font-weight: 800;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.pricing-price sup {
+  font-size: 22px;
+  font-weight: 600;
+  vertical-align: top;
+  margin-top: 8px;
+  display: inline-block;
+}
+
+.pricing-period {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-bottom: 24px;
+}
+
+/* DEMO-FEHLER: Feature-Liste ist bei beiden Plänen fast identisch — kein klarer Unterschied erkennbar */
+.pricing-features {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 28px;
+}
+
+.pricing-features li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.feat-check { color: var(--accent); flex-shrink: 0; margin-top: 1px; }
+.feat-cross { color: var(--text-muted); flex-shrink: 0; margin-top: 1px; opacity: .5; }
+
+/* ===== CONTACT ===== */
+.contact-bg {
+  background: color-mix(in srgb, var(--brand) 4%, var(--bg));
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.contact-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 64px;
+  align-items: start;
+}
+
+.contact-info h2 { margin-bottom: 14px; }
+
+.contact-info p {
+  color: var(--text-muted);
+  margin-bottom: 24px;
+  line-height: 1.65;
+}
+
+.contact-detail {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+.contact-form {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  box-shadow: var(--shadow-md);
+}
+
+.form-row { margin-bottom: 16px; }
+
+.form-row label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.form-row input,
+.form-row textarea,
+.form-row select {
+  width: 100%;
+  padding: 10px 14px;
+  font-size: 15px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  transition: border-color .15s;
+  font-family: inherit;
+}
+
+.form-row input:focus,
+.form-row textarea:focus,
+.form-row select:focus {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 15%, transparent);
+}
+
+.form-row textarea { resize: vertical; min-height: 100px; }
+
+.form-hint {
+  font-size: 12px;
+  /* DEMO-FEHLER: schlechter Kontrast — #b0b5c0 auf weißem/hellem Hintergrund unter WCAG AA */
+  color: #b0b5c0;
+  margin-top: 4px;
+}
+
+/* DEMO-FEHLER: Button-Text "Absenden" ist zu generisch */
+.form-submit { width: 100%; justify-content: center; border-radius: 8px; }
+
+@media (max-width: 768px) {
+  .contact-grid { grid-template-columns: 1fr; gap: 36px; }
+}
+
+/* ===== FOOTER ===== */
+footer {
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+}
+
+.footer-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 48px 24px 32px;
+}
+
+.footer-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 40px;
+  margin-bottom: 40px;
+}
+
+.footer-brand p {
+  color: var(--text-muted);
+  font-size: 14px;
+  margin-top: 10px;
+  max-width: 240px;
+  line-height: 1.65;
+}
+
+.footer-col h4 {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+}
+
+.footer-col ul {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.footer-col a {
+  color: var(--text-muted);
+  font-size: 14px;
+  transition: color .15s;
+}
+.footer-col a:hover { color: var(--text); text-decoration: none; }
+
+.footer-bottom {
+  border-top: 1px solid var(--border);
+  padding-top: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  color: var(--text-muted);
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+@media (max-width: 768px) {
+  .footer-grid { grid-template-columns: 1fr 1fr; }
+  .footer-brand { grid-column: 1 / -1; }
+}
+
+@media (max-width: 480px) {
+  .footer-grid { grid-template-columns: 1fr; }
+}
+
+/* ===== DIVIDER ===== */
+.section-divider {
+  height: 1px;
+  background: var(--border);
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+/* ===== ANNOUNCEMENT BANNER ===== */
+.banner {
+  background: var(--brand);
+  color: #fff;
+  text-align: center;
+  padding: 10px 24px;
+  font-size: 13px;
+  font-weight: 500;
+}
+.banner strong { font-weight: 700; }
+.banner a { color: #fff; font-weight: 700; text-decoration: underline; }
 </style>
 </head>
 <body>
-<header>
-  <h1>Ein Beispiel-Projekt</h1>
-  <p>Dies ist eine fiktive Landing Page, damit du das VibeFeedback-Tool ausprobieren kannst. Klick dich durch — überall wo du klickst, kannst du einen Kommentar hinterlassen.</p>
-  <button>Jetzt starten</button>
-</header>
 
-<main>
-  <section class="features">
-    <div class="feat">
-      <h3>Schnell</h3>
-      <p>Kein Backend, kein Login, direkt loslegen im Browser.</p>
-    </div>
-    <div class="feat">
-      <h3>Präzise</h3>
-      <p>Jeder Kommentar wird an ein DOM-Element gebunden — kein Rätselraten.</p>
-    </div>
-    <div class="feat">
-      <h3>Prompt-tauglich</h3>
-      <p>Export als Markdown, direkt für die nächste KI-Iteration nutzbar.</p>
-    </div>
-  </section>
+<!-- Announcement Banner -->
+<div class="banner">
+  🎉 <strong>Beta-Angebot:</strong> 3 Monate Pro kostenlos für frühe Nutzer. <a href="#pricing">Jetzt sichern →</a>
+</div>
 
-  <section class="cta-block">
-    <h2>Newsletter</h2>
-    <p>Bekomme neue PoC-Ideen frisch in dein Postfach.</p>
-    <form>
-      <input type="email" placeholder="dein@example.com">
-      <button type="submit">Abonnieren</button>
-    </form>
-  </section>
-</main>
+<!-- NAV -->
+<nav>
+  <div class="nav-inner">
+    <a href="#" class="nav-logo" style="text-decoration:none;">
+      <span class="nav-logo-icon">⚡</span>
+      Flowly
+    </a>
 
-<footer>© 2026 — Demo für VibeFeedback</footer>
+    <ul class="nav-links">
+      <li><a href="#features">Features</a></li>
+      <li><a href="#pricing">Preise</a></li>
+      <li><a href="#contact">Kontakt</a></li>
+      <li><a href="#">Blog</a></li>
+    </ul>
+
+    <div class="nav-actions">
+      <a href="#" class="btn btn-ghost btn-sm">Einloggen</a>
+      <a href="#" class="btn btn-primary btn-sm">Kostenlos starten</a>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section>
+  <div class="hero">
+    <div class="hero-content">
+      <div class="hero-badge">✦ Neu: KI-Aufgabenpriorisierung</div>
+
+      <h1>Dein Team.<br><span>Dein Flow.</span><br>Dein Tempo.</h1>
+
+      <p class="hero-sub">
+        Flowly bringt Aufgaben, Deadlines und Teamkommunikation an einen Ort — ohne den üblichen Tool-Chaos. Einfach anfangen, sofort produktiv sein.
+      </p>
+
+      <div class="hero-ctas">
+        <a href="#" class="btn btn-primary">Jetzt kostenlos testen</a>
+        <a href="#features" class="btn btn-ghost">Features ansehen</a>
+      </div>
+
+      <div class="hero-social-proof">
+        <div class="avatars">
+          <span class="avatar">😊</span>
+          <span class="avatar">🧑</span>
+          <span class="avatar">👩</span>
+          <span class="avatar">🧔</span>
+        </div>
+        <!-- DEMO-FEHLER: img ohne alt-Attribut -->
+        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1' height='1'%3E%3C/svg%3E" width="0" height="0">
+        <span>Bereits <strong>2.400+ Teams</strong> vertrauen Flowly</span>
+      </div>
+    </div>
+
+    <!-- App Mockup -->
+    <div class="hero-visual">
+      <div class="mockup-bar">
+        <span class="mockup-dot"></span>
+        <span class="mockup-dot"></span>
+        <span class="mockup-dot"></span>
+      </div>
+      <div class="mockup-body">
+        <div class="mockup-header">
+          <span class="mockup-title">📋 Sprint #12 — Q3 Launch</span>
+          <span class="mockup-tag tag-blue">In Progress</span>
+        </div>
+        <div class="task-list">
+          <div class="task-item">
+            <div class="task-check done">✓</div>
+            <span class="task-name done">Onboarding Flow finalisieren</span>
+            <span class="mockup-tag tag-green">Done</span>
+          </div>
+          <div class="task-item">
+            <div class="task-check done">✓</div>
+            <span class="task-name done">API-Dokumentation schreiben</span>
+            <span class="mockup-tag tag-green">Done</span>
+          </div>
+          <div class="task-item">
+            <div class="task-check"></div>
+            <span class="task-name">Pricing-Page Redesign</span>
+            <span class="mockup-tag tag-amber">Review</span>
+          </div>
+          <div class="task-item">
+            <div class="task-check"></div>
+            <span class="task-name">A/B-Test E-Mail-Betreff</span>
+            <span class="mockup-tag tag-blue">In Progress</span>
+          </div>
+          <div class="task-item">
+            <div class="task-check"></div>
+            <span class="task-name">Release Notes veröffentlichen</span>
+            <span class="mockup-tag tag-blue">Todo</span>
+          </div>
+        </div>
+        <div class="task-progress">
+          <div class="progress-label">
+            <span>Fortschritt</span>
+            <span>4 / 6 erledigt</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features-bg" id="features">
+  <div class="section">
+    <div class="section-label">Features</div>
+    <h2 class="section-title">Alles was dein Team braucht</h2>
+    <!-- DEMO-FEHLER: "braucht" sehr vage — wofür genau? Was unterscheidet Flowly? -->
+    <p class="section-sub">Von der ersten Idee bis zum fertigen Projekt — Flowly begleitet euch durch jeden Schritt.</p>
+
+    <div class="features-grid">
+      <div class="feat-card">
+        <div class="feat-icon">📌</div>
+        <h3>Smart Boards</h3>
+        <!-- DEMO-FEHLER: Dieser Text erklärt nicht was "smart" daran ist -->
+        <p>Organisiere Aufgaben auf Boards, die sich irgendwie automatisch an deinen Workflow anpassen und dafür sorgen, dass du den Überblick behältst.</p>
+      </div>
+
+      <div class="feat-card">
+        <div class="feat-icon">⚡</div>
+        <h3>Echtzeit-Zusammenarbeit</h3>
+        <p>Alle Änderungen werden sofort für alle Teammitglieder sichtbar — kein Refresh nötig, kein "Welche Version ist aktuell?"</p>
+      </div>
+
+      <div class="feat-card">
+        <div class="feat-icon">🔔</div>
+        <h3>Intelligente Deadlines</h3>
+        <p>Flowly erkennt Abhängigkeiten zwischen Aufgaben und warnt dich, wenn eine Deadline gefährdet ist — bevor es zu spät ist.</p>
+      </div>
+
+      <div class="feat-card">
+        <div class="feat-icon">📊</div>
+        <h3>Team-Analysen</h3>
+        <p>Verstehe wie dein Team arbeitet: Velocity, Engpässe, Arbeitsverteilung — alles auf einen Blick, exportierbar als CSV oder PDF.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- PRICING -->
+<section id="pricing">
+  <div class="section">
+    <div class="section-label">Preise</div>
+    <h2 class="section-title">Einfache, faire Preise</h2>
+    <p class="section-sub">Starte kostenlos, upgrade wenn dein Team wächst.</p>
+
+    <div class="pricing-grid">
+      <!-- Free Plan -->
+      <div class="pricing-card">
+        <div class="pricing-name">Free</div>
+        <div class="pricing-price"><sup>€</sup>0</div>
+        <div class="pricing-period">für immer kostenlos</div>
+
+        <!-- DEMO-FEHLER: Free und Pro haben fast die gleichen Features ohne klaren Unterschied -->
+        <ul class="pricing-features">
+          <li><span class="feat-check">✓</span> Bis zu 5 Projekte</li>
+          <li><span class="feat-check">✓</span> Unbegrenzte Aufgaben</li>
+          <li><span class="feat-check">✓</span> Smart Boards</li>
+          <li><span class="feat-check">✓</span> Team-Zusammenarbeit</li>
+          <li><span class="feat-check">✓</span> Echtzeit-Updates</li>
+          <li><span class="feat-cross">✗</span> <span style="opacity:.5">Analysen &amp; Reports</span></li>
+        </ul>
+
+        <a href="#" class="btn btn-ghost" style="display:flex; justify-content:center;">Kostenlos starten</a>
+      </div>
+
+      <!-- Pro Plan -->
+      <div class="pricing-card featured">
+        <div class="pricing-badge">Beliebt</div>
+        <div class="pricing-name">Pro</div>
+        <div class="pricing-price"><sup>€</sup>12</div>
+        <div class="pricing-period">pro Nutzer / Monat</div>
+
+        <ul class="pricing-features">
+          <li><span class="feat-check">✓</span> Unbegrenzte Projekte</li>
+          <li><span class="feat-check">✓</span> Unbegrenzte Aufgaben</li>
+          <li><span class="feat-check">✓</span> Smart Boards</li>
+          <li><span class="feat-check">✓</span> Team-Zusammenarbeit</li>
+          <li><span class="feat-check">✓</span> Echtzeit-Updates</li>
+          <li><span class="feat-check">✓</span> Analysen &amp; Reports</li>
+        </ul>
+
+        <a href="#" class="btn btn-primary" style="display:flex; justify-content:center;">14 Tage gratis testen</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- CONTACT -->
+<section class="contact-bg" id="contact">
+  <div class="section">
+    <div class="contact-grid">
+      <div class="contact-info">
+        <div class="section-label">Kontakt</div>
+        <h2 class="section-title">Fragen? Wir helfen gerne.</h2>
+        <p>Ob technische Frage, Partnerschaftsanfrage oder einfach nur Hallo — unser Team antwortet innerhalb von 24 Stunden.</p>
+
+        <div class="contact-detail">📧 <a href="mailto:hello@flowly.io">hello@flowly.io</a></div>
+        <div class="contact-detail">🏢 Berlin, Deutschland</div>
+        <div class="contact-detail">🕐 Mo–Fr, 9:00–18:00 Uhr</div>
+      </div>
+
+      <div class="contact-form">
+        <h3 style="margin-bottom:20px;font-size:18px;">Nachricht schicken</h3>
+        <form>
+          <div class="form-row">
+            <label for="name">Name</label>
+            <input type="text" id="name" placeholder="Max Mustermann">
+          </div>
+          <div class="form-row">
+            <label for="email">E-Mail-Adresse</label>
+            <input type="email" id="email" placeholder="max@beispiel.de">
+            <!-- DEMO-FEHLER: schlechter Kontrast bei Hint-Text -->
+            <p class="form-hint">Wir geben deine E-Mail nicht weiter.</p>
+          </div>
+          <div class="form-row">
+            <label for="topic">Thema</label>
+            <select id="topic">
+              <option value="">Bitte wählen…</option>
+              <option>Allgemeine Frage</option>
+              <option>Technischer Support</option>
+              <option>Partnerschaft</option>
+              <option>Presse</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label for="message">Nachricht</label>
+            <textarea id="message" placeholder="Wie können wir dir helfen?"></textarea>
+          </div>
+          <!-- DEMO-FEHLER: "Absenden" ist generischer Button-Text ohne Kontext -->
+          <button type="submit" class="btn btn-primary form-submit">Absenden</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="nav-logo" style="margin-bottom:0;">
+          <span class="nav-logo-icon">⚡</span>
+          Flowly
+        </div>
+        <p>Smarter Task Flow für Teams, die liefern wollen. Gebaut mit ❤ in Berlin.</p>
+      </div>
+
+      <div class="footer-col">
+        <h4>Produkt</h4>
+        <ul>
+          <li><a href="#">Features</a></li>
+          <li><a href="#">Preise</a></li>
+          <li><a href="#">Changelog</a></li>
+          <li><a href="#">Roadmap</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h4>Ressourcen</h4>
+        <ul>
+          <li><a href="#">Dokumentation</a></li>
+          <li><a href="#">Blog</a></li>
+          <li><a href="#">Status</a></li>
+          <li><a href="#">API</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h4>Unternehmen</h4>
+        <ul>
+          <li><a href="#">Über uns</a></li>
+          <li><a href="#">Jobs</a></li>
+          <li><a href="#">Datenschutz</a></li>
+          <li><a href="#">Impressum</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <span>© 2026 Flowly GmbH · Alle Rechte vorbehalten</span>
+      <span>Diese Seite ist eine Demo für <strong>VibeFeedback</strong> — klick irgendwo und hinterlasse einen Kommentar!</span>
+    </div>
+  </div>
+</footer>
+
 </body>
 </html>
