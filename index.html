@@ -292,9 +292,9 @@ body:has(.mode-toggle button[data-mode=nav].active) .canvas iframe{outline:2px s
 .cbar .annot .tools .hint{font-size:11px;color:var(--muted)}
 
 /* ============ Compact-Bar (Kommentar-Modal) ============ */
-.cbar-host{position:fixed;left:0;right:0;bottom:0;z-index:9999;pointer-events:none;display:flex;justify-content:center;padding:0 14px 14px}
+.cbar-host{position:fixed;left:0;right:0;bottom:0;z-index:9999;pointer-events:none}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
-.cbar{pointer-events:auto;background:var(--panel);border:1px solid var(--line);border-radius:14px;width:100%;max-width:920px;box-shadow:0 -10px 40px rgba(38,38,38,.18),0 -2px 8px rgba(38,38,38,.08);animation:cbarUp .22s ease;max-height:min(80dvh,780px);display:flex;flex-direction:column;overflow:hidden}
+.cbar{pointer-events:auto;position:fixed;left:50%;bottom:14px;transform:translateX(-50%);background:var(--panel);border:1px solid var(--line);border-radius:14px;width:calc(100% - 28px);max-width:920px;box-shadow:0 -10px 40px rgba(38,38,38,.18),0 -2px 8px rgba(38,38,38,.08);animation:cbarUp .22s ease;max-height:min(80vh,780px);max-height:min(80dvh,780px);display:flex;flex-direction:column;overflow:hidden;z-index:10000}
 @keyframes cbarUp{from{transform:translateY(24px);opacity:0}to{transform:translateY(0);opacity:1}}
 @keyframes slideUp{from{transform:translateY(12px);opacity:0}to{transform:translateY(0);opacity:1}}
 .cbar-grip{padding:6px 0 4px;display:flex;justify-content:center;cursor:pointer;user-select:none;flex-shrink:0}
@@ -409,9 +409,8 @@ body:has(.mode-toggle button[data-mode=nav].active) .canvas iframe{outline:2px s
   .sidebar{border-left:0;border-top:1px solid var(--line);min-height:0}
   .canvas{min-height:0}
   .present-body{grid-template-columns:1fr;grid-template-rows:45vh 1fr;overflow-y:auto}
-  .cbar-host{padding:0}
-  .cbar{max-width:100%;border-radius:14px 14px 0 0;max-height:88dvh}
-  .cbar-expanded{max-height:52dvh}
+  .cbar{width:100%;left:0;right:0;bottom:0;transform:none;max-width:100%;border-radius:14px 14px 0 0;max-height:88vh;max-height:88dvh;padding-bottom:env(safe-area-inset-bottom)}
+  .cbar-expanded{max-height:52vh;max-height:52dvh}
   .cbar-actions .icon-btn{width:44px;height:44px}
   .cbar-actions .primary,.cbar-actions .ghost{flex:1;padding:12px 14px;font-size:14px;min-height:44px}
   .cbar-actions .primary{flex:2}
