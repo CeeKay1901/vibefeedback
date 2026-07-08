@@ -1626,8 +1626,8 @@ async function captureElement(el){
     try{
       const rawCanvas = await window.html2canvas(el, {
         foreignObjectRendering: false,
-        useCORS:     false,
-        allowTaint:  false,
+        useCORS:     true,   // load CORS-enabled images (TMDB, etc.) for real screenshots
+        allowTaint:  false,  // skip non-CORS images; canvas stays untainted → toDataURL works
         logging:     false,
         scale:       DPR,
         scrollX:     -(win.scrollX || 0),
