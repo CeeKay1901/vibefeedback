@@ -423,7 +423,7 @@ body:has(.mode-toggle button[data-mode=nav].active) .canvas iframe{outline:2px s
 .present-bot .dots span.on{background:var(--accent);width:24px;border-radius:4px}
 
 @media(max-width:900px){
-  .app{grid-template-columns:1fr;grid-template-rows:auto minmax(280px,1fr) minmax(240px,1fr);height:100dvh}
+  .app{grid-template-columns:1fr;grid-template-rows:auto minmax(340px,1fr) minmax(200px,35vh);height:100dvh}
   .sidebar{border-left:0;border-top:1px solid var(--line);min-height:0}
   .canvas{min-height:0}
   .present-body{grid-template-columns:1fr;grid-template-rows:45vh 1fr;overflow-y:auto}
@@ -560,6 +560,14 @@ button.tiny{min-height:36px;padding:7px 10px}
   .tools button{min-height:44px}
 }
 
+/* ============ Touch Device: Precision + Original ausblenden ============ */
+@media (pointer: coarse) {
+  label[for="tgl-precision"],
+  label[for="tgl-render"] {
+    display: none;
+  }
+}
+
 /* ============ Back to Top ============ */
 #back-to-top{position:fixed;bottom:24px;right:24px;z-index:999;background:var(--fg);color:var(--bg);border:none;border-radius:99px;padding:10px 16px;font:600 13px/1 inherit;cursor:pointer;box-shadow:var(--shadow);opacity:0;pointer-events:none;transform:translateY(8px);transition:opacity .2s,transform .2s}
 #back-to-top.visible{opacity:1;pointer-events:auto;transform:translateY(0)}
@@ -591,7 +599,7 @@ a.bm-drag:active{transform:scale(.97)}
       <div class="logo">
         <span class="mark"><picture><source srcset="pilot-logo-dark.svg" media="(prefers-color-scheme: dark)"><img src="pilot-logo.svg" alt="pilot"></picture></span>
         <span>VibeFeedback</span>
-        <span class="tag">PoC</span>
+        <span class="tag">Beta</span>
       </div>
       <a href="https://github.com/CeeKay1901/vibefeedback" target="_blank" rel="noopener">GitHub →</a>
     </nav>
@@ -606,6 +614,7 @@ a.bm-drag:active{transform:scale(.97)}
         <button class="primary" onclick="document.querySelector('#src-input').focus();document.querySelector('#setup').scrollIntoView({behavior:'smooth',block:'center'})">Los geht's</button>
         <button onclick="location.href='?src=' + encodeURIComponent(location.origin+location.pathname.replace(/index\.html$/,'')+'demo.html') + '&owner=1&presentation-hint=1'">Live-Demo öffnen →</button>
       </div>
+      <p style="margin-top:14px;font-size:12px;color:var(--muted)">Braucht eine CORS-freie URL (GitHub Pages, Netlify, Vercel). Bei CORS-Fehlern → <a href="#bookmarklet" style="color:var(--muted);text-decoration:underline">Bookmarklet</a> nutzen.</p>
 
       <div class="mock" aria-hidden="true">
         <div class="frame">
@@ -743,14 +752,13 @@ a.bm-drag:active{transform:scale(.97)}
         <div id="cors-hint" class="status-inline muted" role="status" aria-live="polite"></div>
 
         <div id="share-result" class="hidden" style="margin-top:16px">
-          <div class="muted" style="font-size:12px">Feedback-Link (kopieren &amp; teilen)</div>
+          <div style="margin-bottom:12px">
+            <button id="btn-preview" class="primary" style="width:100%;font-size:15px;padding:13px 18px">Als Owner öffnen → <span style="font-weight:400;opacity:.7;font-size:13px">Dashboard, Presentation, Export</span></button>
+          </div>
+          <div class="muted" style="font-size:12px;margin-bottom:4px">Feedback-Link für Tester (kopieren &amp; teilen):</div>
           <div class="link-box">
             <code id="share-link"></code>
             <button id="btn-copy">Kopieren</button>
-          </div>
-          <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-            <button id="btn-preview" class="primary">Als Owner öffnen →</button>
-            <span class="muted" style="font-size:12.5px">Dashboard-Modus mit Presentation, Export, Filtern.</span>
           </div>
         </div>
       </div>
@@ -779,8 +787,8 @@ a.bm-drag:active{transform:scale(.97)}
       <button type="button" data-mode="comment" class="active" title="Klicks öffnen den Kommentar-Dialog">💬 Kommentieren</button>
       <button type="button" data-mode="nav" title="Klicks navigieren die Seite normal">🖱 Navigieren</button>
     </div>
-    <label class="precision-toggle" for="tgl-render" id="render-toggle-wrap" title="Original-Rendering: Seite wird 1:1 wie im Browser geladen. Klick-Kommentare deaktiviert.">
-      <input type="checkbox" id="tgl-render" aria-describedby="render-toggle-wrap"><span class="slider"></span><span class="lbl">🖥 Original</span>
+    <label class="precision-toggle" for="tgl-render" id="render-toggle-wrap" title="Original-Rendering: Lädt die Seite direkt im Browser — pixelgenau, aber Klick-Kommentare inaktiv. Nützlich bei CSS- oder Font-Darstellungsproblemen.">
+      <input type="checkbox" id="tgl-render" aria-describedby="render-toggle-wrap"><span class="slider"></span><span class="lbl">🖥 Direkt</span>
     </label>
     <label class="precision-toggle" for="tgl-precision" title="Präzisionsmodus: Zeigt Details zum Hover-Element">
       <input type="checkbox" id="tgl-precision"><span class="slider"></span><span class="lbl">🎯 Präzision</span>
@@ -826,12 +834,12 @@ a.bm-drag:active{transform:scale(.97)}
 
 // ============ Config ============
 const CATEGORIES = [
-  { id:"bug",      label:"Bug",       emoji:"🐛" },
-  { id:"feature",  label:"Feature",   emoji:"✨" },
-  { id:"design",   label:"Design",    emoji:"🎨" },
-  { id:"copy",     label:"Copy",      emoji:"📝" },
-  { id:"question", label:"Frage",     emoji:"❓" },
-  { id:"praise",   label:"Lob",       emoji:"❤️" },
+  { id:"bug",      label:"Bug",       emoji:"🐛", sub:"Etwas funktioniert nicht" },
+  { id:"feature",  label:"Feature",   emoji:"✨", sub:"Idee / Wunsch" },
+  { id:"design",   label:"Design",    emoji:"🎨", sub:"Sieht nicht richtig aus" },
+  { id:"copy",     label:"Copy",      emoji:"📝", sub:"Text / Formulierung" },
+  { id:"question", label:"Frage",     emoji:"❓", sub:"Ich verstehe nicht..." },
+  { id:"praise",   label:"Lob",       emoji:"❤️", sub:"Das gefällt mir" },
 ];
 const CAT_MAP = Object.fromEntries(CATEGORIES.map(c=>[c.id,c]));
 const PRIORITIES = [
@@ -1113,6 +1121,7 @@ function addReply(commentId, text, author){
 const COACH_KEY = "vibefeedback:v2:coach-seen";
 const seenCoach = ()=> { try{ return localStorage.getItem(COACH_KEY)==="1"; }catch(e){ return true; } };
 const setSeenCoach = ()=> { try{ localStorage.setItem(COACH_KEY,"1"); }catch(e){} };
+const EXPORT_REMINDER_KEY = "vibefeedback:v2:export-reminded";
 const DEVICE_ID_KEY = "vibefeedback:anonId";
 function getDeviceId(){
   try{
@@ -2537,10 +2546,10 @@ function showCoachMark(){
           <h4>Kategorisieren</h4>
           <p>Bug? Feature-Wunsch? Design-Kritik? Ein Klick.</p>
         </div>
-        <div>
+        <div style="background:var(--accent);border-color:var(--fg);border-width:1px;border-style:solid">
           <div class="icon">📤</div>
-          <h4>Exportieren &amp; senden</h4>
-          <p>Am Ende: Markdown-Datei runterladen und zurück an den Owner.</p>
+          <h4 style="color:var(--accent-ink)">⚠ Exportieren &amp; senden</h4>
+          <p style="color:var(--accent-ink)">Nicht vergessen: Dein Feedback bleibt auf <em>deinem</em> Gerät. Am Ende "Als Markdown" klicken → Datei ans Team schicken.</p>
         </div>
       </div>
       <button class="primary" id="coach-ok">Los geht's</button>
