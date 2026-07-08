@@ -8,12 +8,12 @@ Du teilst einen Link → deine Tester klicken direkt auf die Elemente, die sie k
 ## Wie es funktioniert
 
 1. **Owner** öffnet `/` (Setup-View), fügt die URL zu einem eigenen Live-Projekt ein.
-2. Tool baut einen Feedback-Link der Form `?src=<URL>` und stellt ihn zum Kopieren bereit.
-3. **Tester** öffnet den Link, sieht das Projekt im Iframe. Jedes Element ist klickbar → Modal mit Selector + HTML-Auszug + freiem Kommentarfeld.
-4. Kommentare landen im `localStorage` des Testers. Export als Markdown-Datei (Download) oder in die Zwischenablage.
-5. Tester schickt die `.md` an den Owner (Mail, Chat, PR-Kommentar). Owner nutzt den Inhalt als Prompt-Kontext für die nächste Iteration.
+2. Tool baut einen Feedback-Link der Form `?src=<URL>` und stellt ihn zum Kopieren bereit. Der primäre CTA im Setup-Result öffnet den Link direkt als Owner.
+3. **Tester** öffnet den Link, gibt beim ersten Kommentar einmalig seinen Namen ein (wird im Browser gespeichert). Jedes Element ist klickbar → Modal mit lesbarem Element-Label, Kategorie + Priorität, freiem Kommentarfeld.
+4. Kommentare landen im `localStorage` des Testers. Ein **Export-Reminder-Banner** erscheint automatisch beim Tab-Wechsel, sobald Kommentare vorhanden sind — so geht kein Feedback verloren.
+5. Tester exportiert per Download oder Zwischenablage und schickt die `.md` an den Owner (Mail, Chat, PR-Kommentar). Owner nutzt den Inhalt als Prompt-Kontext für die nächste Iteration.
 
-## Was das PoC bewusst NICHT tut
+## Was VibeFeedback bewusst NICHT tut
 
 - Kein Backend, keine Auth, keine geteilte DB. Jeder Tester schickt sein eigenes Markdown zurück.
 - Keine Zeichnung/Screenshot-Annotation — nur DOM-Element-Referenzen.
@@ -22,6 +22,17 @@ Du teilst einen Link → deine Tester klicken direkt auf die Elemente, die sie k
 ## CORS
 
 Das Iframe wird über `fetch(src)` + `srcdoc` befüllt (damit wir Klicks auf DOM-Ebene sehen). Das Ziel muss also CORS für GET erlauben. GitHub Pages, Netlify, Vercel machen das per default. Falls nicht → Fallback im Fehler-Overlay: HTML direkt einfügen.
+
+## Features auf einen Blick
+
+- **Autor-Name**: Beim ersten Kommentar wird der Name abgefragt und im localStorage gespeichert — erscheint im Export.
+- **Kategorie + Subtitel**: Bug, Feature, Design, Copy, Frage, Lob — jede Kategorie zeigt einen erklärenden Untertitel (z.B. "Bug = Etwas funktioniert nicht").
+- **Lesbare Element-Labels** (`humanLabel`): Badges und Sidebar zeigen zuerst `aria-label` oder sichtbaren Text, den CSS-Selector dahinter nur gedimmt.
+- **Export-Reminder**: Sticky Banner erscheint beim Tab-Wechsel, wenn unexportierte Kommentare vorhanden sind (Download / Kopieren / Schließen).
+- **Fertig-Toast**: Nach dem ersten gespeicherten Kommentar erscheint für 5,5 s ein Toast mit Export-Hinweis.
+- **Presentation-Mode Promo**: Nach dem 3. Kommentar Toast-Hinweis auf den Präsentations-Modus für Owners.
+- **Rolle-basierte Sidebar**: Import- und Lösch-Aktionen sind für Commenter ausgeblendet — weniger Rauschen für Tester.
+- **Mobile-optimiert**: Canvas-Mindesthöhe 340 px; Precision- und Original-Toggle werden auf Touch-Geräten ausgeblendet.
 
 ## Datenformat der Kommentare
 
@@ -32,13 +43,17 @@ Das Iframe wird über `fetch(src)` + `srcdoc` befüllt (damit wir Klicks auf DOM
   "snippet": "<button class=\"cta\">Jetzt starten</button>",
   "tag": "button",
   "text": "Freitext des Testers",
+  "author": "Name des Testers",
+  "category": "bug",
+  "priority": "must",
+  "sub": "Etwas funktioniert nicht",
   "ts": "ISO-Zeitstempel"
 }
 ```
 
 ## Loop-Prompt zur Selbst-Iteration
 
-Siehe [`LOOP_PROMPT.md`](./LOOP_PROMPT.md). Enthält die Qualitätskriterien, gegen die das PoC iterativ verbessert wird.
+Siehe [`LOOP_PROMPT.md`](./LOOP_PROMPT.md). Enthält die Qualitätskriterien, gegen die VibeFeedback iterativ verbessert wird.
 
 ## Lokal ausprobieren
 
