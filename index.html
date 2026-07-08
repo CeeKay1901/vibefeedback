@@ -259,6 +259,10 @@ body:has(.mode-toggle button[data-mode=nav].active) .canvas iframe{outline:2px s
 .item .txt{font-size:13px;color:var(--fg);white-space:pre-wrap;overflow-wrap:break-word}
 .item .meta{margin-top:6px;font-size:11px;color:var(--dim);display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .item .meta .pageref{background:rgba(92,143,191,.14);color:var(--accent-3);padding:2px 8px;border-radius:99px;font-family:ui-monospace,monospace;font-size:10.5px;border:1px solid rgba(92,143,191,.3)}
+.item .thumb{margin-top:8px;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:#fff;max-height:120px;display:flex;justify-content:center}
+.item .thumb img{max-width:100%;max-height:120px;height:auto;display:block}
+.modal .target-card .screenshot{margin-top:10px;border:1px solid var(--line);border-radius:6px;padding:6px;background:#fff;text-align:center}
+.modal .target-card .screenshot img{max-width:100%;max-height:180px;display:inline-block}
 
 /* ============ Modal ============ */
 .modal-backdrop{position:fixed;inset:0;background:rgba(38,38,38,.35);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);display:grid;place-items:center;z-index:9999;padding:20px;animation:fadeIn .18s ease}
@@ -661,6 +665,30 @@ const PRIORITIES = [
   { id:"nice",   label:"Nice-to-have" },
 ];
 const PRI_MAP = Object.fromEntries(PRIORITIES.map(p=>[p.id,p]));
+
+// Kategorie-spezifische Feld-Templates. Wenn `fields` leer ist, nur Freitext.
+const TEMPLATES = {
+  bug: { fields: [
+    { key:"expected", label:"Erwartetes Verhalten", placeholder:"Was sollte passieren?",           rows:2 },
+    { key:"actual",   label:"Tatsächliches Verhalten", placeholder:"Was passiert stattdessen?",    rows:2 },
+    { key:"steps",    label:"Schritte zum Reproduzieren", placeholder:"1. …\n2. …\n3. …",         rows:3 },
+  ]},
+  feature: { fields: [
+    { key:"role",    label:"Als …",           placeholder:"z. B. neuer Nutzer / Admin",       rows:1 },
+    { key:"want",    label:"möchte ich …",    placeholder:"welche Funktion / welches Verhalten?", rows:2 },
+    { key:"benefit", label:"damit …",         placeholder:"welcher Nutzen entsteht dadurch?", rows:2 },
+  ]},
+  design: { fields: [
+    { key:"issue",      label:"Was stört visuell?", placeholder:"Kontrast, Hierarchie, Spacing, Farbe…", rows:2 },
+    { key:"suggestion", label:"Vorschlag",           placeholder:"Wie sollte es aussehen?",             rows:2 },
+  ]},
+  copy: { fields: [
+    { key:"current",    label:"Aktueller Text",  placeholder:"Copy & paste den Text",                rows:2 },
+    { key:"suggestion", label:"Vorschlag",       placeholder:"Wie besser formuliert?",               rows:2 },
+  ]},
+  question: { fields: [] },
+  praise:   { fields: [] },
+};
 
 // ============ Utils ============
 const $ = (s,r=document)=>r.querySelector(s);
@@ -1264,11 +1292,96 @@ function applyPrecisionState(){
   }
 }
 
+// ============ Screenshot: DOM → PNG (via SVG foreignObject) ============
+async function captureElement(el, opts){
+  opts = opts || {};
+  if(!el || el.nodeType!==1) return null;
+  const doc = el.ownerDocument;
+  const win = doc.defaultView;
+  const rect = el.getBoundingClientRect();
+  const pad = opts.pad ?? 10;
+  let w = Math.max(1, Math.ceil(rect.width + pad*2));
+  let h = Math.max(1, Math.ceil(rect.height + pad*2));
+  const MAX = 1400;
+  let scale = 1;
+  if(w>MAX || h>MAX){ scale = Math.min(MAX/w, MAX/h); w = Math.round(w*scale); h = Math.round(h*scale); }
+
+  // Clone target, inline computed styles recursively
+  const clone = el.cloneNode(true);
+  function inlineStyles(src, dst){
+    if(!src || !dst || dst.nodeType!==1) return;
+    const cs = win.getComputedStyle(src);
+    let style = "";
+    for(let i=0;i<cs.length;i++){
+      const p = cs[i]; style += p + ":" + cs.getPropertyValue(p) + ";";
+    }
+    dst.setAttribute("style", style);
+    dst.removeAttribute("class");
+    const sK = src.children, dK = dst.children;
+    for(let i=0;i<sK.length && i<dK.length;i++) inlineStyles(sK[i], dK[i]);
+  }
+  try { inlineStyles(el, clone); } catch(e){ /* best-effort */ }
+  // Strip VF internal artefacts
+  clone.querySelectorAll?.(".__vf_badge, .__vf_hover, .__vf_marked, .__vf_precise, .__vf_selected, .__pv_hi, .__vf_infobox").forEach(n=>n.remove());
+  clone.classList?.remove?.("__vf_hover","__vf_marked","__vf_precise","__vf_selected","__pv_hi");
+
+  // Wrap for padding + white bg
+  const wrapper = doc.createElement("div");
+  wrapper.style.cssText = `padding:${pad}px;box-sizing:border-box;background:#fff;display:inline-block;transform-origin:top left;transform:scale(${scale})`;
+  wrapper.appendChild(clone);
+
+  // Serialize as XML — modern browsers emit well-formed XHTML for HTML nodes
+  let inner;
+  try{ inner = new XMLSerializer().serializeToString(wrapper); }
+  catch(e){ return null; }
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml">${inner}</div></foreignObject></svg>`;
+  const blob = new Blob([svg], { type:"image/svg+xml;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  try{
+    const img = new Image();
+    img.decoding = "sync";
+    await new Promise((res, rej)=>{
+      img.onload = res;
+      img.onerror = ()=> rej(new Error("svg-image-load"));
+      img.src = url;
+    });
+    const dpr = Math.min(2, win.devicePixelRatio || 1);
+    const canvas = doc.createElement("canvas");
+    canvas.width = Math.round(w*dpr); canvas.height = Math.round(h*dpr);
+    const ctx = canvas.getContext("2d");
+    ctx.scale(dpr, dpr);
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0,0,w,h);
+    ctx.drawImage(img, 0, 0, w, h);
+    // JPEG for size, quality 0.78 — screenshots kompakt halten
+    try{ return canvas.toDataURL("image/jpeg", 0.78); }
+    catch(e){ return null; }
+  }catch(e){
+    return null;
+  }finally{
+    URL.revokeObjectURL(url);
+  }
+}
+
 function catColorVar(catId){
   const map = { bug:"#e35f5f", feature:"#ffe05e", design:"#62c12d", copy:"#e6ca55", question:"#5c8fbf", praise:"#c67ba0" };
   return map[catId] || "#ffe05e";
 }
 function commentPage(c){ return c.pageUrl || STATE.src; }
+function commentSummary(c){
+  if(c.structured && Object.keys(c.structured).length){
+    const tpl = TEMPLATES[c.category];
+    if(tpl && tpl.fields.length){
+      const parts = tpl.fields
+        .map(f => c.structured[f.key] ? `${f.label}: ${c.structured[f.key].replace(/\s+/g," ")}` : null)
+        .filter(Boolean);
+      const joined = parts.join(" · ");
+      return truncate(joined + (c.text?` · Notiz: ${c.text.replace(/\s+/g," ")}`:""), 220);
+    }
+  }
+  return c.text || "";
+}
 function refreshFrameBadges(){
   const doc = STATE.frameDoc; if(!doc) return;
   $$(".__vf_marked", doc).forEach(el=>{ el.classList.remove("__vf_marked"); el.style.removeProperty("--vf-c"); if(el.style.position==="relative" && el.dataset.vfPosSet==="1"){ el.style.position=""; delete el.dataset.vfPosSet; } });
@@ -1352,9 +1465,10 @@ function openCommentModal(el, existing){
         <label>Von (optional)</label>
         <input type="text" data-field="author" placeholder="Dein Name">
       </div>
+      <div data-role="template-fields"></div>
       <div class="field">
-        <label>Kommentar</label>
-        <textarea placeholder="Was ist dir aufgefallen? Was sollte anders sein?"></textarea>
+        <label data-role="text-label">Kommentar</label>
+        <textarea data-role="text" placeholder="Was ist dir aufgefallen? Was sollte anders sein?"></textarea>
       </div>
       <div class="actions-row">
         <span class="hint"><span class="badge-key">Esc</span>Abbrechen <span class="badge-key">⌘/Ctrl+⏎</span>Speichern</span>
@@ -1363,11 +1477,38 @@ function openCommentModal(el, existing){
       </div>
     </div>`;
   document.body.appendChild(wrap);
-  const ta = $("textarea", wrap);
+  const ta = $("[data-role=text]", wrap);
   const authorInput = $("[data-field=author]", wrap);
   authorInput.value = existing?.author || getAuthor();
   if(isEdit) ta.value = existing.text;
-  setTimeout(()=>ta.focus(), 40);
+
+  // Kategorie-Templates: dynamische Felder, die sich beim Wechsel neu aufbauen
+  const tplWrap = $("[data-role=template-fields]", wrap);
+  const textLabel = $("[data-role=text-label]", wrap);
+  const structured = existing?.structured ? {...existing.structured} : {};
+  function renderTemplate(){
+    const tpl = TEMPLATES[currentCat];
+    const has = tpl && tpl.fields.length;
+    tplWrap.innerHTML = has ? tpl.fields.map(f => `
+      <div class="field">
+        <label>${esc(f.label)}</label>
+        <textarea data-tpl="${esc(f.key)}" rows="${f.rows||2}" placeholder="${esc(f.placeholder||"")}">${esc(structured[f.key]||"")}</textarea>
+      </div>
+    `).join("") : "";
+    // Bind inputs → structured obj
+    $$("[data-tpl]", tplWrap).forEach(inp => {
+      inp.addEventListener("input", ()=> { structured[inp.dataset.tpl] = inp.value; });
+    });
+    // Wenn Template greift: Freitext wird optionale Notiz
+    textLabel.textContent = has ? "Zusätzliche Notiz (optional)" : "Kommentar";
+    ta.placeholder = has ? "Kontext, Screenshots, Nebenaspekte…" : "Was ist dir aufgefallen? Was sollte anders sein?";
+  }
+  renderTemplate();
+
+  setTimeout(()=>{
+    const first = $("[data-tpl]", tplWrap) || ta;
+    first.focus();
+  }, 40);
 
   // ---- Target-card rendering + retarget logic ----
   function renderTarget(){
@@ -1401,12 +1542,14 @@ function openCommentModal(el, existing){
     const href = info?.attrs?.href ? `<div class="attr">→ ${esc(truncate(info.attrs.href,60))}</div>` : "";
     const alt = info?.attrs?.alt ? `<div class="attr">alt: "${esc(truncate(info.attrs.alt,60))}"</div>` : "";
     const aria = info?.attrs?.ariaLabel ? `<div class="attr">aria-label: "${esc(truncate(info.attrs.ariaLabel,60))}"</div>` : "";
+    const shot = (isEdit && existing?.screenshot) ? `<div class="screenshot"><img src="${existing.screenshot}" alt="Screenshot"></div>` : "";
     parts.push(`
       <div class="target-main">
         <div class="tagline"><span class="tt">&lt;${esc(tag)}&gt;</span>${roleTxt}<span class="dims">${dims}</span></div>
         ${textPrev}
         ${href}${alt}${aria}
         <div class="selector-line"><code>${esc(truncate(selector,80))}</code></div>
+        ${shot}
       </div>
     `);
     body.innerHTML = parts.join("");
@@ -1457,6 +1600,7 @@ function openCommentModal(el, existing){
     chip.addEventListener("click", ()=>{
       currentCat = chip.dataset.cat;
       $$("[data-role=cats] .pick", wrap).forEach(c=> c.dataset.active = (c===chip));
+      renderTemplate();
     });
   });
   $$("[data-role=prios] .pick", wrap).forEach(chip => {
@@ -1467,19 +1611,51 @@ function openCommentModal(el, existing){
   });
 
   const close = ()=>{ unhighlight(); wrap.remove(); document.removeEventListener("keydown", onKey, true); };
-  const save = ()=>{
+  const save = async ()=>{
     const txt = ta.value.trim();
-    if(!txt){ ta.focus(); toast("Kommentar darf nicht leer sein."); return; }
+    const tpl = TEMPLATES[currentCat];
+    const struct = {};
+    let structHasContent = false;
+    if(tpl && tpl.fields.length){
+      tpl.fields.forEach(f => {
+        const v = (structured[f.key]||"").trim();
+        if(v){ struct[f.key] = v; structHasContent = true; }
+      });
+    }
+    if(!txt && !structHasContent){
+      const firstEmpty = $("[data-tpl]", tplWrap) || ta;
+      firstEmpty.focus();
+      toast("Kommentar darf nicht leer sein.");
+      return;
+    }
     const author = authorInput.value.trim();
     setAuthor(author);
+    // Screenshot besten Effort — nur bei neuen Kommentaren (Edit behält bestehenden)
+    let screenshot = existing?.screenshot || null;
+    if(!isEdit && currentEl && STATE.frameDoc){
+      unhighlight();
+      try {
+        screenshot = await Promise.race([
+          captureElement(currentEl),
+          new Promise(r => setTimeout(()=>r(null), 4000))
+        ]);
+      } catch(e){ screenshot = null; }
+    }
     if(isEdit){
-      Object.assign(existing, { text:txt, author:author||null, category:currentCat, priority:currentPri, updatedAt:new Date().toISOString() });
+      Object.assign(existing, {
+        text:txt,
+        structured: structHasContent ? struct : null,
+        author:author||null, category:currentCat, priority:currentPri,
+        updatedAt:new Date().toISOString()
+      });
     }else{
       STATE.comments.push({
         id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
         selector, snippet, tag, info,
         pageUrl: STATE.currentUrl || STATE.src,
         text: txt,
+        structured: structHasContent ? struct : null,
+        screenshot,
         author: author || null,
         category: currentCat,
         priority: currentPri,
@@ -1571,7 +1747,8 @@ function renderAll(){
         <span class="prio" data-p="${c.priority}">${pri.label}</span>
       </div>
       <div class="sel">${esc(truncate(c.selector,90))}</div>
-      <div class="txt">${esc(c.text)}</div>
+      <div class="txt">${esc(commentSummary(c))}</div>
+      ${c.screenshot ? `<div class="thumb"><img src="${c.screenshot}" alt="Screenshot" loading="lazy"></div>` : ""}
       <div class="meta">
         ${commentPage(c) !== STATE.currentUrl ? `<span class="pageref" title="Kommentar liegt auf einer anderen Subpage — Klick öffnet sie">📍 ${esc(shortPath(commentPage(c)))}</span>` : ""}
         ${c.author?`<span>${esc(c.author)}</span>`:""}
@@ -1704,7 +1881,19 @@ function openPresentation(){
         <span class="prio" style="border:1px solid var(--line);color:var(--fg-2);padding:4px 12px;border-radius:99px;font-size:12px">${pri.label}</span>
       </div>
       <h2>Kommentar ${idx+1}</h2>
-      <div class="qtext">${esc(c.text)}</div>
+      ${(function(){
+        if(c.structured && Object.keys(c.structured).length){
+          const tpl = TEMPLATES[c.category];
+          const rows = (tpl?.fields||[]).map(f => c.structured[f.key]
+            ? `<div style="margin-bottom:12px"><div style="font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:700;margin-bottom:4px">${esc(f.label)}</div><div class="qtext" style="margin:0">${esc(c.structured[f.key])}</div></div>`
+            : ""
+          ).join("");
+          const note = c.text ? `<div style="margin-bottom:12px"><div style="font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:700;margin-bottom:4px">Notiz</div><div class="qtext" style="margin:0">${esc(c.text)}</div></div>` : "";
+          return rows + note;
+        }
+        return `<div class="qtext">${esc(c.text||"")}</div>`;
+      })()}
+      ${c.screenshot ? `<div class="snipwrap" style="text-align:center;background:#fff"><label style="text-align:left">Screenshot</label><img src="${c.screenshot}" alt="Screenshot" style="max-width:100%;max-height:280px;border:1px solid var(--line);border-radius:6px"></div>` : ""}
       <div class="snipwrap">
         <label>Element</label>
         <code>${esc(c.snippet)}</code>
@@ -1815,7 +2004,26 @@ function buildMarkdown(){
         }
       }
       md += `\n**HTML-Auszug:**\n\n\`\`\`html\n${c.snippet}\n\`\`\`\n\n`;
-      md += `**Feedback:**\n\n${c.text.split("\n").map(l=>"> "+l).join("\n")}\n\n---\n\n`;
+      if(c.screenshot){
+        md += `<details><summary>📷 Screenshot</summary>\n\n![Screenshot](${c.screenshot})\n\n</details>\n\n`;
+      }
+      if(c.structured && Object.keys(c.structured).length){
+        const tpl = TEMPLATES[c.category];
+        md += `**Feedback:**\n\n`;
+        if(tpl && tpl.fields.length){
+          tpl.fields.forEach(f => {
+            const v = c.structured[f.key];
+            if(!v) return;
+            md += `- **${f.label}:**\n${v.split("\n").map(l=>"  > "+l).join("\n")}\n`;
+          });
+        }
+        if(c.text){
+          md += `- **Notiz:**\n${c.text.split("\n").map(l=>"  > "+l).join("\n")}\n`;
+        }
+        md += `\n---\n\n`;
+      }else{
+        md += `**Feedback:**\n\n${(c.text||"").split("\n").map(l=>"> "+l).join("\n")}\n\n---\n\n`;
+      }
     });
   });
 
