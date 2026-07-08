@@ -1284,10 +1284,33 @@ async function initApp(src, isOwner){
   };
 
   renderAll();
+
+  // Sidebar-Tools nach Rolle: Commenter sehen nur Export
+  if(!isOwner){
+    const importBtn = document.getElementById('btn-import');
+    const clearBtn = document.getElementById('btn-clear');
+    if(importBtn) importBtn.style.display = 'none';
+    if(clearBtn) clearBtn.style.display = 'none';
+    // Import-File-Input auch verstecken
+    const importFile = document.getElementById('btn-import-file');
+    if(importFile) importFile.style.display = 'none';
+  }
+
   await loadIntoFrame(src);
   if(!isOwner && !seenCoach() && !STATE.comments.length){
     showCoachMark();
   }
+
+  // Export-Reminder: beim Tab-Wechsel zurück (wenn Kommentare vorhanden)
+  const handleVisibility = () => {
+    if(document.visibilityState === 'visible'
+      && STATE.comments.length > 0
+      && !localStorage.getItem(EXPORT_REMINDER_KEY)){
+      localStorage.setItem(EXPORT_REMINDER_KEY, '1');
+      showExportReminder();
+    }
+  };
+  document.addEventListener('visibilitychange', handleVisibility);
 }
 
 async function loadIntoFrame(src){
@@ -2033,13 +2056,17 @@ function openCommentModal(el, existing){
             <span class="dims" data-target-dims></span>
           </span>
           <div class="chips" data-role="cats">
-            ${CATEGORIES.map(c=>`<span class="pick" data-cat="${c.id}" data-active="${c.id===currentCat}" role="button" tabindex="0" aria-label="${c.label}">${c.emoji} ${c.label}</span>`).join("")}
+            ${CATEGORIES.map(c=>`<span class="pick" data-cat="${c.id}" data-active="${c.id===currentCat}" role="button" tabindex="0" aria-label="${c.label}" title="${c.sub||''}">${c.emoji} ${c.label}<span style="display:block;font-size:10px;color:inherit;opacity:.65;font-weight:400;margin-top:1px">${c.sub||''}</span></span>`).join("")}
           </div>
           <div class="chips" data-role="prios">
             ${PRIORITIES.map(p=>`<span class="pick" data-p="${p.id}" data-active="${p.id===currentPri}" role="button" tabindex="0" aria-label="Priorität ${p.label}">${p.label}</span>`).join("")}
           </div>
         </div>
         <label class="sr-only" for="vf-cbar-text" id="vf-modal-title">${isEdit?"Kommentar bearbeiten":"Kommentar schreiben"}</label>
+        ${!localStorage.getItem(AUTHOR_KEY) ? `<div class="field" id="author-field" style="margin-bottom:6px">
+          <label for="cbar-author-compact" style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);display:block;margin-bottom:3px">Dein Name <span style="color:var(--muted);font-weight:400">(für den Owner)</span></label>
+          <input type="text" id="cbar-author-compact" data-field="author-compact" placeholder="z.B. Marie" style="font-size:13px;padding:8px 10px;width:100%;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--fg)" maxlength="40">
+        </div>` : ''}
         <textarea id="vf-cbar-text" data-role="text" rows="2" placeholder="Was ist dir aufgefallen? Was sollte anders sein?"></textarea>
         <div class="cbar-actions">
           <span class="cbar-hint"><span class="badge-key">Esc</span>Abbrechen <span class="badge-key">⌘/Ctrl+⏎</span>Speichern</span>
@@ -2122,7 +2149,10 @@ function openCommentModal(el, existing){
   // ---- Target-card + retarget ----
   function renderTarget(){
     const body = $("[data-role=target-body]", host);
-    $("[data-target-tag]", host).innerHTML = "&lt;"+esc(tag)+"&gt;";
+    const hl = humanLabel(info);
+    $("[data-target-tag]", host).innerHTML = hl
+      ? `${esc(hl)}<span style="display:inline-block;margin-left:6px;font-size:10px;color:var(--muted);font-weight:400;opacity:.75">&lt;${esc(tag)}&gt;</span>`
+      : `&lt;${esc(tag)}&gt;`;
     const dimsMini = info?.rect ? `${info.rect.w}×${info.rect.h}` : "";
     $("[data-target-dims]", host).textContent = dimsMini;
     const parts = [];
@@ -2264,6 +2294,11 @@ function openCommentModal(el, existing){
       toast("Kommentar darf nicht leer sein.");
       return;
     }
+    // Compact author field (shown on first comment) takes precedence if filled
+    const compactAuthorInput = $("[data-field=author-compact]", host);
+    if(compactAuthorInput && compactAuthorInput.value.trim()){
+      authorInput.value = compactAuthorInput.value.trim();
+    }
     const author = authorInput.value.trim();
     setAuthor(author);
     let screenshot = existing?.screenshot || null;
@@ -2297,6 +2332,18 @@ function openCommentModal(el, existing){
       renderAll(); refreshFrameBadges();
       close();
       toast(isEdit?"Aktualisiert.":"Kommentar gespeichert.");
+      // Erster Kommentar: Export-Hinweis zeigen
+      if(!isEdit && STATE.comments.length === 1){
+        setTimeout(() => {
+          toast('✓ Erster Kommentar gespeichert! Am Ende: "Als Markdown" klicken und ans Team schicken.', 5500);
+        }, 2400); // nach dem normalen Toast
+      }
+      // Presentation-Mode Promo: nach dem 3. Kommentar
+      if(!isEdit && STATE.comments.length === 3 && STATE.isOwner){
+        setTimeout(() => {
+          toast('🎬 3 Kommentare! Tipp: "Präsentieren" für Team-Reviews nutzen.', 5000);
+        }, 2600);
+      }
     }else if(!isEdit){ STATE.comments.pop(); }
   };
   const onKey = e=>{
@@ -2524,6 +2571,37 @@ function scrollToSelector(cOrSel){
     {boxShadow:"0 0 0 0 rgba(255,224,94,.95)"},
     {boxShadow:"0 0 0 14px rgba(255,224,94,0)"}
   ], {duration:900});
+}
+
+// ============ Human Label Helper ============
+function humanLabel(info){
+  if(!info) return null;
+  const aria = info.attrs?.ariaLabel;
+  if(aria && aria.length < 60) return aria;
+  const txt = (info.text || '').trim();
+  if(txt && txt.length > 0 && txt.length < 50) return `"${txt.slice(0,40)}"`;
+  const tag = (info.tag || 'element').toLowerCase();
+  const id = info.id ? `#${info.id}` : '';
+  return id || null;
+}
+
+// ============ Export Reminder ============
+function showExportReminder(){
+  const existing = document.querySelector('.export-reminder');
+  if(existing) return;
+  const bar = document.createElement('div');
+  bar.className = 'export-reminder';
+  bar.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:10001;background:var(--accent);border-top:2px solid var(--fg);padding:12px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;box-shadow:0 -4px 20px rgba(38,38,38,.18);font-size:13px;font-weight:500;color:var(--accent-ink)';
+  bar.innerHTML = `
+    <span style="flex:1;min-width:200px">💬 Du hast <strong>${STATE.comments.length} Kommentar${STATE.comments.length===1?'':'e'}</strong>. Fertig? Exportiere dein Feedback!</span>
+    <button id="er-download" style="background:var(--fg);color:var(--accent);border:1px solid var(--fg);border-radius:8px;padding:8px 14px;font:600 13px/1 inherit;cursor:pointer;white-space:nowrap">⬇ Als Markdown</button>
+    <button id="er-copy" style="background:transparent;border:1px solid var(--fg);border-radius:8px;padding:8px 14px;font:600 13px/1 inherit;cursor:pointer;white-space:nowrap;color:var(--accent-ink)">📋 Kopieren</button>
+    <button id="er-dismiss" style="background:transparent;border:0;padding:8px;cursor:pointer;color:var(--accent-ink);font-size:16px;line-height:1" aria-label="Schließen">✕</button>
+  `;
+  document.body.appendChild(bar);
+  bar.querySelector('#er-download').onclick = () => { exportMarkdown(false); bar.remove(); };
+  bar.querySelector('#er-copy').onclick = () => { exportMarkdown(true); bar.remove(); };
+  bar.querySelector('#er-dismiss').onclick = () => bar.remove();
 }
 
 // ============ Coach Mark ============
