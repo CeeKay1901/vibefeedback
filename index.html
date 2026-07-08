@@ -58,6 +58,10 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font
 .hidden{display:none!important}
 
 button{font-family:inherit;font-size:14px;cursor:pointer;border:1px solid var(--line);background:var(--panel-2);color:var(--fg);padding:9px 14px;border-radius:9px;transition:all .15s ease;font-weight:500}
+/* Touch-Targets (WCAG 2.5.5 / F6): Standard-Buttons + Landing-CTAs mind. 44px */
+button:not(.tiny):not(.icon):not([class*="crumb"]):not([data-act]):not(.mode-toggle button),
+.landing .nav a, .landing .foot a{min-height:44px}
+.landing .nav a, .landing .foot a{display:inline-flex;align-items:center;padding:8px 4px}
 button:hover{border-color:var(--fg);background:var(--panel-3);transform:translateY(-1px)}
 button:active{transform:translateY(0)}
 button.primary{background:var(--fg);border-color:var(--fg);color:var(--bg);box-shadow:0 4px 12px rgba(38,38,38,.15)}
@@ -71,6 +75,13 @@ button.icon:hover{background:var(--panel-3);border-color:var(--line)}
 
 input[type=text],input[type=url],input[type=email],textarea{font-family:inherit;font-size:14px;width:100%;background:var(--panel);border:1px solid var(--line);color:var(--fg);padding:11px 13px;border-radius:9px;outline:none;transition:border-color .15s}
 input:focus,textarea:focus{border-color:var(--fg);box-shadow:0 0 0 3px rgba(255,224,94,.35)}
+/* Global focus ring — Accessibility (F1) */
+:where(button,a,summary,[role="button"],[tabindex]):focus-visible,
+.chip:focus-visible,.pick:focus-visible,.precision-toggle:focus-within{
+  outline:3px solid var(--accent);outline-offset:2px;border-radius:8px;
+  box-shadow:0 0 0 1px var(--fg)
+}
+a:focus-visible{text-decoration:underline}
 textarea{resize:vertical;min-height:110px;line-height:1.5}
 ::placeholder{color:var(--dim)}
 
@@ -86,9 +97,9 @@ textarea{resize:vertical;min-height:110px;line-height:1.5}
 .nav a:hover{color:var(--fg)}
 
 .hero{text-align:center;padding:40px 0 60px}
-.hero .kicker{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;background:var(--accent);border:1px solid var(--fg);border-radius:99px;font-size:12px;color:var(--fg);font-weight:700;margin-bottom:24px}
+.hero .kicker{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;background:var(--accent);border:1px solid var(--accent-ink);border-radius:99px;font-size:12px;color:var(--accent-ink);font-weight:700;margin-bottom:24px}
 .hero h1{font-size:56px;line-height:1.05;letter-spacing:-1.2px;margin-bottom:22px;color:var(--fg);font-weight:800}
-.hero h1 .accent{background:var(--accent);color:var(--fg);padding:0 12px;border-radius:6px;display:inline-block}
+.hero h1 .accent{background:var(--accent);color:var(--accent-ink);padding:0 12px;border-radius:6px;display:inline-block}
 .hero p.lead{font-size:19px;color:var(--fg-2);max-width:640px;margin:0 auto 36px;line-height:1.5}
 .hero .cta-row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
 .hero .cta-row button{font-size:15px;padding:13px 22px}
@@ -162,8 +173,10 @@ textarea{resize:vertical;min-height:110px;line-height:1.5}
 }
 
 /* ============ App View ============ */
-.app{display:grid;grid-template-columns:1fr 400px;grid-template-rows:56px 1fr;height:100vh;overflow:hidden}
-.topbar{grid-column:1/-1;display:flex;align-items:center;gap:14px;padding:0 16px;background:var(--panel);border-bottom:1px solid var(--line)}
+.app{display:grid;grid-template-columns:1fr 400px;grid-template-rows:auto 1fr;height:100vh;overflow:hidden}
+.topbar{grid-column:1/-1;display:flex;align-items:center;gap:10px;padding:6px 12px;background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap;min-height:56px}
+.topbar>*{flex-shrink:0}
+.topbar .src{flex-shrink:1;min-width:0}
 .topbar .brand{display:flex;align-items:center;gap:8px;font-weight:600}
 .topbar .brand .mark{display:inline-flex;align-items:center}
 .topbar .brand .mark img{height:24px;width:auto;display:block}
@@ -263,6 +276,20 @@ body:has(.mode-toggle button[data-mode=nav].active) .canvas iframe{outline:2px s
 .item .thumb img{max-width:100%;max-height:120px;height:auto;display:block}
 .modal .target-card .screenshot{margin-top:10px;border:1px solid var(--line);border-radius:6px;padding:6px;background:#fff;text-align:center}
 .modal .target-card .screenshot img{max-width:100%;max-height:180px;display:inline-block}
+.modal .annot{margin-top:10px;border:1px solid var(--line);border-radius:8px;background:#fff;overflow:hidden}
+.modal .annot .stage{position:relative;background:#f7f7f5;display:flex;justify-content:center;align-items:center;min-height:120px}
+.modal .annot .stage canvas{max-width:100%;max-height:260px;display:block;cursor:crosshair;touch-action:none}
+.modal .annot .stage .ph{padding:24px 10px;color:var(--muted);font-size:13px;text-align:center}
+.modal .annot .stage .ph .spin{display:inline-block;width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--fg);border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.modal .annot .tools{display:flex;flex-wrap:wrap;align-items:center;gap:4px;padding:6px;border-top:1px solid var(--line);background:var(--panel-2)}
+.modal .annot .tools .tool{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:4px 8px;font-size:13px;cursor:pointer;min-height:32px;line-height:1;display:inline-flex;align-items:center;gap:4px}
+.modal .annot .tools .tool[data-active="true"]{background:var(--fg);color:var(--accent);border-color:var(--fg)}
+.modal .annot .tools .sep{width:1px;height:20px;background:var(--line);margin:0 3px}
+.modal .annot .tools .swatch{width:20px;height:20px;border-radius:50%;border:2px solid var(--line);cursor:pointer;padding:0}
+.modal .annot .tools .swatch[data-active="true"]{border-color:var(--fg);box-shadow:0 0 0 2px var(--panel) inset}
+.modal .annot .tools .grow{flex:1}
+.modal .annot .tools .hint{font-size:11px;color:var(--muted)}
 
 /* ============ Modal ============ */
 .modal-backdrop{position:fixed;inset:0;background:rgba(38,38,38,.35);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);display:grid;place-items:center;z-index:9999;padding:14px;animation:fadeIn .18s ease}
@@ -311,7 +338,7 @@ body:has(.mode-toggle button[data-mode=nav].active) .canvas iframe{outline:2px s
 .modal .target-card .target-main .selector-line code{font-size:11px}
 .modal textarea{min-height:52px}
 .modal .row-inputs{display:grid;grid-template-columns:1fr;gap:0}
-.modal .actions-row{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:6px}
+.modal .actions-row{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin:12px -16px -16px;padding:12px 16px 16px;position:sticky;bottom:0;background:var(--panel);border-top:1px solid var(--line);z-index:5}
 .modal .actions-row .hint{margin-right:auto;font-size:11px;color:var(--dim)}
 .badge-key{display:inline-block;background:var(--panel-2);border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-size:10.5px;margin-right:4px;color:var(--muted);font-family:ui-monospace,monospace}
 
@@ -353,7 +380,7 @@ body:has(.mode-toggle button[data-mode=nav].active) .canvas iframe{outline:2px s
 .present-bot .dots span.on{background:var(--accent);width:24px;border-radius:4px}
 
 @media(max-width:900px){
-  .app{grid-template-columns:1fr;grid-template-rows:56px minmax(280px,1fr) minmax(240px,1fr);height:100dvh}
+  .app{grid-template-columns:1fr;grid-template-rows:auto minmax(280px,1fr) minmax(240px,1fr);height:100dvh}
   .sidebar{border-left:0;border-top:1px solid var(--line);min-height:0}
   .canvas{min-height:0}
   .present-body{grid-template-columns:1fr;grid-template-rows:45vh 1fr;overflow-y:auto}
@@ -430,6 +457,71 @@ body:has(.mode-toggle button[data-mode=nav].active) .canvas iframe{outline:2px s
   .topbar #btn-present::before{content:"🎬";font-size:14px;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)}
 }
 
+/* ============ Dark Mode ============ */
+@media(prefers-color-scheme:dark){
+  :root{
+    --bg:#1c1c1a;
+    --bg-2:#201f1b;
+    --panel:#252522;
+    --panel-2:#2c2b27;
+    --panel-3:#343330;
+    --line:#3a3935;
+    --line-2:#4a4843;
+    --fg:#eeede8;
+    --fg-2:#c8c7c0;
+    --muted:#7a7970;
+    --dim:#5a5950;
+    --accent:#ffe05e;
+    --accent-ink:#1c1c1a;
+    --accent-2:#eeede8;
+    --accent-3:#7aadd4;
+    --warn:#d4b840;
+    --danger:#d45f5f;
+    --success:#52a81d;
+    --praise:#b06090;
+    --shadow-sm:0 1px 3px rgba(0,0,0,.25);
+    --shadow:0 6px 20px rgba(0,0,0,.35);
+    --shadow-lg:0 20px 48px rgba(0,0,0,.5);
+  }
+  .landing{background:radial-gradient(1200px 700px at 50% -100px,rgba(255,224,94,.12),transparent 60%),radial-gradient(900px 500px at 90% 300px,rgba(255,255,255,.03),transparent 60%),var(--bg)}
+  .bm-card{background:var(--panel)}
+  /* Mock-Preview mit CSS-Vars statt hardcoded weiß (W8) */
+  .mock .frame-view{background:linear-gradient(180deg,var(--panel),var(--panel-2));color:var(--fg)}
+  .mock .frame-view h4{color:var(--fg)}
+  .mock .frame-view p{color:var(--muted)}
+  .mock .frame-view .fake-hint{background:var(--panel-2);color:var(--muted);border-color:var(--line-2)}
+  /* Yellow-BG-Elemente: Textfarbe fest auf Dark-Ink, damit Kontrast bleibt (F3) */
+  .nav .tag,.section-h .eyebrow,.topbar .role.commenter,
+  .mode-toggle button.active[data-mode=comment],
+  #render-banner,.item .cat[data-cat=feature],
+  .modal .chips .pick[data-active=true][data-cat=feature],
+  .modal .target-card .target-main .tt,a.bm-drag,
+  .modal .target-card .target-actions button:hover{
+    color:var(--accent-ink)
+  }
+}
+
+/* ============ Reduced Motion ============ */
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important}
+  .present-bot .dots span,.modal,.coach .card{transition:none!important;animation:none!important}
+}
+
+/* ============ Touch Targets ============ */
+.mode-toggle button{min-height:36px}
+.precision-toggle{min-height:36px}
+button.tiny{min-height:36px;padding:7px 10px}
+.tools button{min-height:40px}
+@media(max-width:900px){
+  .mode-toggle button,.precision-toggle,button.tiny{min-height:44px}
+  .tools button{min-height:44px}
+}
+
+/* ============ Back to Top ============ */
+#back-to-top{position:fixed;bottom:24px;right:24px;z-index:999;background:var(--fg);color:var(--bg);border:none;border-radius:99px;padding:10px 16px;font:600 13px/1 inherit;cursor:pointer;box-shadow:var(--shadow);opacity:0;pointer-events:none;transform:translateY(8px);transition:opacity .2s,transform .2s}
+#back-to-top.visible{opacity:1;pointer-events:auto;transform:translateY(0)}
+#back-to-top:hover{background:var(--accent);color:var(--accent-ink)}
+
 /* Bookmarklet section */
 .bm-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:32px;display:flex;gap:40px;align-items:flex-start;flex-wrap:wrap}
 .bm-drag-wrap{text-align:center;flex-shrink:0;min-width:180px}
@@ -447,13 +539,14 @@ a.bm-drag:active{transform:scale(.97)}
 </style>
 </head>
 <body>
+<button id="back-to-top" aria-label="Zurück nach oben" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑ Oben</button>
 
 <!-- ============ LANDING ============ -->
 <div id="view-landing" class="landing hidden">
   <div class="landing-inner">
     <nav class="nav">
       <div class="logo">
-        <span class="mark"><img src="pilot-logo.svg" alt="pilot"></span>
+        <span class="mark"><picture><source srcset="pilot-logo-dark.svg" media="(prefers-color-scheme: dark)"><img src="pilot-logo.svg" alt="pilot"></picture></span>
         <span>VibeFeedback</span>
         <span class="tag">PoC</span>
       </div>
@@ -597,14 +690,14 @@ a.bm-drag:active{transform:scale(.97)}
         <h2>Sharing-Link erzeugen</h2>
       </div>
       <div class="setup-card">
-        <h3>Deine Projekt-URL</h3>
-        <div class="muted">Öffentlich erreichbare HTML-Seite. GitHub Pages, Netlify, Vercel, alles was CORS erlaubt.</div>
+        <h3><label for="src-input" style="cursor:pointer">Deine Projekt-URL</label></h3>
+        <div class="muted" id="src-input-hint">Öffentlich erreichbare HTML-Seite. GitHub Pages, Netlify, Vercel, alles was CORS erlaubt.</div>
         <div class="row">
-          <input type="url" id="src-input" placeholder="https://username.github.io/projekt/index.html">
+          <input type="url" id="src-input" placeholder="https://username.github.io/projekt/index.html" aria-describedby="src-input-hint src-error cors-hint">
           <button class="primary" id="btn-generate">Link erzeugen</button>
         </div>
-        <div id="src-error" class="err-inline"></div>
-        <div id="cors-hint" class="status-inline muted"></div>
+        <div id="src-error" class="err-inline" role="alert" aria-live="polite"></div>
+        <div id="cors-hint" class="status-inline muted" role="status" aria-live="polite"></div>
 
         <div id="share-result" class="hidden" style="margin-top:16px">
           <div class="muted" style="font-size:12px">Feedback-Link (kopieren &amp; teilen)</div>
@@ -637,16 +730,16 @@ a.bm-drag:active{transform:scale(.97)}
 <!-- ============ APP ============ -->
 <div id="view-app" class="app hidden">
   <div class="topbar">
-    <div class="brand"><span class="mark"><img src="pilot-logo.svg" alt="pilot"></span><span>VibeFeedback</span></div>
+    <div class="brand"><span class="mark"><picture><source srcset="pilot-logo-dark.svg" media="(prefers-color-scheme: dark)"><img src="pilot-logo.svg" alt="pilot"></picture></span><span>VibeFeedback</span></div>
     <span class="src" id="topbar-src"></span>
     <div class="mode-toggle" id="mode-toggle" role="tablist" aria-label="Interaktionsmodus">
       <button type="button" data-mode="comment" class="active" title="Klicks öffnen den Kommentar-Dialog">💬 Kommentieren</button>
       <button type="button" data-mode="nav" title="Klicks navigieren die Seite normal">🖱 Navigieren</button>
     </div>
-    <label class="precision-toggle" id="render-toggle-wrap" title="Original-Rendering: Seite wird 1:1 wie im Browser geladen. Klick-Kommentare deaktiviert.">
-      <input type="checkbox" id="tgl-render"><span class="slider"></span><span class="lbl">🖥 Original</span>
+    <label class="precision-toggle" for="tgl-render" id="render-toggle-wrap" title="Original-Rendering: Seite wird 1:1 wie im Browser geladen. Klick-Kommentare deaktiviert.">
+      <input type="checkbox" id="tgl-render" aria-describedby="render-toggle-wrap"><span class="slider"></span><span class="lbl">🖥 Original</span>
     </label>
-    <label class="precision-toggle" title="Präzisionsmodus: Zeigt Details zum Hover-Element">
+    <label class="precision-toggle" for="tgl-precision" title="Präzisionsmodus: Zeigt Details zum Hover-Element">
       <input type="checkbox" id="tgl-precision"><span class="slider"></span><span class="lbl">🎯 Präzision</span>
     </label>
     <span class="role" id="topbar-role">Feedback</span>
@@ -911,7 +1004,24 @@ function loadComments(src){
 }
 function saveComments(src, arr){
   try{ localStorage.setItem(storeKey(src), JSON.stringify(arr)); return true; }
-  catch(e){ toast("Speicher voll — Kommentar konnte nicht persistiert werden.", 4000); return false; }
+  catch(e){
+    if(e && (e.name === "QuotaExceededError" || e.code === 22 || e.code === 1014)){
+      const dayAgo = Date.now() - 864e5;
+      let dropped = 0;
+      arr.forEach(c => { if(c.screenshot && (c.ts||0) < dayAgo){ c.screenshot = null; dropped++; } });
+      if(dropped){
+        try{
+          localStorage.setItem(storeKey(src), JSON.stringify(arr));
+          toast(`Speicher knapp: ${dropped} alte Screenshot(s) entfernt, Kommentar gespeichert.`, 4000);
+          return true;
+        }catch(_){}
+      }
+      toast("Speicher voll — bitte alte Kommentare löschen.", 5000);
+      return false;
+    }
+    toast("Speicher voll — Kommentar konnte nicht persistiert werden.", 4000);
+    return false;
+  }
 }
 const AUTHOR_KEY = "vibefeedback:v2:author";
 const getAuthor = ()=> { try{ return localStorage.getItem(AUTHOR_KEY)||""; }catch(e){ return ""; } };
@@ -1087,6 +1197,7 @@ async function loadIntoFrame(src){
   if(STATE.renderMode === "direct"){
     // Original-Rendering: echter iframe.src, pixelgenau — aber kein Klick-Hook (cross-origin)
     frame.setAttribute("referrerpolicy", "no-referrer-when-downgrade");
+    frame.onload = null;
     frame.src = src;
     frame.classList.remove("hidden");
     frame.onload = ()=>{
@@ -1103,12 +1214,18 @@ async function loadIntoFrame(src){
   try{
     const res = await fetch(src, { redirect:"follow" });
     if(!res.ok) throw new Error("HTTP "+res.status);
-    let html = await res.text();
     const finalUrl = res.url || src;
+    try{
+      const srcHost = new URL(src).host;
+      const finalHost = new URL(finalUrl).host;
+      if(srcHost !== finalHost) throw new Error(`Redirect zu ${finalHost} — abgebrochen (Host-Wechsel).`);
+    }catch(err){ if(err.message?.startsWith("Redirect")) throw err; }
+    let html = await res.text();
     STATE.currentUrl = finalUrl;
     updateUrlDisplay();
     html = injectBase(html, finalUrl);
     frame.setAttribute("referrerpolicy", "no-referrer-when-downgrade");
+    frame.onload = null;
     frame.srcdoc = html;
     frame.classList.remove("hidden");
     frame.onload = ()=>{
@@ -1207,14 +1324,35 @@ function showError(e){
     </div>`;
   $("#btn-retry").onclick = ()=> loadIntoFrame(STATE.src);
   $("#btn-paste").onclick = ()=>{
-    const raw = prompt("HTML-Quelltext einfügen:");
-    if(!raw) return;
-    const html = injectBase(raw, STATE.src);
-    const frame = $("#frame");
-    frame.srcdoc = html;
-    frame.classList.remove("hidden");
-    box.classList.add("hidden");
-    frame.onload = ()=> hookFrame(frame.contentDocument);
+    const overlay = document.createElement("div");
+    overlay.style.cssText = "position:fixed;inset:0;background:rgba(38,38,38,.5);backdrop-filter:blur(4px);z-index:9999;display:grid;place-items:center;padding:20px";
+    overlay.innerHTML = `<div style="background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);padding:24px;width:100%;max-width:600px;box-shadow:var(--shadow-lg)">
+      <h3 style="margin:0 0 8px;font-size:16px">HTML-Quelltext einfügen</h3>
+      <p style="margin:0 0 12px;color:var(--muted);font-size:13px">Kopiere den Quelltext deiner Seite (Strg+U im Browser) und füge ihn hier ein.</p>
+      <textarea id="paste-area" style="width:100%;min-height:200px;font-family:ui-monospace,monospace;font-size:12px;resize:vertical" placeholder="&lt;!doctype html&gt;&#10;&lt;html&gt;…"></textarea>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px">
+        <button id="paste-cancel">Abbrechen</button>
+        <button class="primary" id="paste-ok">Laden</button>
+      </div>
+    </div>`;
+    document.body.appendChild(overlay);
+    const ta = overlay.querySelector("#paste-area");
+    setTimeout(()=>ta.focus(), 40);
+    const close = ()=>{ overlay.remove(); };
+    overlay.querySelector("#paste-cancel").onclick = close;
+    overlay.addEventListener("click", e=>{ if(e.target===overlay) close(); });
+    overlay.querySelector("#paste-ok").onclick = ()=>{
+      const raw = ta.value.trim();
+      if(!raw){ ta.focus(); return; }
+      const html = injectBase(raw, STATE.src);
+      const frame = $("#frame");
+      frame.srcdoc = html;
+      frame.classList.remove("hidden");
+      box.classList.add("hidden");
+      frame.onload = ()=> hookFrame(frame.contentDocument);
+      close();
+    };
+    overlay.addEventListener("keydown", e=>{ if(e.key==="Escape") close(); });
   };
 }
 
@@ -1340,7 +1478,10 @@ function hookFrame(doc){
       for(const [k,v] of fd.entries()){ if(typeof v === "string") params.append(k,v); }
       url.search = params.toString();
       if(isSameProject(url.href)) loadIntoFrame(url.href);
-    }catch(_){}
+    }catch(err){
+      console.warn("[vf] form-submit", err);
+      toast("Formular konnte nicht geöffnet werden.");
+    }
   }, true);
 
   STATE.frameInfoBox = info;
@@ -1470,6 +1611,181 @@ function refreshFrameBadges(){
 }
 
 // ============ Comment Modal ============
+function createAnnotator(imgDataUrl){
+  const TOOLS = [
+    { id:"arrow", label:"↗", title:"Pfeil" },
+    { id:"rect",  label:"▭", title:"Rechteck" },
+    { id:"ellipse", label:"○", title:"Kreis" },
+    { id:"highlight", label:"✎", title:"Marker" },
+    { id:"text",  label:"T", title:"Text" }
+  ];
+  const COLORS = [
+    { id:"red", hex:"#e35f5f" },
+    { id:"yellow", hex:"#ffe05e" },
+    { id:"black", hex:"#262626" }
+  ];
+  let currentTool = "arrow";
+  let currentColor = "#e35f5f";
+  const shapes = [];  // { tool, color, x1,y1,x2,y2, text? }
+  let img = null;
+  let canvas, ctx, container, dragging = null;
+
+  function draw(){
+    if(!ctx || !img) return;
+    ctx.clearRect(0,0,canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    for(const s of shapes) drawShape(s);
+    if(dragging) drawShape(dragging);
+  }
+  function drawShape(s){
+    ctx.save();
+    ctx.strokeStyle = s.color;
+    ctx.fillStyle = s.color;
+    ctx.lineWidth = Math.max(2, Math.round(canvas.width/300));
+    ctx.lineCap = "round";
+    if(s.tool === "rect"){
+      ctx.strokeRect(s.x1, s.y1, s.x2-s.x1, s.y2-s.y1);
+    } else if(s.tool === "ellipse"){
+      const cx = (s.x1+s.x2)/2, cy = (s.y1+s.y2)/2;
+      const rx = Math.abs(s.x2-s.x1)/2, ry = Math.abs(s.y2-s.y1)/2;
+      ctx.beginPath(); ctx.ellipse(cx,cy,rx,ry,0,0,Math.PI*2); ctx.stroke();
+    } else if(s.tool === "arrow"){
+      const dx = s.x2-s.x1, dy = s.y2-s.y1;
+      const len = Math.hypot(dx,dy) || 1;
+      const ang = Math.atan2(dy,dx);
+      const head = Math.min(20, len*0.3);
+      ctx.beginPath(); ctx.moveTo(s.x1,s.y1); ctx.lineTo(s.x2,s.y2); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(s.x2, s.y2);
+      ctx.lineTo(s.x2 - head*Math.cos(ang-Math.PI/6), s.y2 - head*Math.sin(ang-Math.PI/6));
+      ctx.lineTo(s.x2 - head*Math.cos(ang+Math.PI/6), s.y2 - head*Math.sin(ang+Math.PI/6));
+      ctx.closePath(); ctx.fill();
+    } else if(s.tool === "highlight"){
+      ctx.globalAlpha = 0.35;
+      ctx.fillRect(Math.min(s.x1,s.x2), Math.min(s.y1,s.y2), Math.abs(s.x2-s.x1), Math.abs(s.y2-s.y1));
+    } else if(s.tool === "text" && s.text){
+      const size = Math.max(14, Math.round(canvas.width/40));
+      ctx.font = `bold ${size}px system-ui, sans-serif`;
+      ctx.textBaseline = "top";
+      const pad = 4;
+      const w = ctx.measureText(s.text).width + pad*2;
+      const h = size + pad*2;
+      ctx.globalAlpha = 0.9;
+      ctx.fillStyle = s.color;
+      ctx.fillRect(s.x1, s.y1, w, h);
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = pickContrastInk(s.color);
+      ctx.fillText(s.text, s.x1 + pad, s.y1 + pad);
+    }
+    ctx.restore();
+  }
+  function pickContrastInk(hex){
+    const m = /^#([0-9a-f]{6})$/i.exec(hex); if(!m) return "#fff";
+    const n = parseInt(m[1],16);
+    const r=(n>>16)&255, g=(n>>8)&255, b=n&255;
+    const lum = (0.299*r + 0.587*g + 0.114*b)/255;
+    return lum > 0.6 ? "#262626" : "#ffffff";
+  }
+  function getPoint(e){
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width, scaleY = canvas.height / rect.height;
+    return { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY };
+  }
+  function bindEvents(){
+    canvas.addEventListener("pointerdown", e => {
+      canvas.setPointerCapture(e.pointerId);
+      const p = getPoint(e);
+      if(currentTool === "text"){
+        const txt = prompt("Text:");
+        if(txt){ shapes.push({ tool:"text", color:currentColor, x1:p.x, y1:p.y, x2:p.x, y2:p.y, text: txt }); draw(); }
+        return;
+      }
+      dragging = { tool:currentTool, color:currentColor, x1:p.x, y1:p.y, x2:p.x, y2:p.y };
+      draw();
+    });
+    canvas.addEventListener("pointermove", e => {
+      if(!dragging) return;
+      const p = getPoint(e);
+      dragging.x2 = p.x; dragging.y2 = p.y;
+      draw();
+    });
+    const endDrag = () => {
+      if(!dragging) return;
+      const dx = dragging.x2 - dragging.x1, dy = dragging.y2 - dragging.y1;
+      if(Math.hypot(dx,dy) > 4) shapes.push(dragging);
+      dragging = null;
+      draw();
+    };
+    canvas.addEventListener("pointerup", endDrag);
+    canvas.addEventListener("pointercancel", endDrag);
+  }
+  function selectTool(id){
+    currentTool = id;
+    container.querySelectorAll("[data-tool]").forEach(b => b.dataset.active = (b.dataset.tool === id));
+  }
+  function selectColor(hex){
+    currentColor = hex;
+    container.querySelectorAll("[data-color]").forEach(b => b.dataset.active = (b.dataset.color === hex));
+  }
+  function mount(host){
+    container = document.createElement("div");
+    container.className = "annot";
+    container.innerHTML = `
+      <div class="stage" data-role="stage"></div>
+      <div class="tools">
+        ${TOOLS.map(t => `<button type="button" class="tool" data-tool="${t.id}" data-active="${t.id===currentTool}" title="${t.title}" aria-label="${t.title}">${t.label}</button>`).join("")}
+        <span class="sep"></span>
+        ${COLORS.map(c => `<button type="button" class="swatch" data-color="${c.hex}" data-active="${c.hex===currentColor}" title="${c.id}" aria-label="Farbe ${c.id}" style="background:${c.hex}"></button>`).join("")}
+        <span class="sep"></span>
+        <button type="button" class="tool" data-act="undo" title="Rückgängig" aria-label="Rückgängig">↶</button>
+        <button type="button" class="tool" data-act="clear" title="Alles löschen" aria-label="Alles löschen">✕</button>
+        <span class="grow"></span>
+        <span class="hint">Ziehen zum Zeichnen</span>
+      </div>`;
+    host.appendChild(container);
+    const stage = container.querySelector("[data-role=stage]");
+    stage.innerHTML = `<div class="ph"><span class="spin"></span>Screenshot wird erstellt…</div>`;
+    container.querySelectorAll("[data-tool]").forEach(b => b.addEventListener("click", () => selectTool(b.dataset.tool)));
+    container.querySelectorAll("[data-color]").forEach(b => b.addEventListener("click", () => selectColor(b.dataset.color)));
+    container.querySelector("[data-act=undo]").addEventListener("click", () => { shapes.pop(); draw(); });
+    container.querySelector("[data-act=clear]").addEventListener("click", () => { shapes.length = 0; draw(); });
+    return container;
+  }
+  function showLoading(){
+    const stage = container?.querySelector("[data-role=stage]");
+    if(stage) stage.innerHTML = `<div class="ph"><span class="spin"></span>Screenshot wird erstellt…</div>`;
+    canvas = null; ctx = null; img = null; shapes.length = 0;
+  }
+  function setImage(dataUrl){
+    return new Promise((resolve, reject) => {
+      const stage = container?.querySelector("[data-role=stage]");
+      if(!stage){ reject(new Error("not mounted")); return; }
+      if(!dataUrl){ stage.innerHTML = `<div class="ph">Screenshot nicht verfügbar.</div>`; resolve(false); return; }
+      const im = new Image();
+      im.onload = () => {
+        img = im;
+        shapes.length = 0;
+        stage.innerHTML = "";
+        canvas = document.createElement("canvas");
+        canvas.width = im.naturalWidth;
+        canvas.height = im.naturalHeight;
+        ctx = canvas.getContext("2d");
+        stage.appendChild(canvas);
+        draw(); bindEvents();
+        resolve(true);
+      };
+      im.onerror = () => { stage.innerHTML = `<div class="ph">Screenshot konnte nicht geladen werden.</div>`; resolve(false); };
+      im.src = dataUrl;
+    });
+  }
+  async function flatten(){
+    if(!canvas || !img) return imgDataUrl || null;
+    try { return canvas.toDataURL("image/jpeg", 0.82); }
+    catch(e){ console.warn("[vf] annot flatten", e); return imgDataUrl || null; }
+  }
+  return { mount, setImage, showLoading, flatten, hasCanvas: () => !!canvas };
+}
+
 function openCommentModal(el, existing){
   const isEdit = !!existing;
   if(!el && !isEdit) return;
@@ -1500,9 +1816,9 @@ function openCommentModal(el, existing){
   wrap.className = "modal-backdrop";
 
   wrap.innerHTML = `
-    <div class="modal" role="dialog" aria-modal="true">
-      <h3>${isEdit?"Kommentar bearbeiten":"Kommentar"} <span class="tag" data-target-tag>&lt;${esc(tag)}&gt;</span></h3>
-      <div class="target-card" data-role="target">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="vf-modal-title" aria-describedby="vf-modal-target">
+      <h3 id="vf-modal-title">${isEdit?"Kommentar bearbeiten":"Kommentar"} <span class="tag" data-target-tag>&lt;${esc(tag)}&gt;</span></h3>
+      <div class="target-card" data-role="target" id="vf-modal-target">
         <div class="target-head">
           <span class="target-label">🎯 Auswahl</span>
           <div class="target-actions">
@@ -1511,6 +1827,7 @@ function openCommentModal(el, existing){
           </div>
         </div>
         <div class="target-body" data-role="target-body"></div>
+        <div data-role="annot-slot"></div>
       </div>
       <div class="field">
         <label>Kategorie</label>
@@ -1573,6 +1890,29 @@ function openCommentModal(el, existing){
     first.focus();
   }, 40);
 
+  // ---- Annotator (nur für neue Kommentare) ----
+  let annotator = null;
+  let captureToken = 0;
+  async function captureIntoAnnotator(){
+    if(!annotator || !currentEl || !STATE.frameDoc) return;
+    const myToken = ++captureToken;
+    annotator.showLoading();
+    let shot = null;
+    try {
+      shot = await Promise.race([
+        captureElement(currentEl).catch(e => { console.warn("[vf] shot", e); return null; }),
+        new Promise(r => setTimeout(()=>r(null), 8000))
+      ]);
+    } catch(e){ shot = null; }
+    if(myToken !== captureToken) return;  // veraltet — retarget hat neu ausgelöst
+    await annotator.setImage(shot);
+  }
+  if(!isEdit && currentEl && STATE.frameDoc){
+    annotator = createAnnotator(null);
+    annotator.mount($("[data-role=annot-slot]", wrap));
+    captureIntoAnnotator();
+  }
+
   // ---- Target-card rendering + retarget logic ----
   function renderTarget(){
     const body = $("[data-role=target-body]", wrap);
@@ -1612,7 +1952,7 @@ function openCommentModal(el, existing){
         ${textPrev}
         ${href}${alt}${aria}
         <div class="selector-line"><code>${esc(truncate(selector,80))}</code></div>
-        ${shot}
+        ${isEdit ? shot : ""}
       </div>
     `);
     body.innerHTML = parts.join("");
@@ -1626,6 +1966,7 @@ function openCommentModal(el, existing){
       computeFromEl();
       renderTarget();
       highlightSelected();
+      captureIntoAnnotator();
     }));
   }
   renderTarget();
@@ -1639,6 +1980,7 @@ function openCommentModal(el, existing){
     computeFromEl();
     renderTarget();
     highlightSelected();
+    captureIntoAnnotator();
   }
   function highlightSelected(){
     if(isEdit || !STATE.frameDoc) return;
@@ -1693,16 +2035,12 @@ function openCommentModal(el, existing){
     }
     const author = authorInput.value.trim();
     setAuthor(author);
-    // Screenshot besten Effort — nur bei neuen Kommentaren (Edit behält bestehenden)
+    // Screenshot: bei neuen Kommentaren annotator flatten (inkl. Zeichnungen), bei Edit unverändert
     let screenshot = existing?.screenshot || null;
-    if(!isEdit && currentEl && STATE.frameDoc){
+    if(!isEdit && annotator){
+      try { screenshot = await annotator.flatten(); }
+      catch(e){ console.warn("[vf] flatten", e); screenshot = null; }
       unhighlight();
-      try {
-        screenshot = await Promise.race([
-          captureElement(currentEl),
-          new Promise(r => setTimeout(()=>r(null), 4000))
-        ]);
-      } catch(e){ screenshot = null; }
     }
     if(isEdit){
       Object.assign(existing, {
@@ -1736,6 +2074,16 @@ function openCommentModal(el, existing){
     else if((e.ctrlKey||e.metaKey)&&e.key==="Enter"){ e.preventDefault(); save(); }
   };
   document.addEventListener("keydown", onKey, true);
+  // Focus-Trap (A11y F5) — Tab-Sequenz bleibt im Modal
+  const focusableInModal = ()=> $$('button, [href], input, textarea, select, [tabindex]:not([tabindex="-1"])', wrap)
+    .filter(el => !el.disabled && el.offsetParent !== null);
+  wrap.addEventListener("keydown", e=>{
+    if(e.key !== "Tab") return;
+    const list = focusableInModal(); if(!list.length) return;
+    const first = list[0], last = list[list.length-1];
+    if(e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
+    else if(!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
+  });
   wrap.addEventListener("click", e=>{ if(e.target===wrap) close(); });
   $("[data-act=cancel]", wrap).onclick = close;
   $("[data-act=save]", wrap).onclick = save;
@@ -1748,19 +2096,21 @@ function filteredComments(){
 }
 function counts(){
   const c = { all: STATE.comments.length };
+  const priosCount = {};
   CATEGORIES.forEach(k=>c[k.id]=0);
-  STATE.comments.forEach(x=>{ if(c[x.category]!==undefined) c[x.category]++; });
-  return c;
+  PRIORITIES.forEach(p=>priosCount[p.id]=0);
+  STATE.comments.forEach(x=>{
+    if(c[x.category]!==undefined) c[x.category]++;
+    if(priosCount[x.priority]!==undefined) priosCount[x.priority]++;
+  });
+  return { cats: c, prios: priosCount };
 }
 function renderAll(){
-  const c = counts();
+  const { cats: c, prios: priosCount } = counts();
   $("#cmt-count").textContent = c.all;
 
   // Stats badges
   const stats = $("#stats");
-  const priosCount = {};
-  PRIORITIES.forEach(p=>priosCount[p.id]=0);
-  STATE.comments.forEach(x=>{ if(priosCount[x.priority]!==undefined) priosCount[x.priority]++; });
   const parts = [];
   if(priosCount.must) parts.push(`<span class="stat" style="color:var(--danger)"><b>${priosCount.must}</b> Muss</span>`);
   if(priosCount.should) parts.push(`<span class="stat" style="color:var(--warn)"><b>${priosCount.should}</b> Sollte</span>`);
@@ -2010,87 +2360,118 @@ function openPresentation(){
 // ============ Markdown Export ============
 function buildMarkdown(){
   const src = STATE.src, cs = STATE.comments;
-  const now = new Date().toLocaleString("de-DE");
+  const now = new Date().toISOString();
   const priOrder = { must:0, should:1, could:2, nice:3 };
-  const sorted = [...cs].sort((a,b)=>(priOrder[a.priority]??9)-(priOrder[b.priority]??9));
-  let md = `# Feedback zu ${src}\n\n`;
-  md += `> Gesammeltes Feedback aus VibeFeedback — ${cs.length} Kommentar${cs.length===1?"":"e"}, exportiert ${now}.\n`;
-  md += `> Nach Priorität sortiert. Verwende diesen Markdown als Prompt-Grundlage für die nächste Iteration.\n\n`;
-
-  const byCat = {};
-  CATEGORIES.forEach(k=>byCat[k.id]=[]);
-  sorted.forEach(c=>{ (byCat[c.category]||(byCat[c.category]=[])).push(c); });
-
-  const priCount = {};
-  PRIORITIES.forEach(p=>priCount[p.id]=0);
-  cs.forEach(c=>{ if(priCount[c.priority]!==undefined) priCount[c.priority]++; });
-  md += `**Übersicht:** ` + CATEGORIES.filter(k=>byCat[k.id]?.length).map(k=>`${k.emoji} ${byCat[k.id].length} ${k.label}`).join(" · ") + `\n`;
-  md += `**Prioritäten:** ` + PRIORITIES.filter(p=>priCount[p.id]).map(p=>`${priCount[p.id]} ${p.label}`).join(" · ") + `\n\n---\n\n`;
-
-  CATEGORIES.forEach(cat=>{
-    const list = byCat[cat.id]||[];
-    if(!list.length) return;
-    md += `## ${cat.emoji} ${cat.label} (${list.length})\n\n`;
-    list.forEach((c,i)=>{
-      const pri = PRI_MAP[c.priority]||PRI_MAP.could;
-      md += `### ${i+1}. \`<${c.tag}>\` — Priorität: ${pri.label}\n\n`;
-      md += `- **CSS-Selector:** \`${c.selector}\`\n`;
-      if(c.author) md += `- **Von:** ${c.author}\n`;
-      md += `- **Zeitstempel:** ${new Date(c.ts).toLocaleString("de-DE")}\n`;
-
-      // Element-Kontext für das LLM
-      const info = c.info;
-      if(info){
-        const contextLines = [];
-        contextLines.push(`  - Rolle: \`${info.role}\``);
-        if(info.id) contextLines.push(`  - ID: \`#${info.id}\``);
-        if(info.classes && info.classes.length) contextLines.push(`  - Klassen: \`${info.classes.map(x=>"."+x).join(" ")}\``);
-        if(info.text) contextLines.push(`  - Sichtbarer Text: "${info.text.replace(/"/g,'\\"')}"`);
-        if(info.attrs.href) contextLines.push(`  - Href: \`${info.attrs.href}\``);
-        if(info.attrs.src) contextLines.push(`  - Src: \`${info.attrs.src}\``);
-        if(info.attrs.alt) contextLines.push(`  - Alt-Text: "${info.attrs.alt}"`);
-        if(info.attrs.title) contextLines.push(`  - Title: "${info.attrs.title}"`);
-        if(info.attrs.placeholder) contextLines.push(`  - Placeholder: "${info.attrs.placeholder}"`);
-        if(info.attrs.ariaLabel) contextLines.push(`  - ARIA-Label: "${info.attrs.ariaLabel}"`);
-        if(info.attrs.dataTestid) contextLines.push(`  - data-testid: \`${info.attrs.dataTestid}\``);
-        if(info.rect) contextLines.push(`  - Position/Größe: ${info.rect.w}×${info.rect.h}px bei (${info.rect.x}, ${info.rect.y}), ${info.rect.viewport}${info.rect.visible===false?" · aktuell unsichtbar":""}`);
-        if(info.style){
-          const s = info.style;
-          contextLines.push(`  - Styling: Farbe \`${s.color}\`, Hintergrund \`${s.backgroundColor}\`, Font \`${s.fontSize} ${s.fontWeight} ${s.fontFamily}\`, Display \`${s.display}\``);
-        }
-        if(info.ancestors && info.ancestors.length){
-          contextLines.push(`  - Ancestor-Chain: \`${info.ancestors.join(" > ")}\``);
-        }
-        if(info.docTitle) contextLines.push(`  - Seitentitel: "${info.docTitle}"`);
-        if(contextLines.length){
-          md += `- **Element-Kontext:**\n${contextLines.join("\n")}\n`;
-        }
-      }
-      md += `\n**HTML-Auszug:**\n\n\`\`\`html\n${c.snippet}\n\`\`\`\n\n`;
-      if(c.screenshot){
-        md += `<details><summary>📷 Screenshot</summary>\n\n![Screenshot](${c.screenshot})\n\n</details>\n\n`;
-      }
-      if(c.structured && Object.keys(c.structured).length){
-        const tpl = TEMPLATES[c.category];
-        md += `**Feedback:**\n\n`;
-        if(tpl && tpl.fields.length){
-          tpl.fields.forEach(f => {
-            const v = c.structured[f.key];
-            if(!v) return;
-            md += `- **${f.label}:**\n${v.split("\n").map(l=>"  > "+l).join("\n")}\n`;
-          });
-        }
-        if(c.text){
-          md += `- **Notiz:**\n${c.text.split("\n").map(l=>"  > "+l).join("\n")}\n`;
-        }
-        md += `\n---\n\n`;
-      }else{
-        md += `**Feedback:**\n\n${(c.text||"").split("\n").map(l=>"> "+l).join("\n")}\n\n---\n\n`;
-      }
-    });
+  const actionVerb = { bug:"Fix", feature:"Implementiere", design:"Passe an", copy:"Formuliere um", question:"Beantworte", praise:"Notiere positiv" };
+  const sorted = [...cs].sort((a,b)=>{
+    const pd = (priOrder[a.priority]??9) - (priOrder[b.priority]??9);
+    if(pd) return pd;
+    return (a.ts||0) - (b.ts||0);
   });
 
-  if(!cs.length) md += `_Noch keine Kommentare vorhanden._\n`;
+  const priCount = { must:0, should:0, could:0, nice:0 };
+  const catCount = {};
+  cs.forEach(c => { if(priCount[c.priority]!==undefined) priCount[c.priority]++; catCount[c.category]=(catCount[c.category]||0)+1; });
+
+  let md = `# Feedback zu ${src}\n\n`;
+  md += `> **Für den KI-Assistenten:** Du bist Senior Web-Engineer. Unten steht manuell gesammeltes Nutzer-Feedback zu einer Web-Seite. Arbeite die Items in der angegebenen Reihenfolge ab (Muss → Sollte → Könnte → Nice). Für jedes Item:\n`;
+  md += `> 1. Finde das Ziel-Element per CSS-Selector — nutze die Fallback-Identifier (Text, ARIA-Label, data-testid, href) falls der Selector veraltet ist.\n`;
+  md += `> 2. Schlage einen minimalen Patch vor (HTML/CSS/JS-Diff). Keine Umfangsausweitung.\n`;
+  md += `> 3. Bei Mehrdeutigkeit: liste Rückfragen statt zu raten.\n`;
+  md += `> 4. „Muss" ist blockierend, „Nice" ist optional. Antworte gruppiert nach Datei.\n\n`;
+
+  md += `**Session:** ${cs.length} Item${cs.length===1?"":"s"} · exportiert ${now}\n\n`;
+  md += `**Aufwand nach Priorität:** `;
+  md += PRIORITIES.filter(p=>priCount[p.id]).map(p=>`${p.label} ${priCount[p.id]}`).join(" · ") || "—";
+  md += `\n\n**Verteilung:** `;
+  md += CATEGORIES.filter(k=>catCount[k.id]).map(k=>`${k.emoji} ${k.label} ${catCount[k.id]}`).join(" · ") || "—";
+  md += `\n\n---\n\n`;
+
+  if(!cs.length){
+    md += `_Noch keine Kommentare vorhanden._\n`;
+    return md;
+  }
+
+  sorted.forEach((c, idx) => {
+    const cat = CAT_MAP[c.category] || { emoji:"•", label:c.category };
+    const pri = PRI_MAP[c.priority] || PRI_MAP.could;
+    const verb = actionVerb[c.category] || "Adressiere";
+    const info = c.info || {};
+    const attrs = info.attrs || {};
+    const title = (info.text && info.text.length<70 ? info.text : null) || attrs.ariaLabel || attrs.alt || attrs.title || attrs.placeholder || (`<${c.tag}>`);
+
+    md += `## ${idx+1}. [${pri.label}] ${cat.emoji} ${verb}: ${title}\n\n`;
+
+    const fp = [];
+    fp.push(`\`${c.selector}\``);
+    if(attrs.dataTestid) fp.push(`\`[data-testid="${attrs.dataTestid}"]\``);
+    if(info.id) fp.push(`\`#${info.id}\``);
+    if(info.text) fp.push(`Text="${info.text.slice(0,60).replace(/"/g,'\\"')}"`);
+    if(attrs.ariaLabel) fp.push(`aria-label="${attrs.ariaLabel}"`);
+    if(attrs.href) fp.push(`href="${attrs.href}"`);
+    md += `**Ziel:** ${fp[0]}  \n`;
+    if(fp.length>1) md += `**Fallback-Identifier:** ${fp.slice(1).join(" · ")}  \n`;
+
+    const metaParts = [];
+    metaParts.push(`Kategorie ${cat.label}`);
+    metaParts.push(`Priorität ${pri.label}`);
+    if(info.rect) metaParts.push(`${info.rect.w}×${info.rect.h}px @ ${info.rect.viewport}${info.rect.visible===false?" · unsichtbar":""}`);
+    if(info.docTitle) metaParts.push(`Seite: "${info.docTitle}"`);
+    if(c.author) metaParts.push(`von ${c.author}`);
+    md += `**Meta:** ${metaParts.join(" · ")}\n\n`;
+
+    // Strukturierte Template-Felder als saubere Sub-Sektionen
+    const struct = c.structured || {};
+    const tpl = TEMPLATES[c.category];
+    let hasStructured = false;
+    if(tpl && tpl.fields.length){
+      tpl.fields.forEach(f => {
+        const v = struct[f.key];
+        if(!v) return;
+        hasStructured = true;
+        md += `**${f.label}:**\n\n${v.split("\n").map(l=>"> "+l).join("\n")}\n\n`;
+      });
+    }
+    if(c.text){
+      md += `**${hasStructured ? "Zusätzliche Notiz" : "Feedback"}:**\n\n${c.text.split("\n").map(l=>"> "+l).join("\n")}\n\n`;
+    }
+
+    // Element-Kontext komprimiert in einem Details-Block
+    const ctx = [];
+    if(info.role) ctx.push(`role=\`${info.role}\``);
+    if(info.classes?.length) ctx.push(`classes=\`${info.classes.map(x=>"."+x).join("")}\``);
+    if(info.ancestors?.length) ctx.push(`ancestors=\`${info.ancestors.join(" > ")}\``);
+    if(info.style) ctx.push(`style=\`${info.style.fontSize} ${info.style.fontWeight}, ${info.style.color} / ${info.style.backgroundColor}\``);
+    if(ctx.length || c.snippet || c.screenshot){
+      md += `<details><summary>Element-Kontext, HTML & Screenshot</summary>\n\n`;
+      if(ctx.length) md += ctx.map(x=>`- ${x}`).join("\n") + `\n\n`;
+      if(c.snippet) md += `\`\`\`html\n${c.snippet}\n\`\`\`\n\n`;
+      if(c.screenshot) md += `![Screenshot](${c.screenshot})\n\n`;
+      md += `</details>\n\n`;
+    }
+
+    md += `---\n\n`;
+  });
+
+  // Maschinen-lesbarer JSON-Block am Ende
+  const jsonPayload = sorted.map(c => ({
+    priority: c.priority,
+    category: c.category,
+    selector: c.selector,
+    fallback: {
+      text: c.info?.text || null,
+      ariaLabel: c.info?.attrs?.ariaLabel || null,
+      dataTestid: c.info?.attrs?.dataTestid || null,
+      href: c.info?.attrs?.href || null,
+      id: c.info?.id || null
+    },
+    structured: c.structured || null,
+    note: c.text || null,
+    author: c.author || null,
+    ts: c.ts
+  }));
+  md += `<details><summary>🤖 Machine-readable JSON (für Tool-Konsumenten)</summary>\n\n\`\`\`json\n${JSON.stringify({ source: src, exportedAt: now, count: cs.length, items: jsonPayload }, null, 2)}\n\`\`\`\n\n</details>\n`;
+
   return md;
 }
 
@@ -2112,9 +2493,18 @@ async function exportMarkdown(copyOnly){
   toast("Markdown heruntergeladen.");
 }
 
+// ============ Back-to-Top ============
+(function(){
+  const btn = document.getElementById("back-to-top");
+  if(!btn) return;
+  const onScroll = ()=>{ btn.classList.toggle("visible", window.scrollY > 400); };
+  window.addEventListener("scroll", onScroll, { passive:true });
+})();
+
 // ============ Router ============
 (function main(){
   const params = new URLSearchParams(location.search);
+  if(params.get("__vftest")==="1"){ window.__vftest = { STATE, buildMarkdown, CATEGORIES, PRIORITIES, TEMPLATES, CAT_MAP, PRI_MAP, createAnnotator }; console.log("[vf] test hook installed"); }
   const src = params.get("src");
   const owner = params.get("owner")==="1";
   if(src){ initApp(src, owner); } else { initLanding(); }

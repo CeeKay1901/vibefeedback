@@ -547,7 +547,7 @@
         }
         if (saveComments()) { renderSide(); refreshBadges(); cleanup(); toast(isEdit ? "Aktualisiert." : "Gespeichert."); toggleSide(true); }
         else if (!isEdit) { comments.pop(); btn.disabled = false; btn.textContent = "Speichern"; }
-      });
+      }).catch(function() { btn.disabled = false; btn.textContent = "Speichern"; toast("Fehler beim Speichern."); });
     }
     function onKey(e) {
       if (e.key === "Escape") { e.preventDefault(); cleanup(); }
