@@ -274,6 +274,24 @@ body:has(.mode-toggle button[data-mode=nav].active) .canvas iframe{outline:2px s
 .item .meta .pageref{background:rgba(92,143,191,.14);color:var(--accent-3);padding:2px 8px;border-radius:99px;font-family:ui-monospace,monospace;font-size:10.5px;border:1px solid rgba(92,143,191,.3)}
 .item .thumb{margin-top:8px;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:#fff;max-height:120px;display:flex;justify-content:center}
 .item .thumb img{max-width:100%;max-height:120px;height:auto;display:block}
+.item .reactions{display:flex;gap:6px;align-items:center;margin-top:8px;flex-wrap:wrap}
+.item .rxn-btn{background:transparent;border:1px solid var(--line);border-radius:99px;padding:2px 9px;font-size:12px;cursor:pointer;color:var(--muted);transition:all .12s;line-height:1.6;display:inline-flex;align-items:center;gap:3px}
+.item .rxn-btn:hover{border-color:var(--line-2);color:var(--fg);transform:none}
+.item .rxn-btn.active{font-weight:700}
+.item .rxn-btn[data-type=like].active{border-color:#4a9420;color:#4a9420}
+.item .rxn-btn[data-type=dislike].active{border-color:var(--danger);color:var(--danger)}
+.item .reply-toggle{background:transparent;border:0;color:var(--muted);font-size:11.5px;cursor:pointer;padding:2px 4px;display:inline-flex;align-items:center;gap:3px;transition:color .12s;margin-left:2px}
+.item .reply-toggle:hover{color:var(--fg)}
+.item .replies{margin-top:8px;padding-left:10px;border-left:2px solid var(--line);display:flex;flex-direction:column;gap:6px}
+.item .reply{background:var(--panel);border-radius:6px;padding:7px 10px}
+.item .reply .reply-meta{font-size:11px;color:var(--dim);margin-bottom:3px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.item .reply .reply-txt{font-size:12.5px;white-space:pre-wrap;overflow-wrap:break-word}
+.item .reply .reply-reactions{display:flex;gap:4px;margin-top:5px}
+.item .reply-form{margin-top:8px;display:flex;flex-direction:column;gap:6px}
+.item .reply-form textarea{width:100%;font-family:inherit;font-size:12.5px;padding:7px 9px;border:1px solid var(--line);border-radius:7px;background:var(--panel-2);color:var(--fg);resize:none;box-sizing:border-box;min-height:52px;transition:border-color .12s}
+.item .reply-form textarea:focus{outline:none;border-color:var(--fg)}
+.item .reply-form .reply-actions{display:flex;gap:6px;justify-content:flex-end}
+.item .reply-form .primary.small,.item .reply-form .ghost{min-height:32px;padding:4px 14px;font-size:12.5px}
 .cbar .target-card .screenshot{margin-top:10px;border:1px solid var(--line);border-radius:6px;padding:6px;background:#fff;text-align:center}
 .cbar .target-card .screenshot img{max-width:100%;max-height:180px;display:inline-block}
 .cbar .annot{margin-top:10px;border:1px solid var(--line);border-radius:8px;background:#fff;overflow:hidden}
@@ -790,6 +808,8 @@ a.bm-drag:active{transform:scale(.97)}
     <div class="tools">
       <button id="btn-export" class="primary">Als Markdown</button>
       <button id="btn-copy-md">Kopieren</button>
+      <button id="btn-import">Importieren</button>
+      <input type="file" id="btn-import-file" accept=".md,.json" multiple hidden>
       <button id="btn-clear" class="danger">Alle löschen</button>
     </div>
     <div id="cmt-empty" class="empty">
@@ -1016,11 +1036,18 @@ const storeKey = src => "vibefeedback:v2:"+src;
 function loadComments(src){
   try{
     const raw = localStorage.getItem(storeKey(src));
-    if(raw) return JSON.parse(raw);
+    if(raw){
+      const arr = JSON.parse(raw);
+      return arr.map(c => ({
+        ...c,
+        reactions: c.reactions || {likes:[],dislikes:[]},
+        replies: (c.replies||[]).map(r => ({...r, reactions: r.reactions||{likes:[],dislikes:[]}}))
+      }));
+    }
     // Migration: v1 → v2
     const oldRaw = localStorage.getItem("vibefeedback:v1:"+src);
     if(oldRaw){
-      const arr = JSON.parse(oldRaw).map(c => ({...c, category:c.category||"feature", priority:c.priority||"could"}));
+      const arr = JSON.parse(oldRaw).map(c => ({...c, category:c.category||"feature", priority:c.priority||"could", reactions:{likes:[],dislikes:[]}, replies:[]}));
       localStorage.setItem(storeKey(src), JSON.stringify(arr));
       return arr;
     }
@@ -1051,9 +1078,49 @@ function saveComments(src, arr){
 const AUTHOR_KEY = "vibefeedback:v2:author";
 const getAuthor = ()=> { try{ return localStorage.getItem(AUTHOR_KEY)||""; }catch(e){ return ""; } };
 const setAuthor = v => { try{ localStorage.setItem(AUTHOR_KEY, v||""); }catch(e){} };
+
+function toggleReaction(commentId, type, replyId){
+  const devId = getDeviceId();
+  const cs = STATE.comments;
+  let obj;
+  if(replyId){
+    const parent = cs.find(x=>x.id===commentId);
+    obj = parent && (parent.replies||[]).find(r=>r.id===replyId);
+  } else {
+    obj = cs.find(x=>x.id===commentId);
+  }
+  if(!obj) return;
+  obj.reactions = obj.reactions || {likes:[],dislikes:[]};
+  const opp = type==="like" ? "dislikes" : "likes";
+  obj.reactions[opp] = (obj.reactions[opp]||[]).filter(x=>x!==devId);
+  const arr = obj.reactions[type] = obj.reactions[type]||[];
+  const idx = arr.indexOf(devId);
+  if(idx>=0) arr.splice(idx,1); else arr.push(devId);
+  saveComments(STATE.src, cs);
+  renderAll();
+}
+
+function addReply(commentId, text, author){
+  const trimmed = (text||"").trim(); if(!trimmed) return;
+  const c = STATE.comments.find(x=>x.id===commentId); if(!c) return;
+  c.replies = c.replies||[];
+  const id = Date.now().toString(36)+Math.random().toString(36).slice(2);
+  c.replies.push({id, text:trimmed, author:author||"", ts:Date.now(), reactions:{likes:[],dislikes:[]}});
+  saveComments(STATE.src, STATE.comments);
+  renderAll();
+}
+
 const COACH_KEY = "vibefeedback:v2:coach-seen";
 const seenCoach = ()=> { try{ return localStorage.getItem(COACH_KEY)==="1"; }catch(e){ return true; } };
 const setSeenCoach = ()=> { try{ localStorage.setItem(COACH_KEY,"1"); }catch(e){} };
+const DEVICE_ID_KEY = "vibefeedback:anonId";
+function getDeviceId(){
+  try{
+    let id = localStorage.getItem(DEVICE_ID_KEY);
+    if(!id){ id = (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)+Date.now().toString(36)); localStorage.setItem(DEVICE_ID_KEY, id); }
+    return id;
+  }catch(e){ return "anon"; }
+}
 const PRECISION_KEY = "vibefeedback:v2:precision";
 const getPrecision = ()=> { try{ return localStorage.getItem(PRECISION_KEY)==="1"; }catch(e){ return false; } };
 const setPrecision = v => { try{ localStorage.setItem(PRECISION_KEY, v?"1":"0"); }catch(e){} };
@@ -1140,6 +1207,8 @@ async function initApp(src, isOwner){
   $("#btn-back").onclick = ()=> location.href = location.origin + location.pathname;
   $("#btn-export").onclick = ()=> exportMarkdown(false);
   $("#btn-copy-md").onclick = ()=> exportMarkdown(true);
+  $("#btn-import").onclick = ()=> $("#btn-import-file").click();
+  $("#btn-import-file").addEventListener("change", ()=> importComments($("#btn-import-file")));
   $("#btn-present").onclick = ()=> openPresentation();
 
   STATE.precision = getPrecision();
@@ -1455,6 +1524,7 @@ function hookFrame(doc){
     if(e.target && e.target.classList) e.target.classList.remove("__vf_hover","__vf_precise");
     info.style.display = "none";
   }, true);
+  // Capture-Phase, damit wir vor SPA-Handlern (React/Vue etc. mit stopPropagation) greifen
   doc.addEventListener("click", e=>{
     if(STATE.mode === "comment"){
       e.preventDefault(); e.stopPropagation();
@@ -1520,75 +1590,160 @@ function applyPrecisionState(){
   }
 }
 
-// ============ Screenshot: DOM → PNG (via SVG foreignObject) ============
-async function captureElement(el, opts){
-  opts = opts || {};
+// ============ Screenshot: DOM → canvas via Canvas 2D API ============
+// SVG foreignObject → canvas is permanently broken in Chrome/Chromium:
+// any SVG with <foreignObject> drawn to canvas taints it, making toDataURL()
+// throw SecurityError regardless of content. Canvas 2D API has no such restriction.
+
+async function captureElement(el){
   if(!el || el.nodeType!==1) return null;
-  const doc = el.ownerDocument;
-  const win = doc.defaultView;
-  const rect = el.getBoundingClientRect();
-  const pad = opts.pad ?? 10;
-  let w = Math.max(1, Math.ceil(rect.width + pad*2));
-  let h = Math.max(1, Math.ceil(rect.height + pad*2));
-  const MAX = 1400;
-  let scale = 1;
-  if(w>MAX || h>MAX){ scale = Math.min(MAX/w, MAX/h); w = Math.round(w*scale); h = Math.round(h*scale); }
+  const win = el.ownerDocument?.defaultView;
+  if(!win) return null;
 
-  // Clone target, inline computed styles recursively
-  const clone = el.cloneNode(true);
-  function inlineStyles(src, dst){
-    if(!src || !dst || dst.nodeType!==1) return;
-    const cs = win.getComputedStyle(src);
-    let style = "";
-    for(let i=0;i<cs.length;i++){
-      const p = cs[i]; style += p + ":" + cs.getPropertyValue(p) + ";";
+  const rootRect = el.getBoundingClientRect();
+  if(rootRect.width < 2 || rootRect.height < 2) return null;
+
+  const PAD = 10;
+  const MAX_W = 680, MAX_H = 480;
+  const rawW = Math.ceil(rootRect.width  + PAD*2);
+  const rawH = Math.ceil(rootRect.height + PAD*2);
+  const scale = Math.min(1, MAX_W / rawW, MAX_H / rawH);
+  const W = Math.round(rawW * scale);
+  const H = Math.round(rawH * scale);
+  console.log("[vf] capture start:", el.tagName, `${Math.round(rootRect.width)}×${Math.round(rootRect.height)}`, "canvas", `${W}×${H}`, "scale", scale.toFixed(2));
+
+  const canvas = document.createElement("canvas");
+  const DPR = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width  = Math.round(W * DPR);
+  canvas.height = Math.round(H * DPR);
+  const ctx = canvas.getContext("2d");
+  ctx.scale(DPR * scale, DPR * scale);
+
+  // White background
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, rawW / scale, rawH / scale);
+
+  // Draw one DOM node (and recurse into children)
+  function drawNode(node, depth){
+    if(!node || node.nodeType !== 1 || depth > 3) return;
+    // Skip VF artefacts
+    const cls = typeof node.className === "string" ? node.className : "";
+    if(cls.includes("__vf_") || cls.includes("__pv_")) return;
+    let r, cs;
+    try{
+      r  = node.getBoundingClientRect();
+      cs = win.getComputedStyle(node);
+    }catch(e){ return; }
+    if(!r || r.width < 1 || r.height < 1) return;
+    if(cs.display === "none" || cs.visibility === "hidden" || parseFloat(cs.opacity||"1") < 0.05) return;
+
+    // Position relative to root element, in un-scaled coords
+    const x = PAD + (r.left - rootRect.left);
+    const y = PAD + (r.top  - rootRect.top);
+    const w = r.width;
+    const h = r.height;
+    if(x + w < 0 || y + h < 0 || x > rawW || y > rawH) return;
+
+    ctx.save();
+
+    // Background colour (skip transparent)
+    const bg = cs.backgroundColor;
+    if(bg && bg !== "rgba(0, 0, 0, 0)" && bg !== "transparent"){
+      ctx.fillStyle = bg;
+      const rx = Math.min(parseFloat(cs.borderTopLeftRadius)||0, h/2, 16);
+      if(rx > 1 && ctx.roundRect){
+        ctx.beginPath(); ctx.roundRect(x, y, w, h, rx); ctx.fill();
+      } else {
+        ctx.fillRect(x, y, w, h);
+      }
     }
-    dst.setAttribute("style", style);
-    dst.removeAttribute("class");
-    const sK = src.children, dK = dst.children;
-    for(let i=0;i<sK.length && i<dK.length;i++) inlineStyles(sK[i], dK[i]);
+
+    // Border (top only, as representative)
+    const bw = parseFloat(cs.borderTopWidth)||0;
+    const bc = cs.borderTopColor;
+    if(bw >= 0.5 && bc && bc !== "rgba(0, 0, 0, 0)"){
+      ctx.strokeStyle = bc;
+      ctx.lineWidth = Math.max(0.5, bw);
+      const rx = Math.min(parseFloat(cs.borderTopLeftRadius)||0, h/2, 16);
+      if(rx > 1 && ctx.roundRect){
+        ctx.beginPath(); ctx.roundRect(x, y, w, h, rx); ctx.stroke();
+      } else {
+        ctx.strokeRect(x, y, w, h);
+      }
+    }
+
+    // Box shadow hint (drawn as a subtle outer glow)
+    const bs = cs.boxShadow;
+    if(bs && bs !== "none"){
+      ctx.shadowColor = "rgba(0,0,0,0.12)";
+      ctx.shadowBlur  = 6;
+      ctx.shadowOffsetY = 2;
+    }
+
+    // Text: collect direct text-node content only
+    let directText = "";
+    node.childNodes.forEach(n=>{ if(n.nodeType===3){ const t=(n.textContent||"").trim(); if(t) directText+=(directText?" ":"")+t; } });
+    if(directText && h >= 10){
+      ctx.shadowColor = "transparent"; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+      const fgColor = cs.color || "#222";
+      const rawFs   = parseFloat(cs.fontSize) || 14;
+      const fs      = Math.max(8, Math.min(rawFs, 18));
+      const fw      = /bold|700|800|900/.test(cs.fontWeight) ? "600" : "400";
+      const ff      = /monospace/.test(cs.fontFamily) ? "monospace" : "system-ui,sans-serif";
+      ctx.fillStyle   = fgColor;
+      ctx.font        = `${fw} ${fs}px ${ff}`;
+      ctx.textBaseline= "middle";
+      ctx.textAlign   = cs.textAlign === "center" ? "center" : "left";
+      const txtX = cs.textAlign === "center" ? x + w/2 : x + Math.min(parseFloat(cs.paddingLeft)||0, 12) + 3;
+      const txtY = y + h/2;
+      // Clip to cell
+      ctx.rect(x, y, w, h); ctx.clip();
+      const maxW = w - 6;
+      let line = directText;
+      while(line && ctx.measureText(line).width > maxW && line.length > 4) line = line.slice(0,-2);
+      if(line !== directText) line += "…";
+      ctx.fillText(line, txtX, txtY);
+    }
+
+    ctx.restore();
+
+    // Image/media placeholder (grey rect with diagonal cross)
+    const tag = node.tagName.toLowerCase();
+    if(tag === "img" || tag === "video" || tag === "svg"){
+      ctx.save();
+      ctx.fillStyle = "#e8e8e8";
+      ctx.fillRect(x, y, w, h);
+      ctx.strokeStyle = "#ccc"; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x+w, y+h); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x+w, y); ctx.lineTo(x, y+h); ctx.stroke();
+      ctx.restore();
+      return; // don't recurse into replaced media
+    }
+
+    // Recurse (skip replaced media)
+    Array.from(node.children).slice(0, 14).forEach(child => drawNode(child, depth+1));
   }
-  try { inlineStyles(el, clone); } catch(e){ /* best-effort */ }
-  // Strip VF internal artefacts
-  clone.querySelectorAll?.(".__vf_badge, .__vf_hover, .__vf_marked, .__vf_precise, .__vf_selected, .__pv_hi, .__vf_infobox").forEach(n=>n.remove());
-  clone.classList?.remove?.("__vf_hover","__vf_marked","__vf_precise","__vf_selected","__pv_hi");
 
-  // Wrap for padding + white bg
-  const wrapper = doc.createElement("div");
-  wrapper.style.cssText = `padding:${pad}px;box-sizing:border-box;background:#fff;display:inline-block;transform-origin:top left;transform:scale(${scale})`;
-  wrapper.appendChild(clone);
+  try { drawNode(el, 0); } catch(e){ console.warn("[vf] drawNode error:", e); }
 
-  // Serialize as XML — modern browsers emit well-formed XHTML for HTML nodes
-  let inner;
-  try{ inner = new XMLSerializer().serializeToString(wrapper); }
-  catch(e){ return null; }
+  // Outer border + label
+  ctx.save();
+  ctx.resetTransform ? ctx.resetTransform() : ctx.setTransform(1,0,0,1,0,0);
+  ctx.strokeStyle = "#d0d0d0"; ctx.lineWidth = 1;
+  ctx.strokeRect(0.5, 0.5, canvas.width - 1, canvas.height - 1);
+  ctx.fillStyle = "#bbbbbb";
+  ctx.font = `${Math.round(9*DPR)}px ui-monospace,monospace`;
+  ctx.textAlign = "right"; ctx.textBaseline = "bottom";
+  ctx.fillText(`<${el.tagName.toLowerCase()}> ${Math.round(rootRect.width)}×${Math.round(rootRect.height)}`, canvas.width - 4*DPR, canvas.height - 2*DPR);
+  ctx.restore();
 
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml">${inner}</div></foreignObject></svg>`;
-  const blob = new Blob([svg], { type:"image/svg+xml;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
   try{
-    const img = new Image();
-    img.decoding = "sync";
-    await new Promise((res, rej)=>{
-      img.onload = res;
-      img.onerror = ()=> rej(new Error("svg-image-load"));
-      img.src = url;
-    });
-    const dpr = Math.min(2, win.devicePixelRatio || 1);
-    const canvas = doc.createElement("canvas");
-    canvas.width = Math.round(w*dpr); canvas.height = Math.round(h*dpr);
-    const ctx = canvas.getContext("2d");
-    ctx.scale(dpr, dpr);
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0,0,w,h);
-    ctx.drawImage(img, 0, 0, w, h);
-    // JPEG for size, quality 0.78 — screenshots kompakt halten
-    try{ return canvas.toDataURL("image/jpeg", 0.78); }
-    catch(e){ return null; }
+    const result = canvas.toDataURL("image/jpeg", 0.82);
+    console.log("[vf] capture success, dataURL length:", result.length);
+    return result;
   }catch(e){
+    console.warn("[vf] capture toDataURL failed:", e);
     return null;
-  }finally{
-    URL.revokeObjectURL(url);
   }
 }
 
@@ -2229,9 +2384,30 @@ function renderAll(){
     return;
   }
 
+  const devId = getDeviceId();
   list.innerHTML = items.map((c,i)=>{
     const cat = CAT_MAP[c.category]||CAT_MAP.feature;
     const pri = PRI_MAP[c.priority]||PRI_MAP.could;
+    const rxn = c.reactions||{likes:[],dislikes:[]};
+    const likeN = (rxn.likes||[]).length, dislikeN = (rxn.dislikes||[]).length;
+    const likedByMe = (rxn.likes||[]).includes(devId);
+    const dislikedByMe = (rxn.dislikes||[]).includes(devId);
+    const replies = c.replies||[];
+    const replyLabel = replies.length ? `💬 ${replies.length}` : "💬 Antworten";
+    const repliesHtml = replies.map(r => {
+      const rRxn = r.reactions||{likes:[],dislikes:[]};
+      const rLN = (rRxn.likes||[]).length, rDN = (rRxn.dislikes||[]).length;
+      const rLiked = (rRxn.likes||[]).includes(devId);
+      const rDisliked = (rRxn.dislikes||[]).includes(devId);
+      return `<div class="reply" data-reply-id="${r.id}">
+        <div class="reply-meta">${r.author?`<b>${esc(r.author)}</b>`:"Anonym"}<span>${new Date(r.ts).toLocaleString("de-DE")}</span></div>
+        <div class="reply-txt">${esc(r.text)}</div>
+        <div class="reply-reactions">
+          <button class="rxn-btn${rLiked?" active":""}" data-rxn="${c.id}" data-reply-id="${r.id}" data-type="like">👍${rLN||""}</button>
+          <button class="rxn-btn${rDisliked?" active":""}" data-rxn="${c.id}" data-reply-id="${r.id}" data-type="dislike">👎${rDN||""}</button>
+        </div>
+      </div>`;
+    }).join("");
     return `<div class="item" data-id="${c.id}" data-cat="${c.category}">
       <div class="h">
         <div style="display:flex;gap:8px;align-items:center">
@@ -2254,6 +2430,19 @@ function renderAll(){
         ${c.author?`<span>${esc(c.author)}</span>`:""}
         <span>${new Date(c.ts).toLocaleString("de-DE")}</span>
       </div>
+      <div class="reactions">
+        <button class="rxn-btn${likedByMe?" active":""}" data-rxn="${c.id}" data-type="like">👍${likeN||""}</button>
+        <button class="rxn-btn${dislikedByMe?" active":""}" data-rxn="${c.id}" data-type="dislike">👎${dislikeN||""}</button>
+        <button class="reply-toggle" data-reply-toggle="${c.id}">${replyLabel}</button>
+      </div>
+      <div class="replies" data-replies="${c.id}"${replies.length?"":" hidden"}>${repliesHtml}</div>
+      <div class="reply-form" data-reply-form="${c.id}" hidden>
+        <textarea placeholder="Antwort schreiben…" rows="2"></textarea>
+        <div class="reply-actions">
+          <button class="ghost" data-reply-cancel="${c.id}">Abbrechen</button>
+          <button class="primary small" data-reply-save="${c.id}">Antworten</button>
+        </div>
+      </div>
     </div>`;
   }).join("");
 
@@ -2268,6 +2457,32 @@ function renderAll(){
     e.stopPropagation();
     const c = STATE.comments.find(x=>x.id===b.dataset.edit);
     if(c) openCommentModal(null, c);
+  }));
+  $$("[data-rxn]", list).forEach(b=>b.addEventListener("click", e=>{
+    e.stopPropagation();
+    toggleReaction(b.dataset.rxn, b.dataset.type, b.dataset.replyId||null);
+  }));
+  $$("[data-reply-toggle]", list).forEach(b=>b.addEventListener("click", e=>{
+    e.stopPropagation();
+    const id = b.dataset.replyToggle;
+    const form = list.querySelector(`[data-reply-form="${id}"]`);
+    const rlist = list.querySelector(`[data-replies="${id}"]`);
+    if(form){
+      form.hidden = !form.hidden;
+      if(!form.hidden){ if(rlist) rlist.hidden=false; form.querySelector("textarea").focus(); }
+    }
+  }));
+  $$("[data-reply-cancel]", list).forEach(b=>b.addEventListener("click", e=>{
+    e.stopPropagation();
+    const form = list.querySelector(`[data-reply-form="${b.dataset.replyCancel}"]`);
+    if(form){ form.hidden=true; form.querySelector("textarea").value=""; }
+  }));
+  $$("[data-reply-save]", list).forEach(b=>b.addEventListener("click", e=>{
+    e.stopPropagation();
+    const id = b.dataset.replySave;
+    const form = list.querySelector(`[data-reply-form="${id}"]`);
+    const ta = form && form.querySelector("textarea");
+    if(ta && ta.value.trim()) addReply(id, ta.value, getAuthor()||undefined);
   }));
   $$(".item", list).forEach(it => it.addEventListener("click", ()=>{
     const c = STATE.comments.find(x=>x.id===it.dataset.id);
@@ -2523,6 +2738,21 @@ function buildMarkdown(){
       md += `**${hasStructured ? "Zusätzliche Notiz" : "Feedback"}:**\n\n${c.text.split("\n").map(l=>"> "+l).join("\n")}\n\n`;
     }
 
+    // Reactions + Replies
+    const rxn = c.reactions||{likes:[],dislikes:[]};
+    const likeN = (rxn.likes||[]).length, dislikeN = (rxn.dislikes||[]).length;
+    if(likeN||dislikeN) md += `**Reaktionen:** 👍 ${likeN} · 👎 ${dislikeN}\n\n`;
+    const replies = c.replies||[];
+    if(replies.length){
+      md += `**Antworten (${replies.length}):**\n\n`;
+      replies.forEach(r => {
+        const rRxn = r.reactions||{likes:[],dislikes:[]};
+        const rLN = (rRxn.likes||[]).length, rDN = (rRxn.dislikes||[]).length;
+        const rMeta = [r.author||"Anonym", new Date(r.ts).toLocaleString("de-DE"), ...(rLN||rDN?[`👍 ${rLN} 👎 ${rDN}`]:[])].join(" · ");
+        md += `> **${rMeta}**\n> ${r.text.split("\n").join("\n> ")}\n\n`;
+      });
+    }
+
     // Element-Kontext komprimiert in einem Details-Block
     const ctx = [];
     if(info.role) ctx.push(`role=\`${info.role}\``);
@@ -2542,9 +2772,12 @@ function buildMarkdown(){
 
   // Maschinen-lesbarer JSON-Block am Ende
   const jsonPayload = sorted.map(c => ({
+    id: c.id,
     priority: c.priority,
     category: c.category,
     selector: c.selector,
+    tag: c.tag || null,
+    page: c.page || null,
     fallback: {
       text: c.info?.text || null,
       ariaLabel: c.info?.attrs?.ariaLabel || null,
@@ -2555,11 +2788,105 @@ function buildMarkdown(){
     structured: c.structured || null,
     note: c.text || null,
     author: c.author || null,
-    ts: c.ts
+    ts: c.ts,
+    reactions: {likes:(c.reactions?.likes||[]).length, dislikes:(c.reactions?.dislikes||[]).length},
+    replies: (c.replies||[]).map(r=>({id:r.id, author:r.author||null, text:r.text, ts:r.ts, reactions:{likes:(r.reactions?.likes||[]).length, dislikes:(r.reactions?.dislikes||[]).length}}))
   }));
   md += `<details><summary>🤖 Machine-readable JSON (für Tool-Konsumenten)</summary>\n\n\`\`\`json\n${JSON.stringify({ source: src, exportedAt: now, count: cs.length, items: jsonPayload }, null, 2)}\n\`\`\`\n\n</details>\n`;
 
   return md;
+}
+
+async function importComments(fileInput){
+  const files = fileInput ? [...fileInput.files] : [];
+  if(!files.length) return;
+  // Reset so the same file can be picked again next time
+  fileInput.value = "";
+
+  // Build dedup sets: by id and by selector:ts fingerprint
+  const existingIds = new Set(STATE.comments.map(c=>c.id).filter(Boolean));
+  const existingFp  = new Set(STATE.comments.map(c=>c.selector+":"+c.ts));
+
+  let newCount = 0, skipCount = 0, errorFiles = [];
+
+  for(const file of files){
+    let raw;
+    try{ raw = await file.text(); }
+    catch(e){ errorFiles.push(file.name); continue; }
+
+    let items = [];
+    try{
+      if(file.name.endsWith(".json")){
+        const parsed = JSON.parse(raw);
+        items = Array.isArray(parsed) ? parsed : (parsed.items || []);
+      } else {
+        // .md: pull the JSON from the <details> machine-readable block
+        const m = raw.match(/```json\r?\n([\s\S]*?)\r?\n```/);
+        if(!m) throw new Error("Kein JSON-Block");
+        const parsed = JSON.parse(m[1]);
+        items = Array.isArray(parsed) ? parsed : (parsed.items || []);
+      }
+    }catch(e){ errorFiles.push(file.name); continue; }
+
+    for(const item of items){
+      if(!item.selector) continue;
+      const fp = item.selector + ":" + item.ts;
+
+      // Dedup: skip if same id OR same selector+ts fingerprint
+      if(item.id && existingIds.has(item.id)){ skipCount++; continue; }
+      if(existingFp.has(fp)){ skipCount++; continue; }
+
+      const id = item.id || (Date.now().toString(36) + Math.random().toString(36).slice(2));
+      existingIds.add(id);
+      existingFp.add(fp);
+
+      const fallback = item.fallback || {};
+      STATE.comments.push({
+        id,
+        selector:   item.selector,
+        tag:        item.tag || (item.selector.match(/^(\w[\w-]*)/)?.[1] || "div"),
+        text:       item.text || item.note || "",
+        author:     item.author || "",
+        ts:         item.ts || Date.now(),
+        category:   item.category || "feature",
+        priority:   item.priority || "could",
+        screenshot: item.screenshot || null,
+        structured: item.structured || null,
+        snippet:    item.snippet || null,
+        page:       item.page || null,
+        info: item.info || (Object.keys(fallback).some(k=>fallback[k]) ? {
+          text:      fallback.text || null,
+          id:        fallback.id || null,
+          attrs: {
+            ariaLabel:   fallback.ariaLabel || null,
+            dataTestid:  fallback.dataTestid || null,
+            href:        fallback.href || null
+          }
+        } : null),
+        reactions: { likes: [], dislikes: [] },
+        replies: (item.replies || []).map(r => ({
+          id:     r.id || (Date.now().toString(36) + Math.random().toString(36).slice(2)),
+          text:   r.text || "",
+          author: r.author || "",
+          ts:     r.ts || Date.now(),
+          reactions: { likes: [], dislikes: [] }
+        }))
+      });
+      newCount++;
+    }
+  }
+
+  if(newCount){
+    saveComments(STATE.src, STATE.comments);
+    renderAll();
+    refreshFrameBadges();
+  }
+
+  const parts = [];
+  if(newCount)       parts.push(`${newCount} Kommentar${newCount===1?"":"e"} importiert`);
+  if(skipCount)      parts.push(`${skipCount} Duplikat${skipCount===1?"":"e"} übersprungen`);
+  if(errorFiles.length) parts.push(`${errorFiles.length} Datei${errorFiles.length===1?" unlesbar":"en unlesbar"}: ${errorFiles.join(", ")}`);
+  toast(parts.join(" · ") || "Nichts importiert.", newCount ? 3000 : 4500);
 }
 
 async function exportMarkdown(copyOnly){
