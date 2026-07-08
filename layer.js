@@ -33,12 +33,12 @@
   }
 
   var CATEGORIES = [
-    { id: "bug", label: "Bug", emoji: "🐛", color: "#e35f5f" },
-    { id: "feature", label: "Feature", emoji: "✨", color: "#ffe05e" },
-    { id: "design", label: "Design", emoji: "🎨", color: "#62c12d" },
-    { id: "copy", label: "Copy", emoji: "📝", color: "#e6ca55" },
-    { id: "question", label: "Frage", emoji: "❓", color: "#5c8fbf" },
-    { id: "praise", label: "Lob", emoji: "❤️", color: "#c67ba0" },
+    { id: "bug",      label: "Bug",     emoji: "🐛", color: "#e35f5f", sub: "Etwas funktioniert nicht" },
+    { id: "feature",  label: "Feature", emoji: "✨", color: "#ffe05e", sub: "Idee / Wunsch" },
+    { id: "design",   label: "Design",  emoji: "🎨", color: "#62c12d", sub: "Sieht nicht richtig aus" },
+    { id: "copy",     label: "Copy",    emoji: "📝", color: "#e6ca55", sub: "Text / Formulierung" },
+    { id: "question", label: "Frage",   emoji: "❓", color: "#5c8fbf", sub: "Ich verstehe nicht..." },
+    { id: "praise",   label: "Lob",     emoji: "❤️", color: "#c67ba0", sub: "Das gefällt mir" },
   ];
   var CAT_MAP = {}; CATEGORIES.forEach(function (c) { CAT_MAP[c.id] = c; });
   var PRIORITIES = [
@@ -242,12 +242,45 @@
     ".__vfl_modal .__vfl_actions button.__vfl_primary { background:#262626; border-color:#262626; color:#fcfcfc; }",
     ".__vfl_modal .__vfl_actions button.__vfl_primary:hover { background:#ffe05e; color:#262626; }",
     ".__vfl_toast { position:fixed; bottom:80px; left:50%; transform:translateX(-50%); background:#262626; color:#fcfcfc; padding:10px 16px; border-radius:10px; box-shadow:0 6px 20px rgba(38,38,38,.35); z-index:2147483647; font:13px system-ui; }",
+    ".__vfl_modal .__vfl_chips .__vfl_pick .__vfl_sub { display:block; font-size:10px; font-weight:400; opacity:.65; margin-top:1px; }",
+    ".__vfl_modal .__vfl_author-hint { font-size:11px; color:#5c8fbf; margin-top:3px; }",
+    ".__vfl_export-bar { position:fixed; bottom:0; left:0; right:0; z-index:2147483647; background:#ffe05e; border-top:2px solid #262626; padding:12px 16px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; box-shadow:0 -4px 20px rgba(38,38,38,.18); font:600 13px/1.4 system-ui,sans-serif; color:#262626; }",
+    ".__vfl_export-bar button { background:#262626; color:#ffe05e; border:1px solid #262626; border-radius:8px; padding:8px 14px; font:600 13px/1 system-ui,sans-serif; cursor:pointer; white-space:nowrap; }",
+    ".__vfl_export-bar button:hover { background:#1a1a1a; }",
+    ".__vfl_export-bar .__vfl_eb-dismiss { background:transparent; border:0; color:#262626; font-size:16px; padding:6px; cursor:pointer; margin-left:auto; flex-shrink:0; }",
+    "@media(max-width:600px){ .__vfl_side { width:100vw; } .__vfl_fab { bottom:12px; right:12px; } .__vfl_fab button { padding:8px 12px; font-size:12px; } }",
   ].join("\n");
   document.head.appendChild(style);
 
   // ---------- state ----------
   var mode = "off"; // "off" | "select"
   var hoverEl = null;
+
+  // ---------- Export Reminder ----------
+  var EXPORT_REMINDED_KEY = "vibefeedback:layer:export-reminded:" + location.origin + location.pathname;
+  function showExportReminder() {
+    if (document.querySelector(".__vfl_export-bar")) return;
+    var bar = document.createElement("div");
+    bar.className = "__vfl_export-bar";
+    var n = comments.length;
+    bar.innerHTML =
+      '<span style="flex:1;min-width:160px">💬 Du hast <strong>' + n + ' Kommentar' + (n === 1 ? "" : "e") + '</strong>. Fertig? Exportiere dein Feedback!</span>' +
+      '<button data-act="er-md">⬇ Als Markdown</button>' +
+      '<button data-act="er-dismiss" class="__vfl_eb-dismiss" aria-label="Schließen">✕</button>';
+    document.body.appendChild(bar);
+    bar.querySelector('[data-act="er-md"]').addEventListener("click", function () { exportMarkdown(); bar.remove(); });
+    bar.querySelector('[data-act="er-dismiss"]').addEventListener("click", function () { bar.remove(); });
+  }
+  function maybeShowExportReminder() {
+    if (comments.length > 0 && !localStorage.getItem(EXPORT_REMINDED_KEY)) {
+      localStorage.setItem(EXPORT_REMINDED_KEY, "1");
+      showExportReminder();
+    }
+  }
+  // Show reminder when user comes back to the tab after commenting
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "visible") maybeShowExportReminder();
+  });
 
   // ---------- FAB ----------
   var fab = document.createElement("div");
@@ -285,9 +318,10 @@
       '<button data-act="close" title="Schließen">✕</button>' +
     '</header>' +
     '<div class="__vfl_tools">' +
-      '<button data-act="export-md">📄 Markdown</button>' +
-      '<button data-act="export-json">💾 JSON</button>' +
-      '<button data-act="clear">Alle löschen</button>' +
+      '<button data-act="export-md" title="Markdown-Datei herunterladen">📄 Markdown</button>' +
+      '<button data-act="export-json" title="JSON-Datei herunterladen">💾 JSON</button>' +
+      '<button data-act="done" title="Feedback fertig — Markdown herunterladen" style="background:#262626;color:#ffe05e;border-color:#262626;font-weight:700">✅ Fertig</button>' +
+      '<button data-act="clear" title="Alle Kommentare löschen" style="margin-left:auto">Alle löschen</button>' +
     '</div>' +
     '<div class="__vfl_list"></div>';
   document.body.appendChild(side);
@@ -295,12 +329,17 @@
   function toggleSide(force) {
     var on = typeof force === "boolean" ? force : !side.classList.contains("__vfl_on");
     side.classList.toggle("__vfl_on", on);
-    if (on) renderSide();
+    if (on) { renderSide(); }
   }
   document.addEventListener("__vf_layer_toggle_sidebar", function () { toggleSide(true); });
   side.querySelector('[data-act="close"]').addEventListener("click", function () { toggleSide(false); });
   side.querySelector('[data-act="export-md"]').addEventListener("click", exportMarkdown);
   side.querySelector('[data-act="export-json"]').addEventListener("click", exportJSON);
+  side.querySelector('[data-act="done"]').addEventListener("click", function () {
+    if (!comments.length) { toast("Noch keine Kommentare."); return; }
+    exportMarkdown();
+    toast("Markdown heruntergeladen. Feedback abgeschlossen!");
+  });
   side.querySelector('[data-act="clear"]').addEventListener("click", function () {
     if (!comments.length) return;
     if (!confirm("Alle Kommentare für diese Seite löschen?")) return;
@@ -461,12 +500,12 @@
       '<div class="__vfl_modal" role="dialog">' +
         '<h3>' + (isEdit ? "Kommentar bearbeiten" : "Kommentar") + ' <span class="__vfl_tag">&lt;' + esc(tag) + '&gt;</span></h3>' +
         '<div class="__vfl_field"><label>Kategorie</label><div class="__vfl_chips" data-r="cats">' +
-          CATEGORIES.map(function (c) { return '<span class="__vfl_pick" data-cat="' + c.id + '" data-a="' + (c.id === currentCat ? 1 : 0) + '">' + c.emoji + " " + esc(c.label) + '</span>'; }).join("") +
+          CATEGORIES.map(function (c) { return '<span class="__vfl_pick" data-cat="' + c.id + '" data-a="' + (c.id === currentCat ? 1 : 0) + '" title="' + esc(c.sub || "") + '">' + c.emoji + " " + esc(c.label) + (c.sub ? '<span class="__vfl_sub">' + esc(c.sub) + '</span>' : '') + '</span>'; }).join("") +
         '</div></div>' +
         '<div class="__vfl_field"><label>Priorität</label><div class="__vfl_chips" data-r="prios">' +
           PRIORITIES.map(function (p) { return '<span class="__vfl_pick" data-p="' + p.id + '" data-a="' + (p.id === currentPri ? 1 : 0) + '">' + esc(p.label) + '</span>'; }).join("") +
         '</div></div>' +
-        '<div class="__vfl_field"><label>Von (optional)</label><input type="text" data-r="author" placeholder="Dein Name"></div>' +
+        '<div class="__vfl_field"><label>Von</label><input type="text" data-r="author" placeholder="Dein Name (wird gespeichert)">' + (!getAuthor() ? '<span class="__vfl_author-hint">Einmalig eingeben — wird für nächste Kommentare gemerkt.</span>' : '') + '</div>' +
         '<div data-r="tpl"></div>' +
         '<div class="__vfl_field"><label data-r="text-label">Kommentar</label><textarea data-r="text" placeholder="Was ist dir aufgefallen?"></textarea></div>' +
         '<div class="__vfl_actions">' +
@@ -618,6 +657,10 @@
   // ---------- init ----------
   refreshBadges();
   updateFabCount();
-  if (comments.length) toggleSide(true);
-  toast("VibeFeedback Layer v" + VF_VERSION + " geladen.");
+  if (comments.length) {
+    toggleSide(true);
+    toast("VibeFeedback Layer — " + comments.length + " Kommentar(e) geladen.");
+  } else {
+    toast("VibeFeedback Layer aktiv — klick auf 🎯 Kommentieren und dann auf ein Element.", 3500);
+  }
 })();
