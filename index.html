@@ -1590,161 +1590,156 @@ function applyPrecisionState(){
   }
 }
 
-// ============ Screenshot: DOM → canvas via Canvas 2D API ============
-// SVG foreignObject → canvas is permanently broken in Chrome/Chromium:
-// any SVG with <foreignObject> drawn to canvas taints it, making toDataURL()
-// throw SecurityError regardless of content. Canvas 2D API has no such restriction.
+// ============ Screenshot via html2canvas ============
+// html2canvas with foreignObjectRendering:false uses pure Canvas 2D — no SecurityError.
+// Lazy-loaded from CDN on first use; falls back to structural Canvas 2D if unavailable.
+
+const H2C_CDN = "https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js";
+let _h2cLoading = null;
+function loadHtml2Canvas(){
+  if(window.html2canvas) return Promise.resolve(true);
+  if(_h2cLoading) return _h2cLoading;
+  _h2cLoading = new Promise(resolve=>{
+    const s = document.createElement("script");
+    s.src = window.__VF_H2C_OVERRIDE || H2C_CDN;
+    s.onload  = ()=> resolve(true);
+    s.onerror = ()=> resolve(false);
+    document.head.appendChild(s);
+  });
+  return _h2cLoading;
+}
 
 async function captureElement(el){
   if(!el || el.nodeType!==1) return null;
   const win = el.ownerDocument?.defaultView;
   if(!win) return null;
-
   const rootRect = el.getBoundingClientRect();
   if(rootRect.width < 2 || rootRect.height < 2) return null;
 
-  const PAD = 10;
-  const MAX_W = 680, MAX_H = 480;
+  console.log("[vf] capture start:", el.tagName, `${Math.round(rootRect.width)}×${Math.round(rootRect.height)}`);
+
+  const DPR    = Math.min(window.devicePixelRatio || 1, 2);
+  const MAX_W  = 680, MAX_H = 480;
+  const loaded = await loadHtml2Canvas();
+
+  if(loaded && window.html2canvas){
+    try{
+      const rawCanvas = await window.html2canvas(el, {
+        foreignObjectRendering: false,
+        useCORS:     false,
+        allowTaint:  false,
+        logging:     false,
+        scale:       DPR,
+        scrollX:     -(win.scrollX || 0),
+        scrollY:     -(win.scrollY || 0),
+        windowWidth:  win.innerWidth  || 1280,
+        windowHeight: win.innerHeight || 800,
+      });
+
+      // Scale down if larger than MAX
+      let out = rawCanvas;
+      if(rawCanvas.width > MAX_W * DPR || rawCanvas.height > MAX_H * DPR){
+        const tw = Math.min(rawCanvas.width, MAX_W * DPR);
+        const th = Math.round(tw * rawCanvas.height / rawCanvas.width);
+        out = document.createElement("canvas");
+        out.width = tw; out.height = th;
+        out.getContext("2d").drawImage(rawCanvas, 0, 0, tw, th);
+      }
+
+      const result = out.toDataURL("image/jpeg", 0.82);
+      console.log("[vf] capture success, dataURL length:", result.length);
+      return result;
+    }catch(e){
+      console.warn("[vf] html2canvas failed, using fallback:", e);
+    }
+  }
+
+  // ---- Fallback: structural Canvas 2D (no CDN needed) ----
+  return captureElementFallback(el, win, rootRect, DPR, MAX_W, MAX_H);
+}
+
+function captureElementFallback(el, win, rootRect, DPR, MAX_W, MAX_H){
+  const PAD  = 10;
   const rawW = Math.ceil(rootRect.width  + PAD*2);
   const rawH = Math.ceil(rootRect.height + PAD*2);
   const scale = Math.min(1, MAX_W / rawW, MAX_H / rawH);
-  const W = Math.round(rawW * scale);
-  const H = Math.round(rawH * scale);
-  console.log("[vf] capture start:", el.tagName, `${Math.round(rootRect.width)}×${Math.round(rootRect.height)}`, "canvas", `${W}×${H}`, "scale", scale.toFixed(2));
+  const W = Math.round(rawW * scale), H = Math.round(rawH * scale);
 
   const canvas = document.createElement("canvas");
-  const DPR = Math.min(window.devicePixelRatio || 1, 2);
   canvas.width  = Math.round(W * DPR);
   canvas.height = Math.round(H * DPR);
   const ctx = canvas.getContext("2d");
   ctx.scale(DPR * scale, DPR * scale);
-
-  // White background
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, rawW / scale, rawH / scale);
 
-  // Draw one DOM node (and recurse into children)
   function drawNode(node, depth){
     if(!node || node.nodeType !== 1 || depth > 3) return;
-    // Skip VF artefacts
     const cls = typeof node.className === "string" ? node.className : "";
     if(cls.includes("__vf_") || cls.includes("__pv_")) return;
     let r, cs;
-    try{
-      r  = node.getBoundingClientRect();
-      cs = win.getComputedStyle(node);
-    }catch(e){ return; }
+    try{ r = node.getBoundingClientRect(); cs = win.getComputedStyle(node); }catch(e){ return; }
     if(!r || r.width < 1 || r.height < 1) return;
     if(cs.display === "none" || cs.visibility === "hidden" || parseFloat(cs.opacity||"1") < 0.05) return;
-
-    // Position relative to root element, in un-scaled coords
     const x = PAD + (r.left - rootRect.left);
     const y = PAD + (r.top  - rootRect.top);
-    const w = r.width;
-    const h = r.height;
+    const w = r.width, h = r.height;
     if(x + w < 0 || y + h < 0 || x > rawW || y > rawH) return;
-
     ctx.save();
-
-    // Background colour (skip transparent)
     const bg = cs.backgroundColor;
     if(bg && bg !== "rgba(0, 0, 0, 0)" && bg !== "transparent"){
       ctx.fillStyle = bg;
       const rx = Math.min(parseFloat(cs.borderTopLeftRadius)||0, h/2, 16);
-      if(rx > 1 && ctx.roundRect){
-        ctx.beginPath(); ctx.roundRect(x, y, w, h, rx); ctx.fill();
-      } else {
-        ctx.fillRect(x, y, w, h);
-      }
+      if(rx > 1 && ctx.roundRect){ ctx.beginPath(); ctx.roundRect(x,y,w,h,rx); ctx.fill(); }
+      else ctx.fillRect(x,y,w,h);
     }
-
-    // Border (top only, as representative)
-    const bw = parseFloat(cs.borderTopWidth)||0;
-    const bc = cs.borderTopColor;
+    const bw = parseFloat(cs.borderTopWidth)||0, bc = cs.borderTopColor;
     if(bw >= 0.5 && bc && bc !== "rgba(0, 0, 0, 0)"){
-      ctx.strokeStyle = bc;
-      ctx.lineWidth = Math.max(0.5, bw);
+      ctx.strokeStyle = bc; ctx.lineWidth = Math.max(0.5, bw);
       const rx = Math.min(parseFloat(cs.borderTopLeftRadius)||0, h/2, 16);
-      if(rx > 1 && ctx.roundRect){
-        ctx.beginPath(); ctx.roundRect(x, y, w, h, rx); ctx.stroke();
-      } else {
-        ctx.strokeRect(x, y, w, h);
-      }
+      if(rx > 1 && ctx.roundRect){ ctx.beginPath(); ctx.roundRect(x,y,w,h,rx); ctx.stroke(); }
+      else ctx.strokeRect(x,y,w,h);
     }
-
-    // Box shadow hint (drawn as a subtle outer glow)
-    const bs = cs.boxShadow;
-    if(bs && bs !== "none"){
-      ctx.shadowColor = "rgba(0,0,0,0.12)";
-      ctx.shadowBlur  = 6;
-      ctx.shadowOffsetY = 2;
-    }
-
-    // Text: collect direct text-node content only
     let directText = "";
     node.childNodes.forEach(n=>{ if(n.nodeType===3){ const t=(n.textContent||"").trim(); if(t) directText+=(directText?" ":"")+t; } });
     if(directText && h >= 10){
-      ctx.shadowColor = "transparent"; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
-      const fgColor = cs.color || "#222";
-      const rawFs   = parseFloat(cs.fontSize) || 14;
-      const fs      = Math.max(8, Math.min(rawFs, 18));
-      const fw      = /bold|700|800|900/.test(cs.fontWeight) ? "600" : "400";
-      const ff      = /monospace/.test(cs.fontFamily) ? "monospace" : "system-ui,sans-serif";
-      ctx.fillStyle   = fgColor;
-      ctx.font        = `${fw} ${fs}px ${ff}`;
-      ctx.textBaseline= "middle";
-      ctx.textAlign   = cs.textAlign === "center" ? "center" : "left";
-      const txtX = cs.textAlign === "center" ? x + w/2 : x + Math.min(parseFloat(cs.paddingLeft)||0, 12) + 3;
-      const txtY = y + h/2;
-      // Clip to cell
-      ctx.rect(x, y, w, h); ctx.clip();
-      const maxW = w - 6;
+      const fgColor = cs.color||"#222", rawFs = parseFloat(cs.fontSize)||14;
+      const fs = Math.max(8, Math.min(rawFs, 18)), fw = /bold|700|800|900/.test(cs.fontWeight)?"600":"400";
+      const ff = /monospace/.test(cs.fontFamily)?"monospace":"system-ui,sans-serif";
+      ctx.fillStyle = fgColor; ctx.font = `${fw} ${fs}px ${ff}`;
+      ctx.textBaseline = "middle"; ctx.textAlign = cs.textAlign==="center"?"center":"left";
+      const txtX = cs.textAlign==="center" ? x+w/2 : x+Math.min(parseFloat(cs.paddingLeft)||0,12)+3;
+      ctx.beginPath(); ctx.rect(x,y,w,h); ctx.clip();
       let line = directText;
-      while(line && ctx.measureText(line).width > maxW && line.length > 4) line = line.slice(0,-2);
+      while(line && ctx.measureText(line).width > w-6 && line.length > 4) line = line.slice(0,-2);
       if(line !== directText) line += "…";
-      ctx.fillText(line, txtX, txtY);
+      ctx.fillText(line, txtX, y+h/2);
     }
-
     ctx.restore();
-
-    // Image/media placeholder (grey rect with diagonal cross)
     const tag = node.tagName.toLowerCase();
-    if(tag === "img" || tag === "video" || tag === "svg"){
-      ctx.save();
-      ctx.fillStyle = "#e8e8e8";
-      ctx.fillRect(x, y, w, h);
-      ctx.strokeStyle = "#ccc"; ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x+w, y+h); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(x+w, y); ctx.lineTo(x, y+h); ctx.stroke();
-      ctx.restore();
-      return; // don't recurse into replaced media
+    if(tag==="img"||tag==="video"||tag==="svg"){
+      ctx.save(); ctx.fillStyle="#e8e8e8"; ctx.fillRect(x,y,w,h);
+      ctx.strokeStyle="#ccc"; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+w,y+h); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x+w,y); ctx.lineTo(x,y+h); ctx.stroke();
+      ctx.restore(); return;
     }
-
-    // Recurse (skip replaced media)
-    Array.from(node.children).slice(0, 14).forEach(child => drawNode(child, depth+1));
+    Array.from(node.children).slice(0,14).forEach(child=>drawNode(child,depth+1));
   }
 
-  try { drawNode(el, 0); } catch(e){ console.warn("[vf] drawNode error:", e); }
+  try{ drawNode(el, 0); }catch(e){ console.warn("[vf] drawNode:", e); }
 
-  // Outer border + label
   ctx.save();
   ctx.resetTransform ? ctx.resetTransform() : ctx.setTransform(1,0,0,1,0,0);
-  ctx.strokeStyle = "#d0d0d0"; ctx.lineWidth = 1;
-  ctx.strokeRect(0.5, 0.5, canvas.width - 1, canvas.height - 1);
-  ctx.fillStyle = "#bbbbbb";
-  ctx.font = `${Math.round(9*DPR)}px ui-monospace,monospace`;
-  ctx.textAlign = "right"; ctx.textBaseline = "bottom";
-  ctx.fillText(`<${el.tagName.toLowerCase()}> ${Math.round(rootRect.width)}×${Math.round(rootRect.height)}`, canvas.width - 4*DPR, canvas.height - 2*DPR);
+  ctx.strokeStyle="#d0d0d0"; ctx.lineWidth=1;
+  ctx.strokeRect(0.5, 0.5, canvas.width-1, canvas.height-1);
   ctx.restore();
 
   try{
     const result = canvas.toDataURL("image/jpeg", 0.82);
-    console.log("[vf] capture success, dataURL length:", result.length);
+    console.log("[vf] capture success (fallback), dataURL length:", result.length);
     return result;
-  }catch(e){
-    console.warn("[vf] capture toDataURL failed:", e);
-    return null;
-  }
+  }catch(e){ return null; }
 }
 
 function catColorVar(catId){
