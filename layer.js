@@ -360,13 +360,36 @@
     return c.text || "";
   }
 
+  // ---------- fingerprint fallback ----------
+  function resolveEl(c) {
+    try { var el = document.querySelector(c.selector); if (el) return el; } catch (e) {}
+    var info = c.info; var tag = c.tag || "*";
+    if (!info) return null;
+    if (info.id) { var byId = document.getElementById(info.id); if (byId) return byId; }
+    try { if (info.attrs && info.attrs.ariaLabel) { var byAria = document.querySelector('[aria-label="' + info.attrs.ariaLabel.replace(/\\/g, "\\\\").replace(/"/g, '\\"') + '"]'); if (byAria) return byAria; } } catch (e2) {}
+    try { if (info.attrs && info.attrs.href) { var byHref = document.querySelector('a[href="' + info.attrs.href.replace(/\\/g, "\\\\").replace(/"/g, '\\"') + '"]'); if (byHref) return byHref; } } catch (e3) {}
+    if (info.text) {
+      var needle = info.text.trim().slice(0, 80);
+      if (needle.length >= 4) {
+        var all = [].slice.call(document.querySelectorAll(tag));
+        var exact = all.filter(function (el) { return (el.innerText || el.textContent || "").trim().slice(0, 80) === needle; })[0];
+        if (exact) return exact;
+        if (needle.length >= 20) {
+          var pfx = needle.slice(0, 40);
+          var partial = all.filter(function (el) { return (el.innerText || el.textContent || "").trim().indexOf(pfx) !== -1; })[0];
+          if (partial) return partial;
+        }
+      }
+    }
+    return null;
+  }
+
   // ---------- Badges ----------
   function refreshBadges() {
     $$(".__vfl_badge").forEach(function (n) { n.remove(); });
     $$(".__vfl_marked").forEach(function (n) { n.classList.remove("__vfl_marked"); n.style.removeProperty("--vfl-c"); });
     comments.forEach(function (c, i) {
-      var el;
-      try { el = document.querySelector(c.selector); } catch (e) { el = null; }
+      var el = resolveEl(c);
       if (!el) return;
       var cat = CAT_MAP[c.category] || CAT_MAP.feature;
       el.classList.add("__vfl_marked");
@@ -380,8 +403,7 @@
     });
   }
   function focusComment(c) {
-    var el;
-    try { el = document.querySelector(c.selector); } catch (e) { el = null; }
+    var el = resolveEl(c);
     if (!el) { toast("Element nicht im DOM."); return; }
     el.scrollIntoView({ behavior: "smooth", block: "center" });
     el.animate([
