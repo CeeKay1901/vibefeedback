@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://ceekay1901.github.io/vibefeedback/sitemap.xml
