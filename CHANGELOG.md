@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.3.0 — 2026-07-07 — pilot CI
+
+**Corporate Identity:** Design komplett auf pilot.de umgezogen.
+
+- **Logo:** `pilot-logo.svg` (91×45) im Landing-Nav und App-Topbar, ersetzt das alte gradient-„V".
+- **Palette:** dark-mode entfernt, pilot-Farben etabliert — `#fcfcfc` Hintergrund, `#262626` Text, `#ffe05e` Akzent-Gelb, `#7b7a71` muted, `#f1f1ec` cream, `#e35f5f` danger, `#62c12d` success.
+- **Typografie:** Body-Font auf `"Centra No1"` + Fallback-Stack.
+- **Buttons:** Primary jetzt schwarz mit gelbem Hover (statt Purple-Gradient). Kicker/Eyebrow als Yellow-Pills.
+- **Hero:** flach getypset, Wort-Accent als Gelb-Highlight-Box statt Text-Gradient.
+- **Iframe-Highlights:** Hover/Selected/Badge-Farben auf schwarz/gelb umgestellt, bleibt sichtbar auf jedem Ziel-Site-Hintergrund.
+- **Kategorie- und Prioritäts-Chips:** in den neuen pilot-Tönen (Feature=Gelb, Design=Grün, Copy=Ocker, Bug=Rot, Frage=Blau, Lob=Rosé).
+- **Presentation-Mode / Coach / Modal:** helle Panels, dunkler Text, gelber Fokus-Ring.
+- **Favicon:** pilot-Logo.
+
 ## 0.2.0 — 2026-07-07 — Präsentations-Release
 
 **Landing:** komplettes Redesign — Hero, Feature-Cards, Mock-Preview, Workflow-Flow, Demo-Card. Gradient-Backdrops, hover-lift, glasmorphism-Modal.
