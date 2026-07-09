@@ -25,6 +25,7 @@ Das Iframe wird über `fetch(src)` + `srcdoc` befüllt (damit wir Klicks auf DOM
 ## Features auf einen Blick
 
 - **Pixel-treue Screenshots**: Jeder Kommentar bekommt automatisch einen Screenshot des angeklickten Elements — gerendert vom Browser selbst (SVG foreignObject via [modern-screenshot](https://github.com/qq15725/modern-screenshot)), inkl. externer Bilder, Webfonts und dunkler Hintergründe. Der Screenshot zeigt, was der Tester wirklich sieht; VibeFeedback-eigene Overlays (Outlines, Badges) werden vorher entfernt. Fallback-Kaskade: html2canvas → strukturelles Drahtgitter.
+- **Eigener Screenshot aus der Zwischenablage**: Für Edge-Cases, in denen der Auto-Screenshot nicht passt (Canvas/WebGL-Inhalte, CORS-gesperrte Bilder, Video-Frames) — Screenshot mit dem OS-Tool aufnehmen, dann 📋-Button oder Strg+V in der Kommentar-Bar bzw. im Bookmarklet-Modal. Ersetzt den Auto-Screenshot, funktioniert auch beim Bearbeiten.
 - **Autor-Name**: Beim ersten Kommentar wird der Name abgefragt und im localStorage gespeichert — erscheint im Export.
 - **Kategorie + Subtitel**: Bug, Feature, Design, Copy, Frage, Lob — jede Kategorie zeigt einen erklärenden Untertitel (z.B. "Bug = Etwas funktioniert nicht").
 - **Lesbare Element-Labels** (`humanLabel`): Badges und Sidebar zeigen zuerst `aria-label` oder sichtbaren Text, den CSS-Selector dahinter nur gedimmt.

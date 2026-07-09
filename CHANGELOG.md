@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.1 — 2026-07-09 — Eigener Screenshot + CORS-Cache-Fix
+
+- **feat: Screenshot aus Zwischenablage überschreiben** — für Edge-Cases, in denen der Auto-Screenshot nicht passt: 📋-Button (Clipboard-API) oder Strg+V in der Kommentar-Bar und im Bookmarklet-Modal. Eingefügte Bilder werden auf max. 1400 px Kante normalisiert und als JPEG gespeichert (localStorage-Schonung); im Haupttool landet das Bild im Annotator und ist weiter annotierbar, im Edit-Modus ersetzt es den vorhandenen Screenshot.
+- **fix: CORS-Cache-Falle beim Bild-Inlining** — CDNs wie image.tmdb.org senden `Access-Control-Allow-Origin` nur bei Requests mit Origin-Header; gecachte `<img>`-Antworten haben keine Freigabe, der cors-fetch scheiterte live (Poster → Platzhalter). `fetchFn` versucht jetzt erst den Cache, dann einen frischen Request.
+
 ## 0.5.0 — 2026-07-09 — Pixel-treue Screenshots
 
 **Screenshot-Engine neu aufgebaut** — Screenshots zeigen jetzt, was der Nutzer wirklich sieht.

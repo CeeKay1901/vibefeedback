@@ -10,7 +10,7 @@
   }
   window.__vf_layer_active = true;
 
-  var VF_VERSION = "0.5.0";
+  var VF_VERSION = "0.5.1";
   var STORE_KEY = "vibefeedback:v2:" + location.origin + location.pathname;
   var AUTHOR_KEY = "vibefeedback:author";
 
@@ -280,6 +280,29 @@
       });
     });
   }
+  // Eingefügten Screenshot normalisieren: lange Kante begrenzen, als JPEG kodieren —
+  // Vollbild-Screenshots würden sonst den localStorage sprengen.
+  function normalizePastedImage(blob) {
+    return new Promise(function (resolve) {
+      if (!blob) return resolve(null);
+      var url = URL.createObjectURL(blob);
+      var img = new Image();
+      img.onload = function () {
+        URL.revokeObjectURL(url);
+        var MAX_EDGE = 1400;
+        var f = Math.min(1, MAX_EDGE / Math.max(img.naturalWidth || 1, img.naturalHeight || 1));
+        var c = document.createElement("canvas");
+        c.width = Math.max(1, Math.round((img.naturalWidth || 1) * f));
+        c.height = Math.max(1, Math.round((img.naturalHeight || 1) * f));
+        var ctx = c.getContext("2d");
+        ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, c.width, c.height);
+        ctx.drawImage(img, 0, 0, c.width, c.height);
+        resolve(c.toDataURL("image/jpeg", 0.82));
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); resolve(null); };
+      img.src = url;
+    });
+  }
   function captureElementLegacy(el) {
     return new Promise(function (resolve) {
       if (!el || el.nodeType !== 1) return resolve(null);
@@ -388,6 +411,11 @@
     ".__vfl_modal .__vfl_chips .__vfl_pick { background:#f1f1ec; border:1px solid #e3e1d6; color:#3b3b3b; padding:6px 11px; border-radius:99px; font-size:12.5px; cursor:pointer; font-weight:500; }",
     ".__vfl_modal .__vfl_chips .__vfl_pick[data-a='1'] { background:#ffe05e; border-color:#262626; color:#262626; font-weight:700; }",
     ".__vfl_modal .__vfl_actions { display:flex; gap:8px; justify-content:flex-end; margin-top:12px; }",
+    ".__vfl_modal .__vfl_shotrow { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }",
+    ".__vfl_modal .__vfl_shotrow button { background:#f1f1ec; border:1px solid #e3e1d6; color:#3b3b3b; padding:6px 11px; border-radius:99px; font-size:12.5px; cursor:pointer; font-weight:500; }",
+    ".__vfl_modal .__vfl_shotrow button:hover { border-color:#262626; }",
+    ".__vfl_modal .__vfl_shothint { font-size:11px; color:#7b7a71; }",
+    ".__vfl_modal .__vfl_shotrow img { max-width:100%; max-height:110px; border:1px solid #e3e1d6; border-radius:8px; display:block; }",
     ".__vfl_modal .__vfl_actions button { padding:9px 14px; border-radius:9px; border:1px solid #e3e1d6; background:#f1f1ec; color:#262626; font:600 13px inherit; cursor:pointer; }",
     ".__vfl_modal .__vfl_actions button.__vfl_primary { background:#262626; border-color:#262626; color:#fcfcfc; }",
     ".__vfl_modal .__vfl_actions button.__vfl_primary:hover { background:#ffe05e; color:#262626; }",
@@ -658,6 +686,11 @@
         '<div class="__vfl_field"><label>Von</label><input type="text" data-r="author" placeholder="Dein Name (wird gespeichert)">' + (!getAuthor() ? '<span class="__vfl_author-hint">Einmalig eingeben — wird für nächste Kommentare gemerkt.</span>' : '') + '</div>' +
         '<div data-r="tpl"></div>' +
         '<div class="__vfl_field"><label data-r="text-label">Kommentar</label><textarea data-r="text" placeholder="Was ist dir aufgefallen?"></textarea></div>' +
+        '<div class="__vfl_field"><label>Screenshot</label><div class="__vfl_shotrow">' +
+          '<button type="button" data-act="paste-shot" title="Eigenen Screenshot aus der Zwischenablage einfügen (oder Strg+V)">📋 Aus Zwischenablage</button>' +
+          '<span class="__vfl_shothint" data-r="shot-hint">' + (isEdit ? "leer = vorhandener bleibt" : "leer = automatisch") + '</span>' +
+          '<img data-r="shot-preview" alt="Screenshot-Vorschau" hidden>' +
+        '</div></div>' +
         '<div class="__vfl_actions">' +
           '<button data-act="cancel">Abbrechen</button>' +
           '<button class="__vfl_primary" data-act="save">' + (isEdit ? "Aktualisieren" : "Speichern") + '</button>' +
@@ -671,6 +704,37 @@
     var tplWrap = bg.querySelector('[data-r="tpl"]');
     authorInput.value = (existing && existing.author) || getAuthor();
     if (isEdit) textArea.value = existing.text || "";
+
+    // Eigener Screenshot aus der Zwischenablage — für Edge-Cases, in denen der
+    // Auto-Screenshot nicht stimmt (Canvas/WebGL, CORS-gesperrte Bilder, Video-Frames).
+    var pastedShot = null;
+    function applyPastedShot(blob) {
+      normalizePastedImage(blob).then(function (dataUrl) {
+        if (!dataUrl) { toast("Bild konnte nicht gelesen werden."); return; }
+        pastedShot = dataUrl;
+        var prev = bg.querySelector('[data-r="shot-preview"]');
+        prev.src = dataUrl; prev.hidden = false;
+        bg.querySelector('[data-r="shot-hint"]').textContent = "eigener Screenshot wird verwendet";
+        toast("Eigener Screenshot übernommen.");
+      });
+    }
+    bg.querySelector('[data-act="paste-shot"]').addEventListener("click", function () {
+      if (!(navigator.clipboard && navigator.clipboard.read)) { toast("Zwischenablage nicht verfügbar — nutze Strg+V.", 3500); return; }
+      navigator.clipboard.read().then(function (items) {
+        for (var i = 0; i < items.length; i++) {
+          var type = null;
+          for (var j = 0; j < items[i].types.length; j++) if (items[i].types[j].indexOf("image/") === 0) type = items[i].types[j];
+          if (type) return items[i].getType(type).then(applyPastedShot);
+        }
+        toast("Kein Bild in der Zwischenablage — erst Screenshot kopieren, dann 📋.", 3500);
+      }).catch(function () { toast("Zugriff auf Zwischenablage nicht erlaubt — nutze Strg+V.", 3500); });
+    });
+    bg.addEventListener("paste", function (e) {
+      var items = (e.clipboardData && e.clipboardData.items) || [];
+      for (var i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf("image/") === 0) { e.preventDefault(); applyPastedShot(items[i].getAsFile()); return; }
+      }
+    });
 
     function renderTpl() {
       var tpl = TEMPLATES[currentCat];
@@ -718,10 +782,13 @@
       var author = authorInput.value.trim(); setAuthor(author);
       var btn = bg.querySelector('[data-act="save"]');
       btn.disabled = true; btn.textContent = "Speichere…";
-      var shotP = (!isEdit && currentEl) ? captureElement(currentEl) : Promise.resolve(existing ? existing.screenshot : null);
+      var shotP = pastedShot ? Promise.resolve(pastedShot)
+        : (!isEdit && currentEl) ? captureElement(currentEl)
+        : Promise.resolve(existing ? existing.screenshot : null);
       shotP.then(function (shot) {
         if (isEdit) {
           Object.assign(existing, { text: txt, structured: has ? struct : null, author: author || null, category: currentCat, priority: currentPri, updatedAt: new Date().toISOString() });
+          if (pastedShot) existing.screenshot = pastedShot;
         } else {
           comments.push({
             id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
