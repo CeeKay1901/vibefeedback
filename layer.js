@@ -10,7 +10,7 @@
   }
   window.__vf_layer_active = true;
 
-  var VF_VERSION = "0.7.0";
+  var VF_VERSION = "0.8.0";
   window.__vf_layer_version = VF_VERSION;   // Laufzeit-Marker: veraltetes Bookmarklet erkennbar
   // search/hash mit einbeziehen: SPAs mit Hash-Router (#/seite-a) hätten sonst einen
   // gemeinsamen Store für alle Routen → Badges landen auf falschen Elementen.
@@ -529,6 +529,7 @@
     '<div class="__vfl_tools">' +
       '<button data-act="export-md" title="Markdown-Datei herunterladen">📄 Markdown</button>' +
       '<button data-act="export-json" title="JSON-Datei herunterladen">💾 JSON</button>' +
+      '<button data-act="export-zip" title="Markdown + Screenshots als Bilddateien in einem ZIP">🗜 ZIP</button>' +
       '<button data-act="done" title="Feedback fertig — Markdown herunterladen" style="background:#262626;color:#ffe05e;border-color:#262626;font-weight:700">✅ Fertig</button>' +
       '<button data-act="clear" title="Alle Kommentare löschen" style="margin-left:auto">Alle löschen</button>' +
     '</div>' +
@@ -544,6 +545,7 @@
   side.querySelector('[data-act="close"]').addEventListener("click", function () { toggleSide(false); });
   side.querySelector('[data-act="export-md"]').addEventListener("click", exportMarkdown);
   side.querySelector('[data-act="export-json"]').addEventListener("click", exportJSON);
+  side.querySelector('[data-act="export-zip"]').addEventListener("click", exportZip);
   side.querySelector('[data-act="done"]').addEventListener("click", function () {
     if (!comments.length) { toast("Noch keine Kommentare."); return; }
     exportMarkdown();
@@ -870,7 +872,9 @@
   }
 
   // ---------- exports ----------
-  function buildMarkdown() {
+  // opts.screenshotPath(comment, index) → relativer Pfad statt data-URL (ZIP-Export)
+  function buildMarkdown(opts) {
+    opts = opts || {};
     var now = new Date().toLocaleString("de-DE");
     var priOrder = { must: 0, should: 1, could: 2, nice: 3 };
     var sorted = comments.slice().sort(function (a, b) { return (priOrder[a.priority] || 9) - (priOrder[b.priority] || 9); });
@@ -888,7 +892,10 @@
         if (c.author) md += "- **Von:** " + c.author + "\n";
         md += "- **Zeitstempel:** " + new Date(c.ts).toLocaleString("de-DE") + "\n\n";
         md += "**HTML-Auszug:**\n\n```html\n" + c.snippet + "\n```\n\n";
-        if (c.screenshot) md += "<details><summary>📷 Screenshot</summary>\n\n![Screenshot](" + c.screenshot + ")\n\n</details>\n\n";
+        if (c.screenshot) {
+          var shotRef = opts.screenshotPath ? opts.screenshotPath(c, i) : c.screenshot;
+          if (shotRef) md += "<details><summary>📷 Screenshot</summary>\n\n![Screenshot](" + shotRef + ")\n\n</details>\n\n";
+        }
         if (c.structured && Object.keys(c.structured).length) {
           var tpl = TEMPLATES[c.category];
           md += "**Feedback:**\n\n";
@@ -911,6 +918,136 @@
     var a = document.createElement("a"); a.href = url; a.download = name;
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(function () { URL.revokeObjectURL(url); }, 500);
+  }
+  // ---------- ZIP-Export (ohne Abhängigkeit) ----------
+  // Minimaler ZIP-Writer, Methode "store" (unkomprimiert) — Screenshots sind bereits JPEG.
+  var _crcTable = (function () {
+    var t = new Uint32Array(256);
+    for (var n = 0; n < 256; n++) {
+      var c = n;
+      for (var k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+      t[n] = c >>> 0;
+    }
+    return t;
+  })();
+  function crc32(bytes) {
+    var c = 0xFFFFFFFF;
+    for (var i = 0; i < bytes.length; i++) c = _crcTable[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8);
+    return (c ^ 0xFFFFFFFF) >>> 0;
+  }
+  function dosDateTime(d) {
+    return {
+      time: (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1),
+      date: ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate()
+    };
+  }
+  function buildZip(files) {
+    var enc = new TextEncoder();
+    var dt = dosDateTime(new Date());
+    var chunks = [], central = [], offset = 0;
+    files.forEach(function (f) {
+      var nameBytes = enc.encode(f.name), data = f.data, crc = crc32(data);
+      var local = new DataView(new ArrayBuffer(30));
+      local.setUint32(0, 0x04034b50, true);
+      local.setUint16(4, 20, true);
+      local.setUint16(6, 0x0800, true);   // UTF-8 Dateinamen
+      local.setUint16(8, 0, true);        // store
+      local.setUint16(10, dt.time, true);
+      local.setUint16(12, dt.date, true);
+      local.setUint32(14, crc, true);
+      local.setUint32(18, data.length, true);
+      local.setUint32(22, data.length, true);
+      local.setUint16(26, nameBytes.length, true);
+      local.setUint16(28, 0, true);
+      chunks.push(new Uint8Array(local.buffer), nameBytes, data);
+
+      var cd = new DataView(new ArrayBuffer(46));
+      cd.setUint32(0, 0x02014b50, true);
+      cd.setUint16(4, 20, true);
+      cd.setUint16(6, 20, true);
+      cd.setUint16(8, 0x0800, true);
+      cd.setUint16(10, 0, true);
+      cd.setUint16(12, dt.time, true);
+      cd.setUint16(14, dt.date, true);
+      cd.setUint32(16, crc, true);
+      cd.setUint32(20, data.length, true);
+      cd.setUint32(24, data.length, true);
+      cd.setUint16(28, nameBytes.length, true);
+      cd.setUint32(42, offset, true);
+      central.push(new Uint8Array(cd.buffer), nameBytes);
+      offset += 30 + nameBytes.length + data.length;
+    });
+    var centralSize = central.reduce(function (n, c) { return n + c.length; }, 0);
+    var end = new DataView(new ArrayBuffer(22));
+    end.setUint32(0, 0x06054b50, true);
+    end.setUint16(8, files.length, true);
+    end.setUint16(10, files.length, true);
+    end.setUint32(12, centralSize, true);
+    end.setUint32(16, offset, true);
+    return new Blob(chunks.concat(central, [new Uint8Array(end.buffer)]), { type: "application/zip" });
+  }
+  function dataUrlToBytes(dataUrl) {
+    var comma = dataUrl.indexOf(",");
+    if (comma < 0) return null;
+    var meta = dataUrl.slice(0, comma);
+    if (!/;base64/i.test(meta)) return null;
+    var bin = atob(dataUrl.slice(comma + 1));
+    var out = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    var m = meta.match(/^data:image\/(\w+)/i);
+    return { bytes: out, ext: ((m && m[1]) || "jpg").replace("jpeg", "jpg") };
+  }
+  function slugify(str, max) {
+    return (str || "").toLowerCase()
+      .replace(/[äöüß]/g, function (m) { return { "ä": "ae", "ö": "oe", "ü": "ue", "ß": "ss" }[m]; })
+      .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, max || 32) || "element";
+  }
+  function exportZip() {
+    if (!comments.length) { toast("Keine Kommentare."); return; }
+    try {
+      var enc = new TextEncoder();
+      var shots = [];
+      var md = buildMarkdown({
+        // Laufende Nummer über alle Kategorien — der Markdown-Index ist kategorie-lokal
+        screenshotPath: function (c) {
+          var parsed = c.screenshot ? dataUrlToBytes(c.screenshot) : null;
+          if (!parsed) return null;
+          var label = slugify((c.info && c.info.text) || c.tag || "element", 32);
+          var name = "screenshots/" + String(shots.length + 1).padStart(2, "0") + "-" + label + "." + parsed.ext;
+          shots.push({ name: name, data: parsed.bytes });
+          return name;
+        }
+      });
+      var json = JSON.stringify({ url: location.href, exportedAt: new Date().toISOString(), count: comments.length, comments: comments }, null, 2);
+      var readme = [
+        "# VibeFeedback-Export",
+        "",
+        "- **feedback.md** — Feedback zum Lesen und als Prompt-Grundlage; Screenshots sind als Bilddateien verlinkt.",
+        "- **feedback.json** — vollständige Daten inkl. eingebetteter Screenshots; in VibeFeedback re-importierbar.",
+        "- **screenshots/** — ein Bild je kommentiertem Element.",
+        "",
+        "Quelle: " + location.href,
+        "Exportiert: " + new Date().toLocaleString("de-DE") + " · " + comments.length + " Kommentar(e)",
+        ""
+      ].join("\n");
+
+      var files = [
+        { name: "feedback.md", data: enc.encode(md) },
+        { name: "feedback.json", data: enc.encode(json) },
+        { name: "README.md", data: enc.encode(readme) }
+      ].concat(shots);
+
+      var blob = buildZip(files);
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url; a.download = "vibefeedback-" + new Date().toISOString().slice(0, 10) + ".zip";
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 500);
+      toast("ZIP heruntergeladen — " + shots.length + " Screenshot(s).", 3000);
+    } catch (e) {
+      console.warn("[vfl] zip", e);
+      toast("ZIP-Export fehlgeschlagen.");
+    }
   }
   function exportMarkdown() {
     if (!comments.length) { toast("Keine Kommentare."); return; }

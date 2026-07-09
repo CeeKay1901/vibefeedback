@@ -11,11 +11,11 @@ Du teilst einen Link → deine Tester klicken direkt auf die Elemente, die sie k
 2. Tool baut einen Feedback-Link der Form `?src=<URL>` und stellt ihn zum Kopieren bereit. Der primäre CTA im Setup-Result öffnet den Link direkt als Owner.
 3. **Tester** öffnet den Link, gibt beim ersten Kommentar einmalig seinen Namen ein (wird im Browser gespeichert). Jedes Element ist klickbar → Modal mit lesbarem Element-Label, Kategorie + Priorität, freiem Kommentarfeld.
 4. Kommentare landen im `localStorage` des Testers. Ein **Export-Reminder-Banner** erscheint automatisch beim Tab-Wechsel, sobald Kommentare vorhanden sind — so geht kein Feedback verloren.
-5. Tester exportiert per Download oder Zwischenablage und schickt die `.md` an den Owner (Mail, Chat, PR-Kommentar). Owner nutzt den Inhalt als Prompt-Kontext für die nächste Iteration.
+5. Tester exportiert als Markdown, ZIP (Markdown + Screenshot-Dateien) oder Zwischenablage und schickt die Datei an den Owner (Mail, Chat, PR-Kommentar). Owner nutzt den Inhalt als Prompt-Kontext für die nächste Iteration.
 
 ## Was VibeFeedback bewusst NICHT tut
 
-- Kein Backend, keine Auth, keine geteilte DB. Jeder Tester schickt sein eigenes Markdown zurück.
+- Kein Backend, keine Auth, keine geteilte DB. Jeder Tester schickt seinen eigenen Export zurück.
 - Keine Persistenz über Browser hinweg.
 
 ## CORS
@@ -24,6 +24,7 @@ Das Iframe wird über `fetch(src)` + `srcdoc` befüllt (damit wir Klicks auf DOM
 
 ## Features auf einen Blick
 
+- **Export als Markdown oder ZIP**: Das ZIP enthält `feedback.md` (Screenshots als verlinkte Bilddateien statt riesiger data-URLs), `feedback.json` (vollständig, re-importierbar) und einen `screenshots/`-Ordner. Ohne externe Bibliothek gebaut.
 - **Pixel-treue Screenshots**: Jeder Kommentar bekommt automatisch einen Screenshot des angeklickten Elements — gerendert vom Browser selbst (SVG foreignObject via [modern-screenshot](https://github.com/qq15725/modern-screenshot)), inkl. externer Bilder, Webfonts und dunkler Hintergründe. Der Screenshot zeigt, was der Tester wirklich sieht; VibeFeedback-eigene Overlays (Outlines, Badges) werden vorher entfernt. Fallback-Kaskade: html2canvas → strukturelles Drahtgitter.
 - **Eigener Screenshot aus der Zwischenablage**: Für Edge-Cases, in denen der Auto-Screenshot nicht passt (Canvas/WebGL-Inhalte, CORS-gesperrte Bilder, Video-Frames) — Screenshot mit dem OS-Tool aufnehmen, dann 📋-Button oder Strg+V in der Kommentar-Bar bzw. im Bookmarklet-Modal. Ersetzt den Auto-Screenshot, funktioniert auch beim Bearbeiten.
 - **Zeichenwerkzeuge im Screenshot**: Pfeil, Stift (Freihand), Rechteck, Kreis, Text direkt in der Toolbar — im Ausklappmenü (⋯) zusätzlich Marker, Pixelieren (sensible Daten unkenntlich machen), Nummern-Badges (1, 2, 3 …), sechs Farben, drei Strichstärken und Wiederholen (Redo).
@@ -65,3 +66,14 @@ cd vibefeedback
 python3 -m http.server 8080
 # → http://localhost:8080/
 ```
+
+## Entwicklung
+
+```bash
+npm install
+npm test          # Playwright-Regressionssuite (95 Checks)
+npm run build     # layer.min.js + eingebettetes Bookmarklet aus layer.js
+npm run audit     # superaudit (Screenshots, a11y, Mobile)
+```
+
+Nach jeder Änderung an `layer.js` muss `npm run build` laufen — sonst bleibt das Bookmarklet in `index.html` veraltet.

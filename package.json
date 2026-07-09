@@ -5,7 +5,7 @@
   "main": "layer.js",
   "scripts": {
     "build": "node scripts/build-bookmarklet.js",
-    "test": "node test_screenshot.js && node test_bugfixes.js && node test_bugfixes_layer.js && node test_annotator.js && node test_badge_numbers.js && node test_paste_shot.js && node test_demo_pages.js",
+    "test": "node test_screenshot.js && node test_bugfixes.js && node test_bugfixes_layer.js && node test_annotator.js && node test_badge_numbers.js && node test_paste_shot.js && node test_demo_pages.js && node test_zip_export.js",
     "test:live": "node test_kippflix.js",
     "audit": "node superaudit.js"
   },
