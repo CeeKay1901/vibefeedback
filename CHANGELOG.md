@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.6.0 — 2026-07-09 — Annotator: echter Stift + Ausklappmenü
+
+- **feat: Stift (Freihand)** — das ✎-Symbol war bisher ein transparenter Marker-Kasten; jetzt gibt es echtes Freihand-Zeichnen mit geglätteter Kurve (quadratische Interpolation durch die Mittelpunkte).
+- **feat: Ausklappmenü (⋯)** in der Annotator-Toolbar mit mehr Funktionen:
+  - **Marker** (transparentes Hervorheben, vorher fälschlich als ✎ beschriftet)
+  - **Pixelieren** — Bereich aufziehen, um sensible Daten unkenntlich zu machen (verdeckt auch darunterliegende Annotationen)
+  - **Nummern-Badges** — Klick platziert ①, ②, ③ …
+  - **3 weitere Farben** (Grün, Blau, Weiß) und **3 Strichstärken** (dünn/mittel/dick)
+  - **Redo (↷)** — Undo/Redo-Historie; neuer Strich verwirft die Redo-Kette
+- **ux:** Hint-Text wechselt je Werkzeug („Freihand zeichnen", „Klicken zum Platzieren", …).
+
 ## 0.5.1 — 2026-07-09 — Eigener Screenshot + CORS-Cache-Fix
 
 - **feat: Screenshot aus Zwischenablage überschreiben** — für Edge-Cases, in denen der Auto-Screenshot nicht passt: 📋-Button (Clipboard-API) oder Strg+V in der Kommentar-Bar und im Bookmarklet-Modal. Eingefügte Bilder werden auf max. 1400 px Kante normalisiert und als JPEG gespeichert (localStorage-Schonung); im Haupttool landet das Bild im Annotator und ist weiter annotierbar, im Edit-Modus ersetzt es den vorhandenen Screenshot.

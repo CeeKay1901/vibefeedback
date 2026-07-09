@@ -317,6 +317,8 @@ body:has(.mode-toggle button[data-mode=nav].active) .canvas iframe{outline:2px s
 .cbar .annot .tools .swatch[data-active="true"]{border-color:var(--fg);box-shadow:0 0 0 2px var(--panel) inset}
 .cbar .annot .tools .grow{flex:1}
 .cbar .annot .tools .hint{font-size:11px;color:var(--muted)}
+.cbar .annot .tools-more{border-top:1px dashed var(--line)}
+.cbar .annot .tools .swatch[data-color="#ffffff"]{border-color:#c9c7ba}
 
 /* ============ Compact-Bar (Kommentar-Modal) ============ */
 .cbar-host{position:fixed;left:0;right:0;bottom:0;z-index:9999;pointer-events:none}
@@ -2010,21 +2012,44 @@ function refreshFrameBadges(){
 function createAnnotator(imgDataUrl){
   const TOOLS = [
     { id:"arrow", label:"↗", title:"Pfeil" },
+    { id:"pen",   label:"✎", title:"Stift (Freihand)" },
     { id:"rect",  label:"▭", title:"Rechteck" },
     { id:"ellipse", label:"○", title:"Kreis" },
-    { id:"highlight", label:"✎", title:"Marker" },
     { id:"text",  label:"T", title:"Text" }
   ];
+  // Weitere Werkzeuge im Ausklappmenü (⋯)
+  const MORE_TOOLS = [
+    { id:"highlight", label:"▨", title:"Marker (transparent hervorheben)" },
+    { id:"pixelate",  label:"▩", title:"Pixelieren (sensible Daten unkenntlich machen)" },
+    { id:"number",    label:"①", title:"Nummern-Badge (Klick platziert 1, 2, 3 …)" }
+  ];
   const COLORS = [
-    { id:"red", hex:"#e35f5f" },
-    { id:"yellow", hex:"#ffe05e" },
-    { id:"black", hex:"#262626" }
+    { id:"rot", hex:"#e35f5f" },
+    { id:"gelb", hex:"#ffe05e" },
+    { id:"schwarz", hex:"#262626" }
+  ];
+  const MORE_COLORS = [
+    { id:"grün", hex:"#62c12d" },
+    { id:"blau", hex:"#5c8fbf" },
+    { id:"weiß", hex:"#ffffff" }
+  ];
+  const WIDTHS = [
+    { id:"thin",   factor:0.6, label:"﹘", title:"Dünn" },
+    { id:"normal", factor:1,   label:"─", title:"Mittel" },
+    { id:"thick",  factor:2,   label:"━", title:"Dick" }
   ];
   let currentTool = "arrow";
   let currentColor = "#e35f5f";
-  const shapes = [];  // { tool, color, x1,y1,x2,y2, text? }
+  let currentWidth = 1;
+  const shapes = [];     // { tool, color, width, x1,y1,x2,y2, text?, points?, n? }
+  const redoStack = [];
   let img = null;
   let canvas, ctx, container, dragging = null;
+
+  function commit(shape){
+    shapes.push(shape);
+    redoStack.length = 0;   // neuer Strich macht Redo-Historie ungültig
+  }
 
   function draw(){
     if(!ctx || !img) return;
@@ -2037,9 +2062,44 @@ function createAnnotator(imgDataUrl){
     ctx.save();
     ctx.strokeStyle = s.color;
     ctx.fillStyle = s.color;
-    ctx.lineWidth = Math.max(2, Math.round(canvas.width/300));
+    ctx.lineWidth = Math.max(2, Math.round(canvas.width/300)) * (s.width || 1);
     ctx.lineCap = "round";
-    if(s.tool === "rect"){
+    ctx.lineJoin = "round";
+    if(s.tool === "pen" && s.points && s.points.length){
+      const pts = s.points;
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x, pts[0].y);
+      // Geglättete Kurve durch die Mittelpunkte — roher Polygonzug wirkt zackig
+      for(let i = 1; i < pts.length - 1; i++){
+        ctx.quadraticCurveTo(pts[i].x, pts[i].y, (pts[i].x + pts[i+1].x)/2, (pts[i].y + pts[i+1].y)/2);
+      }
+      if(pts.length > 1) ctx.lineTo(pts[pts.length-1].x, pts[pts.length-1].y);
+      else ctx.lineTo(pts[0].x + 0.1, pts[0].y);  // Punkt-Tap → sichtbarer Punkt
+      ctx.stroke();
+    } else if(s.tool === "pixelate"){
+      const x = Math.min(s.x1,s.x2), y = Math.min(s.y1,s.y2);
+      const w = Math.abs(s.x2-s.x1), h = Math.abs(s.y2-s.y1);
+      if(w >= 2 && h >= 2){
+        // Region grob heruntersampeln und ohne Glättung zurückzeichnen
+        const px = Math.max(6, Math.round(canvas.width/60));
+        const off = document.createElement("canvas");
+        off.width = Math.max(1, Math.round(w/px));
+        off.height = Math.max(1, Math.round(h/px));
+        off.getContext("2d").drawImage(canvas, x, y, w, h, 0, 0, off.width, off.height);
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(off, 0, 0, off.width, off.height, x, y, w, h);
+      }
+    } else if(s.tool === "number"){
+      const r = Math.max(12, Math.round(canvas.width/45));
+      ctx.beginPath(); ctx.arc(s.x1, s.y1, r, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = pickContrastInk(s.color);
+      ctx.lineWidth = Math.max(1.5, r/10);
+      ctx.stroke();
+      ctx.fillStyle = pickContrastInk(s.color);
+      ctx.font = `bold ${Math.round(r*1.1)}px system-ui, sans-serif`;
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText(String(s.n || 1), s.x1, s.y1 + 1);
+    } else if(s.tool === "rect"){
       ctx.strokeRect(s.x1, s.y1, s.x2-s.x1, s.y2-s.y1);
     } else if(s.tool === "ellipse"){
       const cx = (s.x1+s.x2)/2, cy = (s.y1+s.y2)/2;
@@ -2089,39 +2149,68 @@ function createAnnotator(imgDataUrl){
   }
   function bindEvents(){
     canvas.addEventListener("pointerdown", e => {
+      e.preventDefault();
       canvas.setPointerCapture(e.pointerId);
       const p = getPoint(e);
       if(currentTool === "text"){
         const txt = prompt("Text:");
-        if(txt){ shapes.push({ tool:"text", color:currentColor, x1:p.x, y1:p.y, x2:p.x, y2:p.y, text: txt }); draw(); }
+        if(txt){ commit({ tool:"text", color:currentColor, x1:p.x, y1:p.y, x2:p.x, y2:p.y, text: txt }); draw(); }
         return;
       }
-      dragging = { tool:currentTool, color:currentColor, x1:p.x, y1:p.y, x2:p.x, y2:p.y };
+      if(currentTool === "number"){
+        const n = shapes.filter(s => s.tool === "number").length + 1;
+        commit({ tool:"number", color:currentColor, x1:p.x, y1:p.y, n });
+        draw();
+        return;
+      }
+      if(currentTool === "pen"){
+        dragging = { tool:"pen", color:currentColor, width:currentWidth, points:[p] };
+      } else {
+        dragging = { tool:currentTool, color:currentColor, width:currentWidth, x1:p.x, y1:p.y, x2:p.x, y2:p.y };
+      }
       draw();
     });
     canvas.addEventListener("pointermove", e => {
       if(!dragging) return;
       const p = getPoint(e);
-      dragging.x2 = p.x; dragging.y2 = p.y;
+      if(dragging.tool === "pen"){
+        const last = dragging.points[dragging.points.length-1];
+        if(Math.hypot(p.x-last.x, p.y-last.y) > 2) dragging.points.push(p);
+      } else {
+        dragging.x2 = p.x; dragging.y2 = p.y;
+      }
       draw();
     });
     const endDrag = () => {
       if(!dragging) return;
-      const dx = dragging.x2 - dragging.x1, dy = dragging.y2 - dragging.y1;
-      if(Math.hypot(dx,dy) > 4) shapes.push(dragging);
+      if(dragging.tool === "pen"){
+        if(dragging.points.length > 1) commit(dragging);
+      } else {
+        const dx = dragging.x2 - dragging.x1, dy = dragging.y2 - dragging.y1;
+        if(Math.hypot(dx,dy) > 4) commit(dragging);
+      }
       dragging = null;
       draw();
     };
     canvas.addEventListener("pointerup", endDrag);
     canvas.addEventListener("pointercancel", endDrag);
   }
+  const toolBtn = t => `<button type="button" class="tool" data-tool="${t.id}" data-active="${t.id===currentTool}" title="${t.title}" aria-label="${t.title}">${t.label}</button>`;
+  const swatchBtn = c => `<button type="button" class="swatch" data-color="${c.hex}" data-active="${c.hex===currentColor}" title="${c.id}" aria-label="Farbe ${c.id}" style="background:${c.hex}"></button>`;
+  const HINTS = { pen:"Freihand zeichnen", text:"Klicken, dann Text eingeben", number:"Klicken zum Platzieren", pixelate:"Bereich zum Pixelieren aufziehen" };
   function selectTool(id){
     currentTool = id;
     container.querySelectorAll("[data-tool]").forEach(b => b.dataset.active = (b.dataset.tool === id));
+    const hint = container.querySelector("[data-role=hint]");
+    if(hint) hint.textContent = HINTS[id] || "Ziehen zum Zeichnen";
   }
   function selectColor(hex){
     currentColor = hex;
     container.querySelectorAll("[data-color]").forEach(b => b.dataset.active = (b.dataset.color === hex));
+  }
+  function selectWidth(factor){
+    currentWidth = factor;
+    container.querySelectorAll("[data-width]").forEach(b => b.dataset.active = (parseFloat(b.dataset.width) === factor));
   }
   function mount(host){
     container = document.createElement("div");
@@ -2129,28 +2218,51 @@ function createAnnotator(imgDataUrl){
     container.innerHTML = `
       <div class="stage" data-role="stage"></div>
       <div class="tools">
-        ${TOOLS.map(t => `<button type="button" class="tool" data-tool="${t.id}" data-active="${t.id===currentTool}" title="${t.title}" aria-label="${t.title}">${t.label}</button>`).join("")}
+        ${TOOLS.map(toolBtn).join("")}
         <span class="sep"></span>
-        ${COLORS.map(c => `<button type="button" class="swatch" data-color="${c.hex}" data-active="${c.hex===currentColor}" title="${c.id}" aria-label="Farbe ${c.id}" style="background:${c.hex}"></button>`).join("")}
+        ${COLORS.map(swatchBtn).join("")}
         <span class="sep"></span>
         <button type="button" class="tool" data-act="undo" title="Rückgängig" aria-label="Rückgängig">↶</button>
         <button type="button" class="tool" data-act="clear" title="Alles löschen" aria-label="Alles löschen">✕</button>
+        <button type="button" class="tool" data-act="more" title="Mehr Werkzeuge" aria-label="Mehr Werkzeuge" aria-expanded="false">⋯</button>
         <span class="grow"></span>
-        <span class="hint">Ziehen zum Zeichnen</span>
+        <span class="hint" data-role="hint">Ziehen zum Zeichnen</span>
+      </div>
+      <div class="tools tools-more" hidden>
+        ${MORE_TOOLS.map(toolBtn).join("")}
+        <span class="sep"></span>
+        ${MORE_COLORS.map(swatchBtn).join("")}
+        <span class="sep"></span>
+        ${WIDTHS.map(w => `<button type="button" class="tool" data-width="${w.factor}" data-active="${w.factor===currentWidth}" title="Strichstärke: ${w.title}" aria-label="Strichstärke: ${w.title}">${w.label}</button>`).join("")}
+        <span class="sep"></span>
+        <button type="button" class="tool" data-act="redo" title="Wiederholen" aria-label="Wiederholen">↷</button>
       </div>`;
     host.appendChild(container);
     const stage = container.querySelector("[data-role=stage]");
     stage.innerHTML = `<div class="ph"><span class="spin"></span>Screenshot wird erstellt…</div>`;
     container.querySelectorAll("[data-tool]").forEach(b => b.addEventListener("click", () => selectTool(b.dataset.tool)));
     container.querySelectorAll("[data-color]").forEach(b => b.addEventListener("click", () => selectColor(b.dataset.color)));
-    container.querySelector("[data-act=undo]").addEventListener("click", () => { shapes.pop(); draw(); });
-    container.querySelector("[data-act=clear]").addEventListener("click", () => { shapes.length = 0; draw(); });
+    container.querySelectorAll("[data-width]").forEach(b => b.addEventListener("click", () => selectWidth(parseFloat(b.dataset.width))));
+    container.querySelector("[data-act=undo]").addEventListener("click", () => {
+      if(shapes.length){ redoStack.push(shapes.pop()); draw(); }
+    });
+    container.querySelector("[data-act=redo]").addEventListener("click", () => {
+      if(redoStack.length){ shapes.push(redoStack.pop()); draw(); }
+    });
+    container.querySelector("[data-act=clear]").addEventListener("click", () => { shapes.length = 0; redoStack.length = 0; draw(); });
+    const moreBtn = container.querySelector("[data-act=more]");
+    moreBtn.addEventListener("click", () => {
+      const row = container.querySelector(".tools-more");
+      row.hidden = !row.hidden;
+      moreBtn.setAttribute("aria-expanded", String(!row.hidden));
+      moreBtn.dataset.active = String(!row.hidden);
+    });
     return container;
   }
   function showLoading(){
     const stage = container?.querySelector("[data-role=stage]");
     if(stage) stage.innerHTML = `<div class="ph"><span class="spin"></span>Screenshot wird erstellt…</div>`;
-    canvas = null; ctx = null; img = null; shapes.length = 0;
+    canvas = null; ctx = null; img = null; shapes.length = 0; redoStack.length = 0;
   }
   function setImage(dataUrl){
     return new Promise((resolve, reject) => {
@@ -2161,6 +2273,7 @@ function createAnnotator(imgDataUrl){
       im.onload = () => {
         img = im;
         shapes.length = 0;
+        redoStack.length = 0;
         stage.innerHTML = "";
         canvas = document.createElement("canvas");
         canvas.width = im.naturalWidth;
