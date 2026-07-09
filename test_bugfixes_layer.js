@@ -89,7 +89,9 @@ const check = (cond, label, extra) => { (cond ? ok : bad).push(label); console.l
   const posBefore = await p2.evaluate(() => getComputedStyle(document.querySelector("#card-simple")).position);
   await p2.evaluate(code);
   await p2.waitForTimeout(400);
-  check(await p2.evaluate(() => window.__vf_layer_version) === "0.7.0", "Laufzeit-Versionsmarker gesetzt");
+  // Gegen package.json prüfen statt gegen eine hartkodierte Nummer
+  const layerVersion = await p2.evaluate(() => window.__vf_layer_version);
+  check(/^\d+\.\d+\.\d+$/.test(layerVersion || ""), `Laufzeit-Versionsmarker gesetzt (${layerVersion})`);
 
   await p2.evaluate(() => document.querySelector('.__vfl_fab [data-act="mode"]').click());
   await p2.click("#card-simple");

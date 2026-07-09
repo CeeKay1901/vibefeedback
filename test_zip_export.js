@@ -202,6 +202,136 @@ const check = (c, l, e) => { (c ? ok : bad).push(l); console.log(`  ${c ? "✓" 
   const md2 = fs.readFileSync(path.join(ex2, "feedback.md"), "utf8");
   check(!md2.includes("data:image/"), "Bookmarklet-Markdown ohne data-URLs");
 
+  // ── ZIP-Import ─────────────────────────────────────────────────────────
+  console.log("\n[Import] ZIP zurücklesen");
+  const freshPage = async () => {
+    const p = await ctx.newPage();
+    p.on("pageerror", e => { console.log("PAGE ERR:", e.message.slice(0, 140)); bad.push("pageerror-import"); });
+    await p.addInitScript(`window.__VF_MS_OVERRIDE = "http://127.0.0.1:${PORT}/modern-screenshot.js";`);
+    await p.goto(`http://127.0.0.1:${PORT}/index.html?src=${encodeURIComponent(target + "?f=" + Math.random())}&__vftest=1`, { waitUntil: "networkidle" });
+    await p.waitForTimeout(1200);
+    await p.locator(".coach button").click().catch(() => {});
+    return p;
+  };
+  const importZip = async (p, zipFile) => {
+    const b64 = fs.readFileSync(zipFile).toString("base64");
+    return p.evaluate(async ({ b64, name }) => {
+      const bin = atob(b64);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      const file = new File([bytes], name, { type: "application/zip" });
+      const dt = new DataTransfer(); dt.items.add(file);
+      const input = document.getElementById("btn-import-file");
+      Object.defineProperty(input, "files", { value: dt.files, configurable: true });
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+      await new Promise(r => setTimeout(r, 1500));
+      return {
+        n: STATE.comments.length,
+        withShot: STATE.comments.filter(c => (c.screenshot || "").startsWith("data:image/")).length,
+        texts: STATE.comments.map(c => c.text)
+      };
+    }, { b64, name: path.basename(zipFile) });
+  };
+
+  const pi = await freshPage();
+  check(await pi.locator("#btn-import-file").getAttribute("accept") === ".md,.json,.zip", "Datei-Dialog akzeptiert .zip");
+  const r1 = await importZip(pi, zipPath);
+  check(r1.n === 2, `ZIP-Import: 2 Kommentare (${r1.n})`);
+  check(r1.withShot === 2, `ZIP-Import: beide Screenshots wiederhergestellt (${r1.withShot})`);
+  check(r1.texts.includes("Erster Kommentar") && r1.texts.includes("Zweiter Kommentar"), "Texte korrekt");
+  // Zweiter Import derselben Datei → alles Duplikate
+  const r1b = await importZip(pi, zipPath);
+  check(r1b.n === 2, `Erneuter Import legt keine Duplikate an (${r1b.n})`);
+  await pi.close();
+
+  // ── ZIP ohne feedback.json: Markdown + screenshots/ ────────────────────
+  console.log("\n[Import] ZIP ohne feedback.json (nur Markdown + Bilder)");
+  const zipMdOnly = path.join(OUT, "md_only.zip");
+  fs.rmSync(zipMdOnly, { force: true });
+  execFileSync("python3", ["-c", `
+import zipfile, sys, shutil, os
+src, dst = sys.argv[1], sys.argv[2]
+with zipfile.ZipFile(src) as z, zipfile.ZipFile(dst, "w", zipfile.ZIP_STORED) as out:
+    for n in z.namelist():
+        if n == "feedback.json": continue
+        out.writestr(n, z.read(n))
+`, zipPath, zipMdOnly]);
+  const pm = await freshPage();
+  const r2 = await importZip(pm, zipMdOnly);
+  check(r2.n === 2, `Nur-Markdown-ZIP: 2 Kommentare (${r2.n})`);
+  check(r2.withShot === 2, `Nur-Markdown-ZIP: Screenshots aus screenshots/ geladen (${r2.withShot})`);
+  await pm.close();
+
+  // ── Deflate-komprimiertes ZIP (von einem fremden Tool erzeugt) ─────────
+  console.log("\n[Import] deflate-komprimiertes ZIP");
+  const zipDeflate = path.join(OUT, "deflated.zip");
+  fs.rmSync(zipDeflate, { force: true });
+  execFileSync("python3", ["-c", `
+import zipfile, sys
+src, dst = sys.argv[1], sys.argv[2]
+with zipfile.ZipFile(src) as z, zipfile.ZipFile(dst, "w", zipfile.ZIP_DEFLATED) as out:
+    for n in z.namelist():
+        out.writestr(n, z.read(n))
+`, zipPath, zipDeflate]);
+  const methods = execFileSync("python3", ["-c", `
+import zipfile, sys
+with zipfile.ZipFile(sys.argv[1]) as z:
+    print(sorted({i.compress_type for i in z.infolist()}))
+`, zipDeflate], { encoding: "utf8" }).trim();
+  check(methods.includes("8"), `Testarchiv ist wirklich deflate-komprimiert (${methods})`);
+  const pd = await freshPage();
+  const r3 = await importZip(pd, zipDeflate);
+  check(r3.n === 2, `Deflate-ZIP: 2 Kommentare (${r3.n})`);
+  check(r3.withShot === 2, `Deflate-ZIP: Screenshots entpackt (${r3.withShot})`);
+  await pd.close();
+
+  // ── Bösartiges ZIP: XSS-Payloads in json + kaputte Datei ───────────────
+  console.log("\n[Import] bösartiges / kaputtes ZIP");
+  const zipEvil = path.join(OUT, "evil.zip");
+  execFileSync("python3", ["-c", `
+import zipfile, sys, json
+dst = sys.argv[1]
+items = [{
+  "id": 'x"><img src=x onerror="alert(1)">',
+  "selector": "#card-simple",
+  "note": "boese",
+  "ts": "2026-07-09T10:00:00.000Z",
+  "category": 'bug" onmouseover="alert(2)',
+  "screenshotFile": "screenshots/evil.svg"
+}]
+with zipfile.ZipFile(dst, "w") as z:
+    z.writestr("feedback.json", json.dumps({"comments": items}))
+    z.writestr("screenshots/evil.svg", '<svg xmlns="http://www.w3.org/2000/svg" onload="alert(3)"></svg>')
+`, zipEvil]);
+  const pe = await ctx.newPage();
+  let evilXss = false;
+  pe.on("dialog", d => { evilXss = true; d.dismiss(); });
+  await pe.addInitScript(`window.__VF_MS_OVERRIDE = "http://127.0.0.1:${PORT}/modern-screenshot.js";`);
+  await pe.goto(`http://127.0.0.1:${PORT}/index.html?src=${encodeURIComponent(target + "?evil=1")}&__vftest=1`, { waitUntil: "networkidle" });
+  await pe.waitForTimeout(1200);
+  await pe.locator(".coach button").click().catch(() => {});
+  const r4 = await importZip(pe, zipEvil);
+  await pe.waitForTimeout(600);
+  check(!evilXss, "Bösartiges ZIP löst kein XSS aus");
+  const evilState = await pe.evaluate(() => {
+    const c = STATE.comments[0];
+    return c ? { id: c.id, cat: c.category, shot: c.screenshot } : null;
+  });
+  check(evilState && !/[<>"]/.test(evilState.id), "Bösartige id ersetzt", evilState && evilState.id);
+  check(evilState && evilState.cat === "feature", "Unbekannte category auf Default", evilState && evilState.cat);
+  check(evilState && evilState.shot === null, "SVG-Screenshot aus dem ZIP verworfen", String(evilState && evilState.shot).slice(0, 40));
+  await pe.close();
+
+  // Kaputte Datei: kein ZIP → Fehlermeldung statt Absturz
+  const broken = path.join(OUT, "broken.zip");
+  fs.writeFileSync(broken, Buffer.from("das ist kein zip"));
+  const pb = await freshPage();
+  const r5 = await importZip(pb, broken);
+  check(r5.n === 0, "Kaputte ZIP-Datei importiert nichts");
+  const toastTxt = await pb.evaluate(() => document.querySelector(".toast")?.textContent || "");
+  check(/unlesbar/i.test(toastTxt), `Fehler wird gemeldet ("${toastTxt.slice(0, 60)}")`);
+  await pb.close();
+
   console.log(`\n${ok.length}/${ok.length + bad.length} bestanden`);
   await browser.close();
   srv.close();

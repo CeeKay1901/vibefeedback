@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.8.0 — 2026-07-09 — ZIP-Export mit Screenshot-Dateien
+## 0.8.0 — 2026-07-09 — ZIP-Export und -Import mit Screenshot-Dateien
 
 - **feat: „Als ZIP"** neben „Als Markdown" — in der Sidebar, im Export-Reminder-Banner und im Bookmarklet. Das Archiv enthält:
   - `feedback.md` — dasselbe Markdown, aber die Screenshots sind als Bilddateien **verlinkt** statt als data-URL eingebettet. Damit bleibt die Datei lesbar und klein (vorher blähten Base64-Bilder sie auf ein Vielfaches auf).
@@ -8,8 +8,10 @@
   - `screenshots/01-hero-titel.jpg` … — ein Bild je kommentiertem Element, benannt nach Nummer und Elementtext.
   - `README.md` — erklärt den Inhalt für Empfänger.
 - **Keine neue Abhängigkeit**: eigener ZIP-Writer (`store`-Methode, CRC32) in ~70 Zeilen. Die Screenshots sind bereits JPEG-komprimiert, eine zweite Kompression brächte kaum etwas.
+- **feat: ZIP-Import** — der Datei-Dialog akzeptiert jetzt `.zip` neben `.md`/`.json`. Eigener ZIP-Reader (Central Directory), der `store` und `deflate` auspackt (letzteres über die `DecompressionStream`-API), damit auch von fremden Werkzeugen neu gepackte Archive funktionieren. Enthält das Archiv keine `feedback.json`, werden die Kommentare aus dem JSON-Block des Markdowns gelesen und die Bilder anhand des neuen Feldes `screenshotFile` aus `screenshots/` nachgeladen.
+- **Sicherheit beim Import:** Bilder aus dem Archiv werden nur als Raster-dataURL übernommen (kein SVG); IDs und Kategorien laufen durch dieselbe Validierung wie beim JSON-Import. Die Item-Übernahme liegt jetzt in einer gemeinsamen Funktion `importItems`, damit ZIP und Einzeldatei nicht auseinanderlaufen können.
 - **fix**: Der JSON-Import akzeptierte nur `{items:[…]}`, nicht `{comments:[…]}` — der eigene JSON-Export ließ sich dadurch nicht re-importieren.
-- Verifiziert gegen echte ZIP-Tools: `unzip -t` bestätigt die CRC-Integrität, die extrahierten Bilder sind gültige JPEGs, das Markdown verlinkt sie korrekt, und `feedback.json` lässt sich in einer frischen Session mit Screenshots re-importieren (28 Checks in `test_zip_export.js`).
+- Verifiziert gegen echte ZIP-Tools: `unzip -t` bestätigt die CRC-Integrität, die extrahierten Bilder sind gültige JPEGs, das Markdown verlinkt sie korrekt. Der Import wurde gegen das eigene Archiv, ein Archiv ohne `feedback.json`, ein von Python deflate-gepacktes Archiv, ein bösartiges Archiv (XSS-Payloads, SVG-„Screenshot") und eine kaputte Datei geprüft (44 Checks in `test_zip_export.js`).
 
 ## 0.7.0 — 2026-07-09 — Systematische Bugfix-Runde
 

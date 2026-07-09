@@ -840,7 +840,7 @@ a.bm-drag:active{transform:scale(.97)}
       <button id="btn-export-zip" title="Markdown + Screenshots als Bilddateien in einem ZIP">Als ZIP</button>
       <button id="btn-copy-md">Kopieren</button>
       <button id="btn-import">Importieren</button>
-      <input type="file" id="btn-import-file" accept=".md,.json" multiple hidden aria-label="Feedback-Dateien importieren (.md oder .json)">
+      <input type="file" id="btn-import-file" accept=".md,.json,.zip" multiple hidden aria-label="Feedback-Dateien importieren (.md, .json oder .zip)">
       <button id="btn-clear" class="danger">Alle löschen</button>
     </div>
     <div id="cmt-empty" class="empty">
@@ -3262,6 +3262,8 @@ function buildMarkdown(opts){
     selector: c.selector,
     tag: c.tag || null,
     page: c.pageUrl || null,
+    // Beim ZIP-Export: Pfad der Bilddatei, damit das Markdown allein re-importierbar bleibt
+    screenshotFile: (opts.screenshotFiles && opts.screenshotFiles[c.id]) || null,
     fallback: {
       text: c.info?.text || null,
       ariaLabel: c.info?.attrs?.ariaLabel || null,
@@ -3281,6 +3283,67 @@ function buildMarkdown(opts){
   return md;
 }
 
+// Übernimmt rohe Import-Items in STATE.comments. Importierte Dateien sind fremde
+// Eingaben: IDs landen in HTML-Attributen, Screenshots in <img src> — beides nur
+// in sicherer Form übernehmen (Stored-XSS).
+function importItems(items, existingIds, existingFp){
+  const safeId = v => (typeof v === "string" && /^[a-z0-9_-]{1,64}$/i.test(v)) ? v : null;
+  // Ganzen String validieren, nicht nur das Präfix: ein `"` im Rest bräche sonst aus
+  // dem <img src="…">-Attribut aus. Kein SVG (kann Skripte tragen).
+  const safeShot = v => (typeof v === "string"
+    && /^data:image\/(png|jpeg|jpg|gif|webp);base64,[A-Za-z0-9+/]+=*$/i.test(v)
+    && v.length < 4e6) ? v : null;
+
+  let added = 0, skipped = 0;
+  for(const item of items){
+    if(!item || !item.selector) continue;
+    const fp = item.selector + ":" + item.ts;
+
+    // Dedup: skip if same id OR same selector+ts fingerprint
+    if(item.id && existingIds.has(item.id)){ skipped++; continue; }
+    if(existingFp.has(fp)){ skipped++; continue; }
+
+    const id = safeId(item.id) || (Date.now().toString(36) + Math.random().toString(36).slice(2));
+    existingIds.add(id);
+    existingFp.add(fp);
+
+    const fallback = item.fallback || {};
+    STATE.comments.push({
+      id,
+      selector:   item.selector,
+      tag:        item.tag || (item.selector.match(/^(\w[\w-]*)/)?.[1] || "div"),
+      text:       item.text || item.note || "",
+      author:     item.author || "",
+      ts:         item.ts || Date.now(),
+      category:   CAT_MAP[item.category] ? item.category : "feature",
+      priority:   PRI_MAP[item.priority] ? item.priority : "could",
+      screenshot: safeShot(item.screenshot),
+      structured: item.structured || null,
+      snippet:    item.snippet || null,
+      pageUrl:    item.page || item.pageUrl || null,
+      info: item.info || (Object.keys(fallback).some(k=>fallback[k]) ? {
+        text:      fallback.text || null,
+        id:        fallback.id || null,
+        attrs: {
+          ariaLabel:   fallback.ariaLabel || null,
+          dataTestid:  fallback.dataTestid || null,
+          href:        fallback.href || null
+        }
+      } : null),
+      reactions: { likes: [], dislikes: [] },
+      replies: (item.replies || []).map(r => ({
+        id:     safeId(r.id) || (Date.now().toString(36) + Math.random().toString(36).slice(2)),
+        text:   r.text || "",
+        author: r.author || "",
+        ts:     r.ts || Date.now(),
+        reactions: { likes: [], dislikes: [] }
+      }))
+    });
+    added++;
+  }
+  return { added, skipped };
+}
+
 async function importComments(fileInput){
   const files = fileInput ? [...fileInput.files] : [];
   if(!files.length) return;
@@ -3294,11 +3357,20 @@ async function importComments(fileInput){
   let newCount = 0, skipCount = 0, errorFiles = [];
 
   for(const file of files){
+    let items = [];
+
+    if(/\.zip$/i.test(file.name)){
+      try{ items = await itemsFromZip(file); }
+      catch(e){ console.warn("[vf] zip-import", e); errorFiles.push(file.name); continue; }
+      const res = importItems(items, existingIds, existingFp);
+      newCount += res.added; skipCount += res.skipped;
+      continue;
+    }
+
     let raw;
     try{ raw = await file.text(); }
     catch(e){ errorFiles.push(file.name); continue; }
 
-    let items = [];
     try{
       if(file.name.endsWith(".json")){
         const parsed = JSON.parse(raw);
@@ -3312,61 +3384,8 @@ async function importComments(fileInput){
       }
     }catch(e){ errorFiles.push(file.name); continue; }
 
-    // Importierte Dateien sind fremde Eingaben: IDs landen in HTML-Attributen,
-    // Screenshots in <img src> — beides nur in sicherer Form übernehmen (Stored-XSS).
-    const safeId = v => (typeof v === "string" && /^[a-z0-9_-]{1,64}$/i.test(v)) ? v : null;
-    // Ganzen String validieren, nicht nur das Präfix: ein `"` im Rest bräche sonst aus
-    // dem <img src="…">-Attribut aus. Kein SVG (kann Skripte tragen).
-    const safeShot = v => (typeof v === "string"
-      && /^data:image\/(png|jpeg|jpg|gif|webp);base64,[A-Za-z0-9+/]+=*$/i.test(v)
-      && v.length < 4e6) ? v : null;
-
-    for(const item of items){
-      if(!item.selector) continue;
-      const fp = item.selector + ":" + item.ts;
-
-      // Dedup: skip if same id OR same selector+ts fingerprint
-      if(item.id && existingIds.has(item.id)){ skipCount++; continue; }
-      if(existingFp.has(fp)){ skipCount++; continue; }
-
-      const id = safeId(item.id) || (Date.now().toString(36) + Math.random().toString(36).slice(2));
-      existingIds.add(id);
-      existingFp.add(fp);
-
-      const fallback = item.fallback || {};
-      STATE.comments.push({
-        id,
-        selector:   item.selector,
-        tag:        item.tag || (item.selector.match(/^(\w[\w-]*)/)?.[1] || "div"),
-        text:       item.text || item.note || "",
-        author:     item.author || "",
-        ts:         item.ts || Date.now(),
-        category:   CAT_MAP[item.category] ? item.category : "feature",
-        priority:   PRI_MAP[item.priority] ? item.priority : "could",
-        screenshot: safeShot(item.screenshot),
-        structured: item.structured || null,
-        snippet:    item.snippet || null,
-        pageUrl:    item.page || item.pageUrl || null,
-        info: item.info || (Object.keys(fallback).some(k=>fallback[k]) ? {
-          text:      fallback.text || null,
-          id:        fallback.id || null,
-          attrs: {
-            ariaLabel:   fallback.ariaLabel || null,
-            dataTestid:  fallback.dataTestid || null,
-            href:        fallback.href || null
-          }
-        } : null),
-        reactions: { likes: [], dislikes: [] },
-        replies: (item.replies || []).map(r => ({
-          id:     safeId(r.id) || (Date.now().toString(36) + Math.random().toString(36).slice(2)),
-          text:   r.text || "",
-          author: r.author || "",
-          ts:     r.ts || Date.now(),
-          reactions: { likes: [], dislikes: [] }
-        }))
-      });
-      newCount++;
-    }
+    const res = importItems(items, existingIds, existingFp);
+    newCount += res.added; skipCount += res.skipped;
   }
 
   if(newCount){
@@ -3486,16 +3505,110 @@ function downloadBlob(blob, filename){
   setTimeout(()=> URL.revokeObjectURL(url), 1000);
 }
 
+// ---- ZIP-Reader: Central Directory lesen, "store" und "deflate" auspacken ----
+async function readZip(buffer){
+  const view = new DataView(buffer);
+  const bytes = new Uint8Array(buffer);
+
+  // End of Central Directory rückwärts suchen (Kommentarfeld kann bis 64 KB lang sein)
+  let eocd = -1;
+  for(let i = bytes.length - 22; i >= Math.max(0, bytes.length - 65557); i--){
+    if(view.getUint32(i, true) === 0x06054b50){ eocd = i; break; }
+  }
+  if(eocd < 0) throw new Error("Kein ZIP (End of Central Directory fehlt)");
+
+  const total   = view.getUint16(eocd + 10, true);
+  let   pointer = view.getUint32(eocd + 16, true);
+  const dec = new TextDecoder();
+  const files = new Map();
+
+  for(let n = 0; n < total; n++){
+    if(view.getUint32(pointer, true) !== 0x02014b50) throw new Error("Beschädigter ZIP-Index");
+    const method     = view.getUint16(pointer + 10, true);
+    const compSize   = view.getUint32(pointer + 20, true);
+    const nameLen    = view.getUint16(pointer + 28, true);
+    const extraLen   = view.getUint16(pointer + 30, true);
+    const commentLen = view.getUint16(pointer + 32, true);
+    const localOff   = view.getUint32(pointer + 42, true);
+    const name = dec.decode(bytes.subarray(pointer + 46, pointer + 46 + nameLen));
+    pointer += 46 + nameLen + extraLen + commentLen;
+
+    // Datenanfang steht erst im Local Header (Extra-Feld kann dort abweichen)
+    if(view.getUint32(localOff, true) !== 0x04034b50) throw new Error("Beschädigter ZIP-Eintrag: " + name);
+    const lNameLen  = view.getUint16(localOff + 26, true);
+    const lExtraLen = view.getUint16(localOff + 28, true);
+    const dataStart = localOff + 30 + lNameLen + lExtraLen;
+    const raw = bytes.subarray(dataStart, dataStart + compSize);
+
+    if(name.endsWith("/")) continue;             // Verzeichniseintrag
+    if(method === 0){ files.set(name, raw); continue; }
+    if(method === 8){
+      if(typeof DecompressionStream !== "function") throw new Error("Browser kann deflate nicht auspacken");
+      const stream = new Blob([raw]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+      files.set(name, new Uint8Array(await new Response(stream).arrayBuffer()));
+      continue;
+    }
+    throw new Error(`Nicht unterstützte Kompression (${method}) in ${name}`);
+  }
+  return files;
+}
+
+function bytesToDataUrl(bytes, name){
+  const ext = (name.split(".").pop() || "jpg").toLowerCase();
+  const mime = { jpg:"jpeg", jpeg:"jpeg", png:"png", gif:"gif", webp:"webp" }[ext];
+  if(!mime) return null;
+  let bin = "";
+  const CHUNK = 0x8000;   // btoa verträgt keine beliebig langen Argumentlisten
+  for(let i = 0; i < bytes.length; i += CHUNK){
+    bin += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK));
+  }
+  return `data:image/${mime};base64,${btoa(bin)}`;
+}
+
+// Kommentare aus einem VibeFeedback-ZIP ziehen: bevorzugt feedback.json
+// (enthält die Screenshots eingebettet), sonst das Markdown + screenshots/-Ordner.
+async function itemsFromZip(file){
+  const files = await readZip(await file.arrayBuffer());
+  const dec = new TextDecoder();
+  const pick = re => [...files.keys()].find(n => re.test(n));
+
+  const jsonName = files.has("feedback.json") ? "feedback.json" : pick(/\.json$/i);
+  const mdName   = files.has("feedback.md")   ? "feedback.md"   : pick(/\.md$/i);
+
+  let items = [];
+  if(jsonName){
+    const parsed = JSON.parse(dec.decode(files.get(jsonName)));
+    items = Array.isArray(parsed) ? parsed : (parsed.items || parsed.comments || []);
+  }else if(mdName){
+    const m = dec.decode(files.get(mdName)).match(/```json\r?\n([\s\S]*?)\r?\n```/);
+    if(!m) throw new Error("Kein JSON-Block im Markdown");
+    const parsed = JSON.parse(m[1]);
+    items = Array.isArray(parsed) ? parsed : (parsed.items || parsed.comments || []);
+  }else{
+    throw new Error("Weder feedback.json noch feedback.md im ZIP");
+  }
+
+  // Screenshots aus dem Ordner nachladen, wo sie in den Daten fehlen
+  items.forEach(it => {
+    if(it.screenshot || !it.screenshotFile) return;
+    const bytes = files.get(it.screenshotFile);
+    if(bytes) it.screenshot = bytesToDataUrl(bytes, it.screenshotFile);
+  });
+  return items;
+}
+
 async function exportZip(){
   if(!STATE.comments.length){ toast("Keine Kommentare zum Exportieren."); return; }
   const btn = $("#btn-export-zip");
   if(btn){ btn.disabled = true; btn.textContent = "Packe…"; }
   try{
     const enc = new TextEncoder();
-    const shots = [];   // { name, data }
+    const shots = [];               // { name, data }
+    const screenshotFiles = {};     // comment.id → Dateiname (landet im JSON-Block)
 
     // buildMarkdown ruft screenshotPath in Sortier-Reihenfolge auf — dort die Dateien einsammeln
     const md = buildMarkdown({
+      screenshotFiles,
       screenshotPath: (c, idx) => {
         const parsed = c.screenshot ? dataUrlToBytes(c.screenshot) : null;
         if(!parsed) return null;
@@ -3506,6 +3619,7 @@ async function exportZip(){
           name = `screenshots/${String(idx + 1).padStart(2, "0")}-${label}-${n}.${parsed.ext}`;
         }
         shots.push({ name, data: parsed.bytes });
+        screenshotFiles[c.id] = name;
         return name;
       }
     });
@@ -3574,7 +3688,7 @@ async function exportMarkdown(copyOnly){
 // ============ Router ============
 (function main(){
   const params = new URLSearchParams(location.search);
-  if(params.get("__vftest")==="1"){ window.__vftest = { STATE, buildMarkdown, CATEGORIES, PRIORITIES, TEMPLATES, CAT_MAP, PRI_MAP, createAnnotator, buildZip, crc32, dataUrlToBytes }; console.log("[vf] test hook installed"); }
+  if(params.get("__vftest")==="1"){ window.__vftest = { STATE, buildMarkdown, CATEGORIES, PRIORITIES, TEMPLATES, CAT_MAP, PRI_MAP, createAnnotator, buildZip, crc32, dataUrlToBytes, readZip, itemsFromZip }; console.log("[vf] test hook installed"); }
   const src = params.get("src");
   const owner = params.get("owner")==="1";
   if(src){ initApp(src, owner); } else { initLanding(); }
