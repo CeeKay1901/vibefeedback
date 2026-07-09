@@ -15,6 +15,9 @@
 - Das **Bookmarklet behält bewusst seine eigene Kopie** — es wird in fremde Seiten injiziert und darf nichts nachladen. Damit sie nicht wegdriftet, prüft `test_zip_parity.js`, dass beide Implementierungen bei gleicher Eingabe **byte-identische** Archive erzeugen. Der Test wurde gegen zwei absichtliche Sabotagen (verändertes Header-Feld, falsches CRC-Polynom) geprüft — er schlägt an.
 - `buildZip(files, when)` nimmt den Zeitstempel entgegen. Dadurch ist das Ergebnis reproduzierbar und überhaupt erst vergleichbar.
 
+### fix
+- **Ausfallsicherheit gegen die eigene Auslagerung**: Ein fehlendes `vf-zip.js` (404, Adblocker, offline) hätte durch das Destructuring auf oberster Ebene eine Ausnahme geworfen und damit *das ganze Tool und das ganze Dashboard* lahmgelegt — der Router läuft am Skriptende. Jetzt fallen nur die ZIP-Funktionen aus: der Button verschwindet bzw. wird deaktiviert, Markdown-Export und alles andere laufen weiter. Der Fall ist als Test hinterlegt.
+
 ## 0.9.1 — 2026-07-09 — Nachprüfung des Dashboards
 
 Eigene Nachkontrolle der 0.9.0-Änderungen; drei Fehler gefunden, die die Tests nicht abgedeckt hatten:

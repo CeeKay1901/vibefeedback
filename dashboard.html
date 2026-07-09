@@ -672,7 +672,18 @@ function renderDetail(idx){
    Die feedback.json liegt oben und verweist per screenshotFile in die Projekt-
    ordner — damit versteht der ZIP-Import des Tools das Archiv unverändert.
    ========================================================================== */
-const { buildZip, dataUrlToBytes, downloadBlob, slugify } = window.VFZip;
+// Fehlt vf-zip.js (404, Adblocker), darf nur der Export ausfallen, nicht das Dashboard.
+const VFZIP = window.VFZip || null;
+if(!VFZIP) console.warn("[vf] vf-zip.js nicht geladen — Export deaktiviert.");
+
+// DOM-Helfer, bewusst lokal
+function downloadBlob(blob, filename){
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=> URL.revokeObjectURL(url), 1000);
+}
 
 // RFC-4180: Feld quoten, enthaltene Anführungszeichen verdoppeln. Zeilenumbrüche
 // dürfen so innerhalb eines Feldes stehen bleiben.
@@ -701,7 +712,7 @@ function buildCsv(projects){
 }
 
 function projectSlug(src, taken){
-  let base = slugify(hostOf(src) + "-" + pathOf(src), 48) || "projekt";
+  let base = VFZIP.slugify(hostOf(src) + "-" + pathOf(src), 48) || "projekt";
   let name = base;
   for(let n = 2; taken.has(name); n++) name = `${base}-${n}`;
   taken.add(name);
@@ -710,7 +721,7 @@ function projectSlug(src, taken){
 
 async function exportAll(){
   const btn = document.getElementById("btn-export-all");
-  if(!PROJECTS.length){ return; }
+  if(!VFZIP || !PROJECTS.length){ return; }
   btn.disabled = true; btn.textContent = "Packe…";
   try{
     const enc = new TextEncoder();
@@ -728,9 +739,9 @@ async function exportAll(){
         delete item.screenshot;              // Bild liegt als Datei bei, nicht doppelt als base64
         item.project = p.src;
         if(shot){
-          const parsed = dataUrlToBytes(shot);
+          const parsed = VFZIP.dataUrlToBytes(shot);
           if(parsed){
-            const label = slugify((c.info && c.info.text) || c.text || c.tag || "element", 32);
+            const label = VFZIP.slugify((c.info && c.info.text) || c.text || c.tag || "element", 32);
             const name = `${slug}/screenshots/${String(++shotNo).padStart(2, "0")}-${label}.${parsed.ext}`;
             files.push({ name, data: parsed.bytes });
             item.screenshotFile = name;      // der ZIP-Import des Tools löst das auf
@@ -765,7 +776,7 @@ async function exportAll(){
       { name:"README.md",      data: enc.encode(readme) }
     );
 
-    const blob = buildZip(files);
+    const blob = VFZIP.buildZip(files);
     downloadBlob(blob, `vibefeedback-alle-${new Date().toISOString().slice(0,10)}.zip`);
   }catch(e){
     console.warn("[vf] export-all", e);
@@ -789,7 +800,7 @@ function boot(){
     </div>`;
     return;
   }
-  document.getElementById("btn-export-all").disabled = !PROJECTS.length;
+  document.getElementById("btn-export-all").disabled = !PROJECTS.length || !VFZIP;
   renderOverview();
 }
 document.getElementById("btn-refresh").addEventListener("click", boot);

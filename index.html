@@ -1245,7 +1245,8 @@ async function initApp(src, isOwner){
 
   $("#btn-back").onclick = ()=> location.href = location.origin + location.pathname;
   $("#btn-export").onclick = ()=> exportMarkdown(false);
-  $("#btn-export-zip").onclick = ()=> exportZip();
+  if(VFZIP) $("#btn-export-zip").onclick = ()=> exportZip();
+  else $("#btn-export-zip").hidden = true;
   $("#btn-copy-md").onclick = ()=> exportMarkdown(true);
   $("#btn-import").onclick = ()=> $("#btn-import-file").click();
   $("#btn-import-file").addEventListener("change", ()=> importComments($("#btn-import-file")));
@@ -3407,15 +3408,33 @@ async function importComments(fileInput){
 }
 
 // ============ ZIP ============
-// Schreiben/Lesen liegt in vf-zip.js (gemeinsam mit dem Dashboard) und hängt
-// als window.VFZip am globalen Objekt. layer.js hat eine eigene Kopie, weil
-// das Bookmarklet in fremden Seiten nichts nachladen darf.
-const { buildZip, readZip, dataUrlToBytes, bytesToDataUrl, crc32, downloadBlob, slugify } = window.VFZip;
+// Schreiben/Lesen liegt in vf-zip.js (gemeinsam mit dem Dashboard) und hängt als
+// window.VFZip am globalen Objekt. layer.js hat eine eigene Kopie, weil das
+// Bookmarklet in fremden Seiten nichts nachladen darf.
+// Fehlt die Datei (404, Adblocker, Offline), dürfen nur die ZIP-Funktionen
+// ausfallen — nicht das ganze Tool. Deshalb kein Destructuring auf oberster Ebene.
+const VFZIP = window.VFZip || null;
+if(!VFZIP) console.warn("[vf] vf-zip.js nicht geladen — ZIP-Export und -Import sind deaktiviert.");
+function zipReady(){
+  if(VFZIP) return true;
+  toast("ZIP-Funktionen nicht verfügbar — die Datei vf-zip.js konnte nicht geladen werden.", 4500);
+  return false;
+}
+
+// DOM-Helfer, bewusst lokal: der Markdown-Download darf nicht von vf-zip.js abhängen.
+function downloadBlob(blob, filename){
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=> URL.revokeObjectURL(url), 1000);
+}
 
 // Kommentare aus einem VibeFeedback-ZIP ziehen: bevorzugt feedback.json
 // (enthält die Screenshots eingebettet), sonst das Markdown + screenshots/-Ordner.
 async function itemsFromZip(file){
-  const files = await readZip(await file.arrayBuffer());
+  if(!VFZIP) throw new Error("ZIP-Unterstützung nicht geladen");
+  const files = await VFZIP.readZip(await file.arrayBuffer());
   const dec = new TextDecoder();
   const pick = re => [...files.keys()].find(n => re.test(n));
 
@@ -3439,12 +3458,13 @@ async function itemsFromZip(file){
   items.forEach(it => {
     if(it.screenshot || !it.screenshotFile) return;
     const bytes = files.get(it.screenshotFile);
-    if(bytes) it.screenshot = bytesToDataUrl(bytes, it.screenshotFile);
+    if(bytes) it.screenshot = VFZIP.bytesToDataUrl(bytes, it.screenshotFile);
   });
   return items;
 }
 
 async function exportZip(){
+  if(!zipReady()) return;
   if(!STATE.comments.length){ toast("Keine Kommentare zum Exportieren."); return; }
   const btn = $("#btn-export-zip");
   if(btn){ btn.disabled = true; btn.textContent = "Packe…"; }
@@ -3457,9 +3477,9 @@ async function exportZip(){
     const md = buildMarkdown({
       screenshotFiles,
       screenshotPath: (c, idx) => {
-        const parsed = c.screenshot ? dataUrlToBytes(c.screenshot) : null;
+        const parsed = c.screenshot ? VFZIP.dataUrlToBytes(c.screenshot) : null;
         if(!parsed) return null;
-        const label = slugify((c.info && c.info.text) || c.tag || "element", 32);
+        const label = VFZIP.slugify((c.info && c.info.text) || c.tag || "element", 32);
         let name = `screenshots/${String(idx + 1).padStart(2, "0")}-${label}.${parsed.ext}`;
         // Ein ZIP mit doppelten Einträgen wäre kaputt — Suffix anhängen, falls nötig
         for(let n = 2; shots.some(f => f.name === name); n++){
@@ -3491,7 +3511,7 @@ async function exportZip(){
       ``
     ].join("\n");
 
-    const blob = buildZip([
+    const blob = VFZIP.buildZip([
       { name: "feedback.md",   data: enc.encode(md) },
       { name: "feedback.json", data: enc.encode(JSON.stringify(jsonPayload, null, 2)) },
       { name: "README.md",     data: enc.encode(readme) },
@@ -3535,7 +3555,7 @@ async function exportMarkdown(copyOnly){
 // ============ Router ============
 (function main(){
   const params = new URLSearchParams(location.search);
-  if(params.get("__vftest")==="1"){ window.__vftest = { STATE, buildMarkdown, CATEGORIES, PRIORITIES, TEMPLATES, CAT_MAP, PRI_MAP, createAnnotator, buildZip, crc32, dataUrlToBytes, readZip, itemsFromZip }; console.log("[vf] test hook installed"); }
+  if(params.get("__vftest")==="1"){ window.__vftest = { STATE, buildMarkdown, CATEGORIES, PRIORITIES, TEMPLATES, CAT_MAP, PRI_MAP, createAnnotator, itemsFromZip, ...(VFZIP || {}) }; console.log("[vf] test hook installed"); }
   const src = params.get("src");
   const owner = params.get("owner")==="1";
   if(src){ initApp(src, owner); } else { initLanding(); }

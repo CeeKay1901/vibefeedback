@@ -49,9 +49,11 @@ const check = (c, l, e) => { (c ? ok : bad).push(l); console.log(`  ${c ? "✓" 
   await page.locator(".coach button").click().catch(() => {});
 
   // ── CRC32 gegen bekannte Referenzwerte ─────────────────────────────────
+  // crc32 ist kein globales Symbol mehr, sondern liegt in vf-zip.js (window.VFZip)
   const crc = await page.evaluate(() => {
     const enc = new TextEncoder();
-    return { empty: crc32(enc.encode("")), abc: crc32(enc.encode("abc")), check: crc32(enc.encode("123456789")) };
+    const f = window.VFZip.crc32;
+    return { empty: f(enc.encode("")), abc: f(enc.encode("abc")), check: f(enc.encode("123456789")) };
   });
   check(crc.empty === 0, `CRC32("") === 0 (${crc.empty})`);
   check(crc.abc === 0x352441c2, `CRC32("abc") === 0x352441c2 (0x${crc.abc.toString(16)})`);
