@@ -623,7 +623,10 @@ a.bm-drag:active{transform:scale(.97)}
         <span>VibeFeedback</span>
         <span class="tag">Beta</span>
       </div>
-      <a href="https://github.com/CeeKay1901/vibefeedback" target="_blank" rel="noopener">GitHub →</a>
+      <span style="display:flex;align-items:center;gap:16px">
+        <a href="dashboard.html" id="nav-dashboard">Dashboard</a>
+        <a href="https://github.com/CeeKay1901/vibefeedback" target="_blank" rel="noopener">GitHub →</a>
+      </span>
     </nav>
 
     <section class="hero">
@@ -635,6 +638,7 @@ a.bm-drag:active{transform:scale(.97)}
       <div class="cta-row">
         <button class="primary" onclick="document.querySelector('#src-input').focus();document.querySelector('#setup').scrollIntoView({behavior:'smooth',block:'center'})">Los geht's</button>
         <button onclick="location.href='?src=' + encodeURIComponent(location.origin+location.pathname.replace(/index\.html$/,'')+'demo.html') + '&owner=1&presentation-hint=1'">Live-Demo öffnen →</button>
+        <button onclick="location.href='dashboard.html'" id="cta-dashboard">📊 Mein Dashboard</button>
       </div>
       <p style="margin-top:14px;font-size:12px;color:var(--muted)">Braucht eine CORS-freie URL (GitHub Pages, Netlify, Vercel). Bei CORS-Fehlern → <a href="#bookmarklet" style="color:var(--muted);text-decoration:underline">Bookmarklet</a> nutzen.</p>
 

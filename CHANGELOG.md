@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.9.0 — 2026-07-09 — Dashboard mit Analytics
+
+Neue Seite `dashboard.html`, erreichbar über Navigation und CTA der Startseite. Sie liest ausschließlich den `localStorage` dieses Browsers — kein Backend, nichts wird hochgeladen.
+
+### feat
+- **Übersicht**: Stat-Kacheln (Projekte, Kommentare, Muss-Fixes, Screenshot-Quote, Autor:innen, aktive Tage), Kommentare nach Kategorie und Priorität, 30-Tage-Aktivitätsverlauf, Projekttabelle mit Muss-Anzahl, Unterseiten, Screenshots und letzter Aktivität.
+- **Projekt-Detail**: alle Kommentare mit Screenshot-Vorschau, Filter nach Kategorie und Priorität, Kommentare pro Unterseite, Beiträge pro Autor:in bzw. mehrfach kommentierte Elemente, Zeitraum, Direktlink ins Tool, Projekt löschen.
+
+### Chart-Handwerk
+- Farben nach der Data-Viz-Methode gewählt und mit dem Validator geprüft — **gegen die Fläche, auf der die Marks wirklich liegen** (Balken-Track `#f6f6f3`, nicht die Karten-Fläche). Die erste Rampe fiel dabei durch (heller Endpunkt 1,95:1, Floor ist 2:1) und wurde gespreizt.
+- Eine Serie → ein Farbton (kein Wertrampen-Effekt auf nominalen Kategorien). Prioritäten sind geordnet → Ordinal-Rampe, immer mit Text neben dem Farbpunkt.
+- **Entartete Charts degradieren**: ein einzelner Balken wird zur Zahl, lauter gleich lange Balken werden zur Tabelle, ein leerer 30-Tage-Verlauf zu einem Satz. Ein Chart, das nichts zeigt, ist schlechter als keins.
+- Jedes Chart hat eine Tabellenansicht; Tooltips erscheinen auch bei Tastaturfokus; Dark Mode hat eigene, separat validierte Farbstufen.
+
+### security
+- **DOM-XSS im Tooltip geschlossen**: Das Escaping beim Bauen von `data-tip` war wirkungslos, weil der Browser die Entities beim Parsen des Attributs wieder dekodiert und der Wert dann über `innerHTML` in den Tooltip floss. Ein Autorname oder Seitenpfad aus einem manipulierten Import hätte beim Hover Code ausgeführt. Jetzt `textContent`.
+- **Screenshots werden validiert**: Nur eingebettete Rasterbilder werden angezeigt. Eine externe URL im Store wäre ein Tracking-Pixel gewesen (Referer-Leak), ein SVG hätte Skripte tragen können.
+
+### fix
+- Blockierter `localStorage` (privater Modus, WebViews) zeigt jetzt eine Erklärung statt ewig „Lade …".
+- Unbekannte Kategorien/Prioritäten werden als „Sonstige"/„ohne Priorität" geführt, statt in keinem Balken aufzutauchen bzw. fälschlich als „Könnte" zu erscheinen.
+- „Seiten betroffen" zählt global distinkte Seiten statt sie je Projekt aufzuaddieren.
+- Der `storage`-Event reißt eine offene Detailansicht nicht mehr weg und ignoriert fremde Keys.
+- `Math.max(...)`-Spread durch `reduce` ersetzt (RangeError bei sehr vielen Kommentaren).
+
 ## 0.8.0 — 2026-07-09 — ZIP-Export und -Import mit Screenshot-Dateien
 
 - **feat: „Als ZIP"** neben „Als Markdown" — in der Sidebar, im Export-Reminder-Banner und im Bookmarklet. Das Archiv enthält:

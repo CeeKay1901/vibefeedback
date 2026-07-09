@@ -22,6 +22,10 @@ Du teilst einen Link → deine Tester klicken direkt auf die Elemente, die sie k
 
 Das Iframe wird über `fetch(src)` + `srcdoc` befüllt (damit wir Klicks auf DOM-Ebene sehen). Das Ziel muss also CORS für GET erlauben. GitHub Pages, Netlify, Vercel machen das per default. Falls nicht → Fallback im Fehler-Overlay: HTML direkt einfügen.
 
+## Dashboard
+
+`dashboard.html` (verlinkt von der Startseite) zeigt alle Projekte, die du in diesem Browser kommentiert hast: Kennzahlen, Verteilung nach Kategorie und Priorität, 30-Tage-Aktivität, und je Projekt eine Detailansicht mit allen Kommentaren, Screenshots und Filtern. Die Daten stammen ausschließlich aus dem `localStorage` — es gibt kein Backend.
+
 ## Features auf einen Blick
 
 - **Export & Import als Markdown, JSON oder ZIP**: Das ZIP enthält `feedback.md` (Screenshots als verlinkte Bilddateien statt riesiger data-URLs), `feedback.json` (vollständig) und einen `screenshots/`-Ordner. Ein ZIP lässt sich direkt wieder importieren — inklusive Screenshots, auch wenn es zwischendurch von einem anderen Werkzeug neu gepackt wurde. Ohne externe Bibliothek gebaut.
@@ -71,7 +75,7 @@ python3 -m http.server 8080
 
 ```bash
 npm install
-npm test          # Playwright-Regressionssuite (111 Checks)
+npm test          # Playwright-Regressionssuite (170 Checks)
 npm run build     # layer.min.js + eingebettetes Bookmarklet aus layer.js
 npm run audit     # superaudit (Screenshots, a11y, Mobile)
 ```
