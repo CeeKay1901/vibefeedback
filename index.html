@@ -451,13 +451,18 @@ body:has(.mode-toggle button[data-mode=nav].active) .canvas iframe{outline:2px s
 
 /* Touch-Geräte: 44px-Mindestziel für die Topbar-Aktionen (WCAG 2.5.5) */
 @media(pointer:coarse){
-  .mode-toggle button,.topbar #btn-present,.topbar #btn-back,.topbar #btn-new{min-height:44px}
+  .mode-toggle button,.topbar #btn-present,.topbar #btn-back,.topbar #btn-new{min-height:44px;min-width:44px}
   .tools button{min-height:44px}
 }
 
 @media(max-width:640px){
   /* Topbar: nur Essenzielles, Rest als Icons */
-  .topbar{padding:0 10px;gap:8px;overflow-x:auto}
+  /* Eine Zeile, horizontal scrollbar — mit 44px-Zielen bräche die Leiste sonst um */
+  .topbar{padding:0 10px;gap:8px;overflow-x:auto;flex-wrap:nowrap}
+  .topbar>*{flex-shrink:0}
+  /* 44×44px-Mindestziel auch hier, nicht nur bei pointer:coarse (WCAG 2.5.5) */
+  .mode-toggle button,.topbar #btn-present,.topbar #btn-back,.topbar #btn-new{min-height:44px;min-width:44px}
+  .tools button{min-height:44px}
   .topbar .src{display:none}
   .topbar .brand span{display:none}
   .topbar .role{padding:3px 8px;font-size:10.5px}
@@ -510,10 +515,10 @@ body:has(.mode-toggle button[data-mode=nav].active) .canvas iframe{outline:2px s
 @media(max-width:400px){
   /* Sehr schmal — Toggle & Präsentation als Icon */
   .precision-toggle .lbl{display:none}
-  .mode-toggle button{font-size:0;padding:6px 10px;position:relative;min-width:34px}
+  .mode-toggle button{font-size:0;padding:6px 10px;position:relative;min-width:44px}
   .mode-toggle button[data-mode=comment]::before{content:"💬";font-size:13px}
   .mode-toggle button[data-mode=nav]::before{content:"🖱";font-size:13px}
-  .topbar #btn-present{font-size:0;padding:6px 10px;position:relative;min-width:32px}
+  .topbar #btn-present{font-size:0;padding:6px 10px;position:relative;min-width:44px}
   .topbar #btn-present::before{content:"🎬";font-size:14px;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)}
 }
 

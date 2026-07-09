@@ -30,7 +30,8 @@ Drei parallele Code-Reviews (Screenshot-Pipeline, Kommentar-Lifecycle, Bookmarkl
 
 ### a11y
 - Import-Datei-Input hat ein `aria-label` (Audit-FAIL behoben).
-- Topbar- und Sidebar-Buttons erfüllen auf Touch-Geräten die 44-px-Mindestgröße (WCAG 2.5.5).
+- Topbar- und Sidebar-Buttons erfüllen die 44×44-px-Mindestgröße (WCAG 2.5.5) — auf Touch-Geräten und auf schmalen Viewports; die Topbar bleibt dabei einzeilig und scrollt horizontal, statt umzubrechen.
+- Veraltete Audit-Heuristik korrigiert: der CORS-Fallback nutzt längst eine Textarea statt `window.prompt()`, der Audit meldete das trotzdem.
 
 ## 0.6.1 — 2026-07-09 — Demo: funktionierende Unterseiten
 
