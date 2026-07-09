@@ -173,6 +173,25 @@
       return !/unicode-range/i.test(b) || b.indexOf("U+0000-00FF") !== -1 || /U\+0-/.test(b);
     }).map(function (b) { return absolutizeCssUrls(b, baseHref); }).join("\n");
   }
+  // Erst aus dem Cache; scheitert das, frischer Request mit cache:"reload" — CDNs wie
+  // image.tmdb.org senden CORS-Header nur bei Anfragen mit Origin-Header, gecachte
+  // <img>-Antworten haben deshalb keine Freigabe.
+  function fetchAsDataUrl(u) {
+    function attempt(cache) {
+      return fetch(u, { mode: "cors", cache: cache }).then(function (res) {
+        if (!res.ok) throw new Error("http " + res.status);
+        return res.blob().then(function (blob) {
+          return new Promise(function (ok, fail) {
+            var fr = new FileReader();
+            fr.onload = function () { ok(fr.result); };
+            fr.onerror = fail;
+            fr.readAsDataURL(blob);
+          });
+        });
+      });
+    }
+    return attempt("force-cache").catch(function () { return attempt("reload"); }).catch(function () { return false; });
+  }
   function inlineFontData(css) {
     var URL_RE = /url\(\s*(['"]?)(https?:[^'")]+)\1\s*\)/g;
     var unique = [], m2;
@@ -180,17 +199,7 @@
     unique = unique.slice(0, 24);
     var resolved = {};
     return Promise.all(unique.map(function (u) {
-      return fetch(u, { mode: "cors", cache: "force-cache" }).then(function (res) {
-        if (!res.ok) return null;
-        return res.blob().then(function (blob) {
-          return new Promise(function (ok) {
-            var fr = new FileReader();
-            fr.onload = function () { resolved[u] = fr.result; ok(); };
-            fr.onerror = function () { ok(); };
-            fr.readAsDataURL(blob);
-          });
-        });
-      }).catch(function () {});
+      return fetchAsDataUrl(u).then(function (d) { if (d) resolved[u] = d; });
     })).then(function () {
       return css.replace(/url\(\s*(['"]?)(https?:[^'")]+)\1\s*\)/g, function (m, q, u) {
         return resolved[u] ? 'url("' + resolved[u] + '")' : m;
@@ -249,7 +258,8 @@
           filter: function (n) {
             return !(n.nodeType === 1 && typeof n.className === "string" && n.className.indexOf("__vfl_") !== -1);
           },
-          fetch: { requestInit: { cache: "force-cache" }, placeholderImage: SHOT_PLACEHOLDER }
+          fetch: { requestInit: { cache: "force-cache" }, placeholderImage: SHOT_PLACEHOLDER },
+          fetchFn: fetchAsDataUrl
         };
         if (fontCss) opts.font = { cssText: fontCss };
         return window.modernScreenshot.domToCanvas(el, opts).then(function (canvas) {
