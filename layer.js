@@ -941,9 +941,9 @@
       date: ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate()
     };
   }
-  function buildZip(files) {
+  function buildZip(files, when) {
     var enc = new TextEncoder();
-    var dt = dosDateTime(new Date());
+    var dt = dosDateTime(when || new Date());
     var chunks = [], central = [], offset = 0;
     files.forEach(function (f) {
       var nameBytes = enc.encode(f.name), data = f.data, crc = crc32(data);
@@ -1061,6 +1061,11 @@
     download("vibefeedback-" + stamp + ".json", JSON.stringify({ url: location.href, exportedAt: new Date().toISOString(), comments: comments }, null, 2), "application/json");
     toast("JSON heruntergeladen.");
   }
+
+  // Für den Divergenz-Test: das Bookmarklet trägt eine eigene ZIP-Kopie (es darf in
+  // fremden Seiten nichts nachladen). test_zip_parity.js prüft, dass sie byte-gleiche
+  // Archive erzeugt wie vf-zip.js.
+  window.__vf_layer_zip = { buildZip: buildZip, crc32: crc32, dosDateTime: dosDateTime };
 
   // ---------- init ----------
   refreshBadges();

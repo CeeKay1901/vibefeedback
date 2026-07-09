@@ -26,6 +26,8 @@ Das Iframe wird über `fetch(src)` + `srcdoc` befüllt (damit wir Klicks auf DOM
 
 `dashboard.html` (verlinkt von der Startseite) zeigt alle Projekte, die du in diesem Browser kommentiert hast: Kennzahlen, Verteilung nach Kategorie und Priorität, 30-Tage-Aktivität, und je Projekt eine Detailansicht mit allen Kommentaren, Screenshots und Filtern. Die Daten stammen ausschließlich aus dem `localStorage` — es gibt kein Backend.
 
+**„Alles exportieren"** packt sämtliche Projekte in ein ZIP: `feedback.json` (wieder importierbar, samt Bildern), `kommentare.csv` für die Tabellenkalkulation und die Screenshots als Dateien in Projektordnern.
+
 ## Features auf einen Blick
 
 - **Export & Import als Markdown, JSON oder ZIP**: Das ZIP enthält `feedback.md` (Screenshots als verlinkte Bilddateien statt riesiger data-URLs), `feedback.json` (vollständig) und einen `screenshots/`-Ordner. Ein ZIP lässt sich direkt wieder importieren — inklusive Screenshots, auch wenn es zwischendurch von einem anderen Werkzeug neu gepackt wurde. Ohne externe Bibliothek gebaut.
@@ -75,9 +77,13 @@ python3 -m http.server 8080
 
 ```bash
 npm install
-npm test          # Playwright-Regressionssuite (170 Checks)
+npm test          # Playwright-Regressionssuite (208 Checks)
 npm run build     # layer.min.js + eingebettetes Bookmarklet aus layer.js
 npm run audit     # superaudit (Screenshots, a11y, Mobile)
 ```
 
 Nach jeder Änderung an `layer.js` muss `npm run build` laufen — sonst bleibt das Bookmarklet in `index.html` veraltet.
+
+### ZIP-Code liegt zweimal — mit Absicht
+
+`vf-zip.js` ist die gemeinsame Quelle für `index.html` und `dashboard.html`. Das Bookmarklet (`layer.js`) trägt eine eigene Kopie, weil es in fremde Seiten injiziert wird und dort nichts nachladen darf. `test_zip_parity.js` stellt sicher, dass beide bei gleicher Eingabe byte-identische Archive erzeugen — wer eine ändert, muss die andere nachziehen.

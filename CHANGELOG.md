@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.10.0 — 2026-07-09 — Alles exportieren + ein ZIP-Writer statt zwei
+
+### feat
+- **„⬇ Alles exportieren" im Dashboard**: sichert alle Projekte in einem Archiv.
+  - `feedback.json` — alle Kommentare; **im Tool importierbar**, die Bilder werden über `screenshotFile` aus den Projektordnern nachgeladen.
+  - `kommentare.csv` — eine Zeile je Kommentar (RFC-4180-konform, mit BOM für Excel), für Auswertung in der Tabellenkalkulation.
+  - `<projekt>/screenshots/01-….jpg` — die Bilder als normale Dateien, je Projekt ein Ordner.
+  - `README.md` mit Überblick und Projektliste.
+  - Bewusst kein Prompt-Markdown: das baut das Tool selbst, und eine zweite Kopie dieser Logik wäre eine Fehlerquelle.
+
+### refactor
+- **Der ZIP-Writer liegt jetzt einmal**: `vf-zip.js` wird von `index.html` und `dashboard.html` geladen. Ohne diesen Schritt hätte das Dashboard eine dritte Kopie bekommen.
+- Das **Bookmarklet behält bewusst seine eigene Kopie** — es wird in fremde Seiten injiziert und darf nichts nachladen. Damit sie nicht wegdriftet, prüft `test_zip_parity.js`, dass beide Implementierungen bei gleicher Eingabe **byte-identische** Archive erzeugen. Der Test wurde gegen zwei absichtliche Sabotagen (verändertes Header-Feld, falsches CRC-Polynom) geprüft — er schlägt an.
+- `buildZip(files, when)` nimmt den Zeitstempel entgegen. Dadurch ist das Ergebnis reproduzierbar und überhaupt erst vergleichbar.
+
 ## 0.9.1 — 2026-07-09 — Nachprüfung des Dashboards
 
 Eigene Nachkontrolle der 0.9.0-Änderungen; drei Fehler gefunden, die die Tests nicht abgedeckt hatten:

@@ -161,6 +161,7 @@ footer{color:var(--muted);font-size:12.5px;padding:34px 0;text-align:center}
       <span>VibeFeedback</span><span class="sep">/</span><span>Dashboard</span>
     </a>
     <span class="grow"></span>
+    <button class="btn sm" id="btn-export-all" title="Alle Projekte samt Screenshots als ZIP sichern">⬇ Alles exportieren</button>
     <button class="btn sm" id="btn-refresh" title="Daten neu aus dem Browser-Speicher lesen">↻ Aktualisieren</button>
     <a class="btn sm" href="./">← Startseite</a>
   </div>
@@ -176,6 +177,7 @@ footer{color:var(--muted);font-size:12.5px;padding:34px 0;text-align:center}
   Alle Daten liegen ausschließlich im <code>localStorage</code> dieses Browsers — nichts wird hochgeladen.
 </footer>
 
+<script src="vf-zip.js"></script>
 <script>
 "use strict";
 /* ============================================================================
@@ -663,6 +665,116 @@ function renderDetail(idx){
   draw();
 }
 
+
+/* ============================================================================
+   Export: alle Projekte in einem Archiv.
+   Bewusst ein Analyse-Artefakt, kein Prompt-Markdown (das baut das Tool selbst).
+   Die feedback.json liegt oben und verweist per screenshotFile in die Projekt-
+   ordner — damit versteht der ZIP-Import des Tools das Archiv unverändert.
+   ========================================================================== */
+const { buildZip, dataUrlToBytes, downloadBlob, slugify } = window.VFZip;
+
+// RFC-4180: Feld quoten, enthaltene Anführungszeichen verdoppeln. Zeilenumbrüche
+// dürfen so innerhalb eines Feldes stehen bleiben.
+const csvCell = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
+
+function buildCsv(projects){
+  const head = ["Projekt","Seite","Kategorie","Priorität","Autor","Zeitpunkt","Selektor","Screenshot","Kommentar"];
+  const rows = [head.map(csvCell).join(",")];
+  projects.forEach(p => {
+    [...p.comments].sort((a,b) => tsMs(a) - tsMs(b)).forEach(c => {
+      rows.push([
+        p.src,
+        c.pageUrl || p.src,
+        (CAT_MAP[c.category] || {}).label || "Sonstige",
+        (PRI_MAP[c.priority] || {}).label || "ohne",
+        c.author || "",
+        tsMs(c) ? new Date(tsMs(c)).toISOString() : "",
+        c.selector || "",
+        safeShot(c.screenshot) ? "ja" : "nein",
+        c.text || ""
+      ].map(csvCell).join(","));
+    });
+  });
+  // BOM, sonst zerlegt Excel die Umlaute
+  return "\uFEFF" + rows.join("\r\n") + "\r\n";
+}
+
+function projectSlug(src, taken){
+  let base = slugify(hostOf(src) + "-" + pathOf(src), 48) || "projekt";
+  let name = base;
+  for(let n = 2; taken.has(name); n++) name = `${base}-${n}`;
+  taken.add(name);
+  return name;
+}
+
+async function exportAll(){
+  const btn = document.getElementById("btn-export-all");
+  if(!PROJECTS.length){ return; }
+  btn.disabled = true; btn.textContent = "Packe…";
+  try{
+    const enc = new TextEncoder();
+    const files = [];
+    const taken = new Set();
+    const allItems = [];
+    let shotCount = 0;
+
+    PROJECTS.forEach(p => {
+      const slug = projectSlug(p.src, taken);
+      let shotNo = 0;   // fortlaufend über die BILDER, nicht über alle Kommentare
+      [...p.comments].sort((a,b) => tsMs(a) - tsMs(b)).forEach(c => {
+        const item = { ...c };
+        const shot = safeShot(c.screenshot);
+        delete item.screenshot;              // Bild liegt als Datei bei, nicht doppelt als base64
+        item.project = p.src;
+        if(shot){
+          const parsed = dataUrlToBytes(shot);
+          if(parsed){
+            const label = slugify((c.info && c.info.text) || c.text || c.tag || "element", 32);
+            const name = `${slug}/screenshots/${String(++shotNo).padStart(2, "0")}-${label}.${parsed.ext}`;
+            files.push({ name, data: parsed.bytes });
+            item.screenshotFile = name;      // der ZIP-Import des Tools löst das auf
+            shotCount++;
+          }
+        }
+        allItems.push(item);
+      });
+    });
+
+    const readme = [
+      "# VibeFeedback — Export aller Projekte",
+      "",
+      `Exportiert: ${new Date().toLocaleString("de-DE")}`,
+      `${PROJECTS.length} Projekt(e) · ${allItems.length} Kommentar(e) · ${shotCount} Screenshot(s)`,
+      "",
+      "## Inhalt",
+      "",
+      "- **feedback.json** — alle Kommentare. Diese Datei kannst du im Tool importieren; die Screenshots werden aus den Projektordnern dazugeladen.",
+      "- **kommentare.csv** — eine Zeile je Kommentar, für Tabellenkalkulation und Auswertung.",
+      "- **&lt;projekt&gt;/screenshots/** — die Bilder, je Projekt ein Ordner.",
+      "",
+      "## Projekte",
+      "",
+      ...PROJECTS.map(p => `- ${p.src} — ${p.comments.length} Kommentar(e), zuletzt ${fmtDateTime(p.lastTs)}`),
+      ""
+    ].join("\n");
+
+    files.unshift(
+      { name:"feedback.json",  data: enc.encode(JSON.stringify({ exportedAt: new Date().toISOString(), projects: PROJECTS.length, count: allItems.length, comments: allItems }, null, 2)) },
+      { name:"kommentare.csv", data: enc.encode(buildCsv(PROJECTS)) },
+      { name:"README.md",      data: enc.encode(readme) }
+    );
+
+    const blob = buildZip(files);
+    downloadBlob(blob, `vibefeedback-alle-${new Date().toISOString().slice(0,10)}.zip`);
+  }catch(e){
+    console.warn("[vf] export-all", e);
+    alert("Export fehlgeschlagen: " + e.message);
+  }finally{
+    btn.disabled = false; btn.textContent = "⬇ Alles exportieren";
+  }
+}
+
 function boot(){
   try{
     PROJECTS = loadProjects();
@@ -677,9 +789,11 @@ function boot(){
     </div>`;
     return;
   }
+  document.getElementById("btn-export-all").disabled = !PROJECTS.length;
   renderOverview();
 }
 document.getElementById("btn-refresh").addEventListener("click", boot);
+document.getElementById("btn-export-all").addEventListener("click", exportAll);
 // Zweiter Tab kommentiert → nur neu laden, wenn wir in der Übersicht stehen und
 // wirklich ein Kommentar-Store betroffen ist (nicht bei Meta-Keys).
 addEventListener("storage", e => {
@@ -690,7 +804,7 @@ addEventListener("storage", e => {
 boot();
 
 if(new URLSearchParams(location.search).get("__vftest") === "1"){
-  window.__vftest = { loadProjects, dailySeries, countBy, barChart, lineChart, renderOverview, renderDetail, get PROJECTS(){ return PROJECTS; } };
+  window.__vftest = { loadProjects, dailySeries, countBy, barChart, lineChart, renderOverview, renderDetail, exportAll, buildCsv, projectSlug, get PROJECTS(){ return PROJECTS; } };
 }
 </script>
 </body>
