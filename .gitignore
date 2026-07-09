@@ -8,3 +8,8 @@ node_modules/
 audit_screenshots/
 fidelity_*
 test_screenshot_result.png
+test_artifacts/
+test_artifacts/
+debug_vf.js
+audit_test.js
+reaudit.sh

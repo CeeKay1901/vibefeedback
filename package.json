@@ -1,0 +1,32 @@
+{
+  "name": "vibefeedback",
+  "version": "1.0.0",
+  "description": "Ein winziges, backend-freies Feedback-Tool für Vibecoding-Projekte. Du teilst einen Link → deine Tester klicken direkt auf die Elemente, die sie kommentieren wollen → am Ende bekommst du ein sauberes Markdown, das du 1:1 als Prompt-Grundlage nutzen kannst.",
+  "main": "layer.js",
+  "scripts": {
+    "build": "node scripts/build-bookmarklet.js",
+    "test": "node test_screenshot.js && node test_bugfixes.js && node test_bugfixes_layer.js && node test_annotator.js && node test_badge_numbers.js && node test_paste_shot.js && node test_demo_pages.js",
+    "test:live": "node test_kippflix.js",
+    "audit": "node superaudit.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CeeKay1901/vibefeedback.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/CeeKay1901/vibefeedback/issues"
+  },
+  "homepage": "https://github.com/CeeKay1901/vibefeedback#readme",
+  "devDependencies": {
+    "modern-screenshot": "^4.7.0",
+    "playwright": "^1.61.1",
+    "terser": "^5.49.0"
+  },
+  "dependencies": {
+    "html2canvas": "^1.4.1"
+  }
+}
