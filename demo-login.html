@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Flowly — Einloggen</title>
+<link rel="stylesheet" href="demo-shared.css">
+<style>
+.login-wrap {
+  min-height: calc(100vh - 64px - 70px);
+  display: grid; place-items: center;
+  padding: 48px 24px;
+}
+.login-card {
+  width: 100%; max-width: 400px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
+  padding: 36px 32px;
+}
+.login-card h1 { font-size: 24px; font-weight: 800; letter-spacing: -.3px; margin-bottom: 6px; }
+.login-card .sub { font-size: 14px; color: var(--text-muted); margin-bottom: 26px; }
+.field { margin-bottom: 16px; }
+.field label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+.field input {
+  width: 100%; padding: 11px 14px;
+  border: 1px solid var(--border); border-radius: 10px;
+  background: var(--bg); color: var(--text); font-size: 15px;
+}
+.field input:focus { outline: 2px solid var(--brand); outline-offset: 1px; border-color: var(--brand); }
+.row { display: flex; align-items: center; justify-content: space-between; font-size: 13px; margin: 4px 0 20px; }
+.row label { display: flex; align-items: center; gap: 6px; color: var(--text-muted); cursor: pointer; }
+.login-card .btn { width: 100%; justify-content: center; }
+.alt { text-align: center; font-size: 14px; color: var(--text-muted); margin-top: 20px; }
+.demo-hint {
+  margin-top: 22px; padding: 10px 14px;
+  border: 1px dashed var(--border); border-radius: 10px;
+  font-size: 12.5px; color: var(--text-muted);
+}
+/* DEMO-FEHLER: kein „Passwort anzeigen"-Toggle, und der Submit-Button
+   heißt nur „OK" — sagt nicht, was passiert */
+</style>
+</head>
+<body>
+
+<nav class="site-nav">
+  <div class="nav-inner">
+    <a href="demo.html" class="nav-logo"><span class="nav-logo-icon">◆</span> Flowly</a>
+    <ul class="nav-links">
+      <li><a href="demo.html#features">Features</a></li>
+      <li><a href="demo-preise.html">Preise</a></li>
+      <li><a href="demo-blog.html">Blog</a></li>
+    </ul>
+    <div class="nav-actions">
+      <a href="demo-login.html" class="btn btn-ghost btn-sm" aria-current="page">Einloggen</a>
+    </div>
+  </div>
+</nav>
+
+<main class="login-wrap">
+  <div class="login-card">
+    <h1>Willkommen zurück</h1>
+    <p class="sub">Melde dich an, um zu deinem Board zu kommen.</p>
+    <form method="get" action="demo-app.html">
+      <div class="field">
+        <label for="email">E-Mail</label>
+        <input type="email" id="email" name="email" placeholder="max@beispiel.de" autocomplete="email">
+      </div>
+      <div class="field">
+        <label for="pw">Passwort</label>
+        <input type="password" id="pw" name="pw" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <div class="row">
+        <label><input type="checkbox" name="stay"> Angemeldet bleiben</label>
+        <a href="#">Passwort vergessen?</a>
+      </div>
+      <button type="submit" class="btn btn-primary">OK</button>
+    </form>
+    <p class="alt">Noch kein Konto? <a href="demo-preise.html">Kostenlos starten</a></p>
+    <p class="demo-hint">💡 Demo: beliebige Daten eingeben — der Login führt direkt zum <a href="demo-app.html">Board</a>.</p>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="footer-bottom-only">
+    <span>© 2026 Flowly GmbH — Demo-Seite für VibeFeedback</span>
+    <span><a href="demo.html">flowly.io</a></span>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Flowly — Blog</title>
+<link rel="stylesheet" href="demo-shared.css">
+<style>
+.posts { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+.post { display: flex; flex-direction: column; padding: 0; overflow: hidden; }
+.post .cover {
+  height: 140px; display: flex; align-items: center; justify-content: center;
+  font-size: 42px; color: #fff;
+}
+.post .body { padding: 20px 22px 22px; display: flex; flex-direction: column; flex: 1; }
+/* DEMO-FEHLER: Datum im US-Format statt deutsch */
+.post .meta { font-size: 12.5px; color: var(--text-muted); margin-bottom: 8px; }
+.post h2 { font-size: 18px; font-weight: 800; line-height: 1.3; margin-bottom: 8px; }
+.post p { font-size: 14px; color: var(--text-muted); margin-bottom: 16px; flex: 1; }
+.post .more { font-weight: 700; font-size: 14px; }
+.soon { opacity: .65; }
+.soon .more { color: var(--text-muted); font-weight: 500; font-style: italic; }
+</style>
+</head>
+<body>
+
+<nav class="site-nav">
+  <div class="nav-inner">
+    <a href="demo.html" class="nav-logo"><span class="nav-logo-icon">◆</span> Flowly</a>
+    <ul class="nav-links">
+      <li><a href="demo.html#features">Features</a></li>
+      <li><a href="demo-preise.html">Preise</a></li>
+      <li><a href="demo-blog.html" aria-current="page">Blog</a></li>
+      <li><a href="demo.html#contact">Kontakt</a></li>
+    </ul>
+    <div class="nav-actions">
+      <a href="demo-login.html" class="btn btn-ghost btn-sm">Einloggen</a>
+      <a href="demo-login.html" class="btn btn-primary btn-sm">Kostenlos starten</a>
+    </div>
+  </div>
+</nav>
+
+<main class="section">
+  <div class="section-label">Blog</div>
+  <h1 class="section-title">Notizen aus dem Maschinenraum</h1>
+  <p class="section-sub">Wie wir Flowly bauen — und was wir über Teamarbeit, Fokus und Priorisierung lernen.</p>
+
+  <div class="posts">
+    <article class="card post">
+      <div class="cover" style="background:linear-gradient(135deg, var(--brand), var(--accent))">🔀</div>
+      <div class="body">
+        <div class="meta">07/02/2026 · Produkt · 6 Min.</div>
+        <h2>Warum wir den „Zuweisen"-Dialog dreimal weggeworfen haben</h2>
+        <p>Drei Iterationen, zwei Usability-Tests, ein Aha-Moment: Der beste Dialog ist der, den niemand öffnen muss.</p>
+        <a class="more" href="demo-blog-artikel.html">Weiterlesen →</a>
+      </div>
+    </article>
+
+    <article class="card post soon">
+      <div class="cover" style="background:linear-gradient(135deg, #c67ba0, #e35f5f)">⏱</div>
+      <div class="body">
+        <div class="meta">06/24/2026 · Engineering · 8 Min.</div>
+        <h2>Zeiterfassung ohne Stoppuhr-Gefühl</h2>
+        <p>Wie wir Tracking so beiläufig gemacht haben, dass es niemand mehr „Tracking" nennt.</p>
+        <span class="more">Erscheint bald</span>
+      </div>
+    </article>
+
+    <article class="card post soon">
+      <div class="cover" style="background:linear-gradient(135deg, #5c8fbf, #7c6fe0)">🧭</div>
+      <div class="body">
+        <div class="meta">06/10/2026 · Team · 5 Min.</div>
+        <h2>Unser Weg zu asynchronen Weeklys</h2>
+        <p>Warum unser Montagsmeeting jetzt ein Board ist — und was das mit Zeitzonen zu tun hat.</p>
+        <span class="more">Erscheint bald</span>
+      </div>
+    </article>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="footer-bottom-only">
+    <span>© 2026 Flowly GmbH — Demo-Seite für VibeFeedback</span>
+    <span><a href="demo.html">flowly.io</a></span>
+  </div>
+</footer>
+
+</body>
+</html>

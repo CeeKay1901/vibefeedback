@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Flowly Blog — Warum wir den „Zuweisen“-Dialog dreimal weggeworfen haben</title>
+<link rel="stylesheet" href="demo-shared.css">
+<style>
+.article { max-width: 720px; margin: 0 auto; padding: 56px 24px 72px; }
+.article .meta { font-size: 13px; color: var(--text-muted); margin-bottom: 10px; }
+.article h1 { font-size: clamp(26px, 4vw, 38px); font-weight: 800; letter-spacing: -.4px; line-height: 1.2; margin-bottom: 18px; }
+.article .lead { font-size: 18px; color: var(--text-muted); line-height: 1.7; margin-bottom: 28px; }
+.article h2 { font-size: 21px; font-weight: 800; margin: 34px 0 12px; }
+.article p { margin-bottom: 16px; font-size: 16px; line-height: 1.75; }
+.article blockquote {
+  border-left: 3px solid var(--brand); padding: 4px 0 4px 18px;
+  color: var(--text-muted); font-style: italic; margin: 22px 0;
+}
+.author {
+  display: flex; align-items: center; gap: 12px;
+  margin: 36px 0 0; padding-top: 22px; border-top: 1px solid var(--border);
+  font-size: 14px; color: var(--text-muted);
+}
+.author .avatar {
+  width: 40px; height: 40px; border-radius: 50%;
+  background: var(--brand); color: #fff; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+.backlink { display: inline-block; margin-bottom: 26px; font-size: 14px; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<nav class="site-nav">
+  <div class="nav-inner">
+    <a href="demo.html" class="nav-logo"><span class="nav-logo-icon">◆</span> Flowly</a>
+    <ul class="nav-links">
+      <li><a href="demo.html#features">Features</a></li>
+      <li><a href="demo-preise.html">Preise</a></li>
+      <li><a href="demo-blog.html" aria-current="page">Blog</a></li>
+    </ul>
+    <div class="nav-actions">
+      <a href="demo-login.html" class="btn btn-primary btn-sm">Kostenlos starten</a>
+    </div>
+  </div>
+</nav>
+
+<main class="article">
+  <a class="backlink" href="demo-blog.html">← Alle Artikel</a>
+  <div class="meta">07/02/2026 · Produkt · 6 Min. Lesezeit</div>
+  <h1>Warum wir den „Zuweisen“-Dialog dreimal weggeworfen haben</h1>
+  <p class="lead">Drei Iterationen, zwei Usability-Tests, ein Aha-Moment: Der beste Dialog ist der, den niemand öffnen muss. Eine kleine Produktgeschichte über Reibung an der falschen Stelle.</p>
+
+  <h2>Version 1: Das Modal, das alles konnte</h2>
+  <p>Unser erster „Zuweisen“-Dialog war gründlich: Person suchen, Rolle wählen, Benachrichtigung konfigurieren, optional eine Notiz. Vier Felder, ein Modal, gefühlte Ewigkeit. Im Test haben wir gestoppt: <strong>im Median 11 Sekunden</strong>, um einen Task zuzuweisen. Für eine Aktion, die manche Nutzer dreißigmal am Tag machen.</p>
+  <blockquote>„Ich weise nicht zu, ich delegiere Formulare.“ — Testperson 4, freundlich, aber vernichtend</blockquote>
+
+  <h2>Version 2: Weniger Felder, gleiches Problem</h2>
+  <p>Also gestrichen: Rolle raus, Notiz raus. Blieb ein Modal mit einem Suchfeld. Schneller, ja — aber der eigentliche Fehler blieb: Ein Modal reißt dich aus dem Board. Fokus weg, Kontext weg, Scrollposition weg. Wir hatten die Reibung verkleinert, statt sie zu entfernen.</p>
+
+  <h2>Version 3: Kein Dialog</h2>
+  <p>Die Lösung stand am Ende in einem Testprotokoll: „Ich will einfach das Gesicht anklicken.“ Heute tippst du auf den Avatar-Platzhalter der Karte und bekommst die drei wahrscheinlichsten Personen direkt als Inline-Vorschlag — berechnet aus Tag, Spalte und bisherigen Zuweisungen. Ein Klick, fertig, Median <strong>1,8 Sekunden</strong>. Der vollständige Personen-Picker existiert noch, aber er ist der Ausnahmeweg, nicht der Standard.</p>
+
+  <h2>Was wir mitnehmen</h2>
+  <p>Erstens: Häufigkeit schlägt Vollständigkeit — optimiere die Aktion, die dreißigmal am Tag passiert, nicht die, die einmal im Monat passiert. Zweitens: Wenn ein Dialog nur ein Feld hat, ist er verdächtig. Drittens: Usability-Tests mit fünf Leuten finden die Probleme, über die dein Team seit Monaten hinwegscrollt.</p>
+  <p>Ausprobieren? Das Inline-Zuweisen ist im <a href="demo-app.html">Demo-Board</a> zu sehen — und ab dem <a href="demo-preise.html">Free-Plan</a> für alle drin.</p>
+
+  <div class="author">
+    <span class="avatar">LK</span>
+    <span><strong style="color:var(--text)">Lena Krüger</strong><br>Product Lead bei Flowly</span>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="footer-bottom-only">
+    <span>© 2026 Flowly GmbH — Demo-Seite für VibeFeedback</span>
+    <span><a href="demo.html">flowly.io</a></span>
+  </div>
+</footer>
+
+</body>
+</html>

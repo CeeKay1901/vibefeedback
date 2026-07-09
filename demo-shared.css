@@ -1,0 +1,174 @@
+/* Flowly Demo — gemeinsame Basis für die Unterseiten (Tokens aus demo.html) */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --brand: #5b4fcf;
+  --brand-light: #7c6fe0;
+  --brand-dark: #3d34a0;
+  --accent: #22d3a4;
+  --text: #1a1c2e;
+  --text-muted: #6b7280;
+  --bg: #f8f9fc;
+  --surface: #ffffff;
+  --border: #e5e7eb;
+  --shadow-sm: 0 1px 4px rgba(0,0,0,.07);
+  --shadow-md: 0 4px 16px rgba(0,0,0,.09);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,.12);
+  --radius: 12px;
+  --radius-lg: 20px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --brand: #7c6fe0;
+    --brand-light: #9d93ec;
+    --brand-dark: #5b4fcf;
+    --text: #f0f1f8;
+    --text-muted: #9ca3af;
+    --bg: #0f1018;
+    --surface: #1a1c2e;
+    --border: #2d2f45;
+    --shadow-sm: 0 1px 4px rgba(0,0,0,.3);
+    --shadow-md: 0 4px 16px rgba(0,0,0,.35);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,.45);
+  }
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  line-height: 1.6;
+  font-size: 16px;
+}
+
+a { color: var(--brand); text-decoration: none; }
+a:hover { text-decoration: underline; }
+img { max-width: 100%; display: block; }
+
+/* ===== BUTTONS ===== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 11px 22px;
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: 99px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform .15s, box-shadow .15s, background .15s;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); text-decoration: none; }
+.btn-primary { background: var(--brand); color: #fff; }
+.btn-primary:hover { background: var(--brand-light); }
+.btn-ghost { background: transparent; color: var(--brand); border-color: var(--brand); }
+.btn-ghost:hover { background: var(--brand); color: #fff; }
+.btn-sm { padding: 8px 16px; font-size: 14px; }
+
+/* ===== NAV ===== */
+nav.site-nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+.nav-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 24px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.nav-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--brand);
+  letter-spacing: -.5px;
+  text-decoration: none;
+}
+.nav-logo:hover { text-decoration: none; }
+.nav-logo-icon {
+  width: 32px; height: 32px;
+  background: var(--brand);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 18px; line-height: 1;
+}
+.nav-links { display: flex; align-items: center; gap: 28px; list-style: none; }
+.nav-links a { color: var(--text-muted); font-size: 15px; font-weight: 500; transition: color .15s; }
+.nav-links a:hover { color: var(--text); text-decoration: none; }
+.nav-links a[aria-current="page"] { color: var(--brand); font-weight: 700; }
+.nav-actions { display: flex; align-items: center; gap: 10px; }
+
+/* Bewusst wie auf der Landing: Nav-Links verschwinden mobil ohne Hamburger (DEMO-FEHLER) */
+@media (max-width: 640px) {
+  .nav-links { display: none; }
+  .nav-actions .btn-ghost { display: none; }
+}
+
+/* ===== SECTION ===== */
+.section { max-width: 1100px; margin: 0 auto; padding: 72px 24px; }
+.section-label {
+  font-size: 13px; font-weight: 700;
+  letter-spacing: .08em; text-transform: uppercase;
+  color: var(--brand); margin-bottom: 12px;
+}
+.section-title {
+  font-size: clamp(24px, 4vw, 38px);
+  font-weight: 800; letter-spacing: -.3px; line-height: 1.2;
+  margin-bottom: 14px;
+}
+.section-sub { font-size: 17px; color: var(--text-muted); max-width: 560px; margin-bottom: 48px; }
+
+/* ===== CARD ===== */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  box-shadow: var(--shadow-sm);
+}
+
+/* ===== TAGS ===== */
+.mockup-tag { font-size: 11px; padding: 2px 8px; border-radius: 99px; font-weight: 600; }
+.tag-blue  { background: #dbeafe; color: #1d4ed8; }
+.tag-green { background: #dcfce7; color: #15803d; }
+.tag-amber { background: #fef3c7; color: #b45309; }
+@media (prefers-color-scheme: dark) {
+  .tag-blue  { background: #1e3a5f; color: #93c5fd; }
+  .tag-green { background: #14532d; color: #86efac; }
+  .tag-amber { background: #451a03; color: #fcd34d; }
+}
+
+/* ===== FOOTER ===== */
+footer.site-footer { background: var(--surface); border-top: 1px solid var(--border); margin-top: 48px; }
+.footer-bottom-only {
+  max-width: 1100px; margin: 0 auto;
+  padding: 22px 24px;
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 13px; color: var(--text-muted);
+  flex-wrap: wrap; gap: 10px;
+}
+.footer-bottom-only a { color: var(--text-muted); }
+
+/* ===== BANNER ===== */
+.banner {
+  background: var(--brand); color: #fff;
+  text-align: center; padding: 10px 24px;
+  font-size: 13px; font-weight: 500;
+}
+.banner strong { font-weight: 700; }
+.banner a { color: #fff; font-weight: 700; text-decoration: underline; }

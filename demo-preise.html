@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Flowly — Preise</title>
+<link rel="stylesheet" href="demo-shared.css">
+<style>
+.plans { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 64px; }
+@media (max-width: 820px) { .plans { grid-template-columns: 1fr; } }
+
+.plan { position: relative; display: flex; flex-direction: column; }
+.plan.featured { border-color: var(--brand); box-shadow: var(--shadow-lg); }
+.plan .flag {
+  position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+  background: var(--brand); color: #fff; font-size: 12px; font-weight: 700;
+  border-radius: 99px; padding: 3px 12px; white-space: nowrap;
+}
+.plan h2 { font-size: 18px; font-weight: 800; margin-bottom: 4px; }
+.plan .for { font-size: 13px; color: var(--text-muted); margin-bottom: 18px; }
+.plan .price { font-size: 38px; font-weight: 800; letter-spacing: -1px; }
+.plan .price small { font-size: 14px; font-weight: 500; color: var(--text-muted); letter-spacing: 0; }
+/* DEMO-FEHLER: „bei jährlicher Zahlung" — aber es gibt keinen Monats/Jahres-Umschalter,
+   und das Sternchen hat nirgends eine Fußnote */
+.plan .bill { font-size: 12px; color: var(--text-muted); margin-bottom: 20px; }
+.plan ul { list-style: none; display: flex; flex-direction: column; gap: 9px; font-size: 14px; margin-bottom: 24px; }
+.plan ul li::before { content: "✓ "; color: var(--accent); font-weight: 700; }
+.plan ul li.no { color: var(--text-muted); }
+.plan ul li.no::before { content: "— "; color: var(--border); }
+.plan .btn { margin-top: auto; justify-content: center; }
+
+.compare { overflow-x: auto; margin-bottom: 64px; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+th, td { padding: 12px 16px; border-bottom: 1px solid var(--border); text-align: left; }
+th { font-size: 13px; text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted); }
+td:not(:first-child), th:not(:first-child) { text-align: center; }
+tr:last-child td { border-bottom: none; }
+.yes { color: var(--accent); font-weight: 700; }
+.no-cell { color: var(--text-muted); }
+
+.faq { max-width: 720px; }
+.faq details {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px 20px; margin-bottom: 10px;
+}
+.faq summary { font-weight: 700; font-size: 15px; cursor: pointer; }
+.faq details p { margin-top: 10px; font-size: 14px; color: var(--text-muted); }
+</style>
+</head>
+<body>
+
+<nav class="site-nav">
+  <div class="nav-inner">
+    <a href="demo.html" class="nav-logo"><span class="nav-logo-icon">◆</span> Flowly</a>
+    <ul class="nav-links">
+      <li><a href="demo.html#features">Features</a></li>
+      <li><a href="demo-preise.html" aria-current="page">Preise</a></li>
+      <li><a href="demo-blog.html">Blog</a></li>
+      <li><a href="demo.html#contact">Kontakt</a></li>
+    </ul>
+    <div class="nav-actions">
+      <a href="demo-login.html" class="btn btn-ghost btn-sm">Einloggen</a>
+      <a href="demo-login.html" class="btn btn-primary btn-sm">Kostenlos starten</a>
+    </div>
+  </div>
+</nav>
+
+<main class="section">
+  <div class="section-label">Preise</div>
+  <h1 class="section-title">Fair für Teams jeder Größe</h1>
+  <p class="section-sub">Starte kostenlos, upgrade wenn dein Team wächst. Keine Einrichtungsgebühr, monatlich kündbar.</p>
+
+  <div class="plans">
+    <div class="card plan">
+      <h2>Free</h2>
+      <p class="for">Für Einzelpersonen und Side-Projects</p>
+      <div class="price">0 €<small> /Monat</small></div>
+      <p class="bill">für immer kostenlos</p>
+      <ul>
+        <li>1 Board</li>
+        <li>Bis zu 3 Mitglieder</li>
+        <li>Basis-Automationen (5/Monat)</li>
+        <li class="no">Zeiterfassung</li>
+        <li class="no">Prioritäts-Support</li>
+      </ul>
+      <a href="demo-login.html" class="btn btn-ghost">Kostenlos starten</a>
+    </div>
+
+    <div class="card plan featured">
+      <span class="flag">Beliebt</span>
+      <h2>Pro</h2>
+      <p class="for">Für Teams, die liefern müssen</p>
+      <div class="price">9 €<small> /Nutzer · Monat*</small></div>
+      <p class="bill">bei jährlicher Zahlung</p>
+      <ul>
+        <li>Unbegrenzte Boards</li>
+        <li>Unbegrenzte Mitglieder</li>
+        <li>Unbegrenzte Automationen</li>
+        <li>Zeiterfassung &amp; Reports</li>
+        <li class="no">SSO / SAML</li>
+      </ul>
+      <a href="demo-login.html" class="btn btn-primary">14 Tage gratis testen</a>
+    </div>
+
+    <div class="card plan">
+      <h2>Business</h2>
+      <p class="for">Für Organisationen mit Compliance-Anforderungen</p>
+      <div class="price">19 €<small> /Nutzer · Monat*</small></div>
+      <p class="bill">bei jährlicher Zahlung</p>
+      <ul>
+        <li>Alles aus Pro</li>
+        <li>SSO / SAML &amp; SCIM</li>
+        <li>Audit-Log &amp; Datenexport</li>
+        <li>99,9 % SLA</li>
+        <li>Persönlicher Ansprechpartner</li>
+      </ul>
+      <a href="demo.html#contact" class="btn btn-ghost">Vertrieb kontaktieren</a>
+    </div>
+  </div>
+
+  <h2 class="section-title" style="font-size:24px">Im Detail vergleichen</h2>
+  <div class="compare">
+    <table>
+      <thead><tr><th>Funktion</th><th>Free</th><th>Pro</th><th>Business</th></tr></thead>
+      <tbody>
+        <tr><td>Boards</td><td>1</td><td>∞</td><td>∞</td></tr>
+        <tr><td>Mitglieder</td><td>3</td><td>∞</td><td>∞</td></tr>
+        <tr><td>Automationen / Monat</td><td>5</td><td>∞</td><td>∞</td></tr>
+        <tr><td>Zeiterfassung</td><td class="no-cell">—</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+        <tr><td>Gäste-Zugänge</td><td class="no-cell">—</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+        <tr><td>SSO / SAML</td><td class="no-cell">—</td><td class="no-cell">—</td><td class="yes">✓</td></tr>
+        <tr><td>Audit-Log</td><td class="no-cell">—</td><td class="no-cell">—</td><td class="yes">✓</td></tr>
+        <tr><td>Support</td><td>Community</td><td>E-Mail</td><td>Priorität + Ansprechpartner</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2 class="section-title" style="font-size:24px">Häufige Fragen</h2>
+  <div class="faq">
+    <details>
+      <summary>Kann ich jederzeit kündigen?</summary>
+      <p>Ja. Monatliche Pläne enden zum Ende des Abrechnungsmonats, jährliche zum Ende des Vertragsjahres. Deine Daten kannst du davor jederzeit exportieren.</p>
+    </details>
+    <details>
+      <summary>Was passiert nach den 14 Tagen Pro-Test?</summary>
+      <p>Dein Workspace wechselt automatisch auf Free — nichts wird gelöscht. Boards über dem Free-Limit werden schreibgeschützt, bis du upgradest oder aufräumst.</p>
+    </details>
+    <details>
+      <summary>Gibt es Rabatte für Bildung oder Non-Profits?</summary>
+      <p>Ja, 50 % auf Pro und Business. Schreib uns über das <a href="demo.html#contact">Kontaktformular</a> mit einem Nachweis.</p>
+    </details>
+    <details>
+      <summary>Wo werden die Daten gehostet?</summary>
+      <p>In der EU (Frankfurt). Ein AVV nach Art. 28 DSGVO ist im Business-Plan enthalten und für Pro auf Anfrage verfügbar.</p>
+    </details>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="footer-bottom-only">
+    <span>© 2026 Flowly GmbH — Demo-Seite für VibeFeedback</span>
+    <span><a href="demo.html">flowly.io</a></span>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Flowly — Mein Board</title>
+<link rel="stylesheet" href="demo-shared.css">
+<style>
+body { background: var(--bg); }
+
+.app-shell { max-width: 1100px; margin: 0 auto; padding: 24px; }
+
+.app-header {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap; margin-bottom: 20px;
+}
+.app-header h1 { font-size: 24px; font-weight: 800; letter-spacing: -.3px; }
+.app-header .crumb { font-size: 13px; color: var(--text-muted); margin-bottom: 2px; }
+
+.board-toolbar {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.chip {
+  border: 1px solid var(--border); background: var(--surface);
+  color: var(--text-muted); border-radius: 99px;
+  padding: 6px 14px; font-size: 13px; font-weight: 500; cursor: pointer;
+}
+.chip[data-active="true"] { background: var(--brand); border-color: var(--brand); color: #fff; }
+
+.board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+@media (max-width: 820px) { .board { grid-template-columns: 1fr; } }
+
+.col {
+  background: color-mix(in srgb, var(--brand) 4%, var(--bg));
+  border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 14px; min-height: 320px;
+}
+.col-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 12px;
+}
+.col-head h2 { font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted); }
+.col-count {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 99px; font-size: 12px; font-weight: 700;
+  padding: 1px 8px; color: var(--text-muted);
+}
+
+.task {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 12px; margin-bottom: 10px;
+  box-shadow: var(--shadow-sm); cursor: grab;
+}
+.task-top { display: flex; align-items: flex-start; gap: 9px; }
+.task input[type=checkbox] { margin-top: 3px; accent-color: var(--brand); width: 15px; height: 15px; cursor: pointer; }
+.task .t-title { font-size: 14px; font-weight: 600; flex: 1; line-height: 1.4; }
+.task[data-done="true"] .t-title { text-decoration: line-through; color: var(--text-muted); }
+.task .t-meta { display: flex; align-items: center; gap: 8px; margin-top: 9px; }
+.task .t-due { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+.task .t-due.overdue { color: #dc2626; font-weight: 700; }
+.task .avatar {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--brand-light); color: #fff;
+  font-size: 11px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+/* DEMO-FEHLER: Löschen (🗑) steht direkt neben Bearbeiten (✎), gleiche Optik,
+   und löscht sofort ohne Bestätigung — klassische Destruktiv-Falle */
+.task .t-actions { display: none; gap: 4px; }
+.task:hover .t-actions { display: inline-flex; }
+.task .t-actions button {
+  border: none; background: transparent; cursor: pointer;
+  font-size: 13px; padding: 2px 4px; border-radius: 5px; color: var(--text-muted);
+}
+.task .t-actions button:hover { background: var(--bg); }
+
+.add-task {
+  width: 100%; border: 1px dashed var(--border); background: transparent;
+  border-radius: 10px; padding: 10px; color: var(--text-muted);
+  font-size: 13px; cursor: pointer;
+}
+.add-task:hover { border-color: var(--brand); color: var(--brand); }
+
+/* DEMO-FEHLER: Icon-only-Buttons in der Kopfzeile ohne Tooltip/aria-label —
+   was ⚡ und ◫ tun, ist nicht erkennbar */
+.icon-btn {
+  border: 1px solid var(--border); background: var(--surface);
+  border-radius: 8px; width: 36px; height: 36px; cursor: pointer; font-size: 15px;
+}
+
+.usage-note {
+  margin-top: 28px; font-size: 13px; color: var(--text-muted);
+  border: 1px dashed var(--border); border-radius: var(--radius);
+  padding: 12px 16px;
+}
+</style>
+</head>
+<body>
+
+<nav class="site-nav">
+  <div class="nav-inner">
+    <a href="demo.html" class="nav-logo"><span class="nav-logo-icon">◆</span> Flowly</a>
+    <ul class="nav-links">
+      <li><a href="demo-app.html" aria-current="page">Mein Board</a></li>
+      <li><a href="demo-preise.html">Preise</a></li>
+      <li><a href="demo-blog.html">Blog</a></li>
+    </ul>
+    <div class="nav-actions">
+      <span class="avatar" style="width:32px;height:32px;border-radius:50%;background:var(--brand);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700">MK</span>
+    </div>
+  </div>
+</nav>
+
+<main class="app-shell">
+  <div class="app-header">
+    <div>
+      <div class="crumb">Workspace / Website-Relaunch</div>
+      <h1>Mein Board</h1>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="icon-btn">⚡</button>
+      <button class="icon-btn">◫</button>
+      <a class="btn btn-primary btn-sm" href="#" onclick="addTask(event)">+ Neuer Task</a>
+    </div>
+  </div>
+
+  <div class="board-toolbar">
+    <button class="chip" data-filter="alle" data-active="true" onclick="setFilter(this)">Alle</button>
+    <button class="chip" data-filter="mk" onclick="setFilter(this)">Meine</button>
+    <button class="chip" data-filter="overdue" onclick="setFilter(this)">Überfällig</button>
+    <span style="flex:1"></span>
+    <span style="font-size:13px;color:var(--text-muted)" data-role="board-stat"></span>
+  </div>
+
+  <div class="board">
+    <section class="col" data-col="todo">
+      <div class="col-head"><h2>To-do</h2><span class="col-count">4</span></div>
+      <article class="task" data-owner="mk">
+        <div class="task-top">
+          <input type="checkbox" onchange="toggleDone(this)">
+          <span class="t-title">Hero-Texte finalisieren und mit Marketing abstimmen</span>
+          <span class="t-actions"><button title="Bearbeiten">✎</button><button onclick="delTask(this)">🗑</button></span>
+        </div>
+        <div class="t-meta"><span class="mockup-tag tag-blue">Copy</span><span class="avatar">MK</span><span class="t-due overdue">fällig 02.07.</span></div>
+      </article>
+      <article class="task" data-owner="js">
+        <div class="task-top">
+          <input type="checkbox" onchange="toggleDone(this)">
+          <span class="t-title">Preisseite: Vergleichstabelle bauen</span>
+          <span class="t-actions"><button title="Bearbeiten">✎</button><button onclick="delTask(this)">🗑</button></span>
+        </div>
+        <div class="t-meta"><span class="mockup-tag tag-amber">Design</span><span class="avatar" style="background:#c67ba0">JS</span><span class="t-due">fällig 14.07.</span></div>
+      </article>
+      <article class="task" data-owner="mk">
+        <div class="task-top">
+          <input type="checkbox" onchange="toggleDone(this)">
+          <span class="t-title">Newsletter-Anmeldung DSGVO-konform machen</span>
+          <span class="t-actions"><button title="Bearbeiten">✎</button><button onclick="delTask(this)">🗑</button></span>
+        </div>
+        <div class="t-meta"><span class="mockup-tag tag-green">Legal</span><span class="avatar">MK</span><span class="t-due">fällig 21.07.</span></div>
+      </article>
+      <article class="task" data-owner="ab">
+        <div class="task-top">
+          <input type="checkbox" onchange="toggleDone(this)">
+          <span class="t-title">Analytics-Events für CTA-Klicks definieren</span>
+          <span class="t-actions"><button title="Bearbeiten">✎</button><button onclick="delTask(this)">🗑</button></span>
+        </div>
+        <div class="t-meta"><span class="mockup-tag tag-blue">Tracking</span><span class="avatar" style="background:#5c8fbf">AB</span><span class="t-due">fällig 25.07.</span></div>
+      </article>
+      <button class="add-task" onclick="addTask(event)">+ Task hinzufügen</button>
+    </section>
+
+    <section class="col" data-col="doing">
+      <div class="col-head"><h2>In Arbeit</h2><span class="col-count">2</span></div>
+      <article class="task" data-owner="js">
+        <div class="task-top">
+          <input type="checkbox" onchange="toggleDone(this)">
+          <span class="t-title">Dark-Mode für das Dashboard umsetzen</span>
+          <span class="t-actions"><button title="Bearbeiten">✎</button><button onclick="delTask(this)">🗑</button></span>
+        </div>
+        <div class="t-meta"><span class="mockup-tag tag-amber">Design</span><span class="avatar" style="background:#c67ba0">JS</span><span class="t-due">fällig 11.07.</span></div>
+      </article>
+      <article class="task" data-owner="mk">
+        <div class="task-top">
+          <input type="checkbox" onchange="toggleDone(this)">
+          <span class="t-title">Onboarding-Mails schreiben (Tag 1, 3, 7)</span>
+          <span class="t-actions"><button title="Bearbeiten">✎</button><button onclick="delTask(this)">🗑</button></span>
+        </div>
+        <div class="t-meta"><span class="mockup-tag tag-blue">Copy</span><span class="avatar">MK</span><span class="t-due overdue">fällig 05.07.</span></div>
+      </article>
+      <button class="add-task" onclick="addTask(event)">+ Task hinzufügen</button>
+    </section>
+
+    <section class="col" data-col="done">
+      <div class="col-head"><h2>Fertig</h2><span class="col-count">3</span></div>
+      <article class="task" data-owner="ab" data-done="true">
+        <div class="task-top">
+          <input type="checkbox" checked onchange="toggleDone(this)">
+          <span class="t-title">Staging-Umgebung aufsetzen</span>
+          <span class="t-actions"><button title="Bearbeiten">✎</button><button onclick="delTask(this)">🗑</button></span>
+        </div>
+        <div class="t-meta"><span class="mockup-tag tag-green">Infra</span><span class="avatar" style="background:#5c8fbf">AB</span><span class="t-due">erledigt 01.07.</span></div>
+      </article>
+      <article class="task" data-owner="mk" data-done="true">
+        <div class="task-top">
+          <input type="checkbox" checked onchange="toggleDone(this)">
+          <span class="t-title">Logo-Varianten exportieren (SVG + PNG)</span>
+          <span class="t-actions"><button title="Bearbeiten">✎</button><button onclick="delTask(this)">🗑</button></span>
+        </div>
+        <div class="t-meta"><span class="mockup-tag tag-amber">Design</span><span class="avatar">MK</span><span class="t-due">erledigt 28.06.</span></div>
+      </article>
+      <article class="task" data-owner="js" data-done="true">
+        <div class="task-top">
+          <input type="checkbox" checked onchange="toggleDone(this)">
+          <span class="t-title">Kickoff-Meeting protokollieren</span>
+          <span class="t-actions"><button title="Bearbeiten">✎</button><button onclick="delTask(this)">🗑</button></span>
+        </div>
+        <div class="t-meta"><span class="mockup-tag tag-blue">Orga</span><span class="avatar" style="background:#c67ba0">JS</span><span class="t-due">erledigt 26.06.</span></div>
+      </article>
+      <button class="add-task" onclick="addTask(event)">+ Task hinzufügen</button>
+    </section>
+  </div>
+
+  <p class="usage-note">💡 Demo-Board: Checkboxen, Filter-Chips, „+ Neuer Task" und Löschen funktionieren (nur lokal, ohne Speichern). Zurück zur <a href="demo.html">Startseite</a>.</p>
+</main>
+
+<footer class="site-footer">
+  <div class="footer-bottom-only">
+    <span>© 2026 Flowly GmbH — Demo-Seite für VibeFeedback</span>
+    <span><a href="demo.html">flowly.io</a></span>
+  </div>
+</footer>
+
+<script>
+function toggleDone(cb){
+  const task = cb.closest(".task");
+  task.dataset.done = cb.checked ? "true" : "false";
+  updateStat();
+}
+/* DEMO-FEHLER: Löschen ohne Bestätigung und ohne Undo */
+function delTask(btn){
+  btn.closest(".task").remove();
+  updateCounts(); updateStat();
+}
+function addTask(e){
+  e.preventDefault();
+  const title = prompt("Task-Titel:");
+  if(!title) return;
+  const col = e.target.closest(".col") || document.querySelector('[data-col="todo"]');
+  const t = document.createElement("article");
+  t.className = "task"; t.dataset.owner = "mk";
+  t.innerHTML = '<div class="task-top"><input type="checkbox" onchange="toggleDone(this)">' +
+    '<span class="t-title"></span>' +
+    '<span class="t-actions"><button title="Bearbeiten">✎</button><button onclick="delTask(this)">🗑</button></span></div>' +
+    '<div class="t-meta"><span class="mockup-tag tag-blue">Neu</span><span class="avatar">MK</span></div>';
+  t.querySelector(".t-title").textContent = title;
+  col.insertBefore(t, col.querySelector(".add-task"));
+  updateCounts(); updateStat();
+}
+function setFilter(chip){
+  document.querySelectorAll(".chip").forEach(c => c.dataset.active = (c === chip));
+  const f = chip.dataset.filter;
+  document.querySelectorAll(".task").forEach(t => {
+    const show = f === "alle"
+      || (f === "mk" && t.dataset.owner === "mk")
+      || (f === "overdue" && t.querySelector(".t-due.overdue"));
+    t.style.display = show ? "" : "none";
+  });
+}
+function updateCounts(){
+  document.querySelectorAll(".col").forEach(col => {
+    col.querySelector(".col-count").textContent = col.querySelectorAll(".task").length;
+  });
+}
+function updateStat(){
+  const all = document.querySelectorAll(".task").length;
+  const done = document.querySelectorAll('.task[data-done="true"]').length;
+  document.querySelector("[data-role=board-stat]").textContent = done + " von " + all + " erledigt";
+}
+updateStat();
+</script>
+</body>
+</html>

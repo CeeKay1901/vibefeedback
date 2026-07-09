@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.6.1 — 2026-07-09 — Demo: funktionierende Unterseiten
+
+Die Flowly-Demo ist jetzt eine Mini-Site — im Navigieren-Modus komplett durchklickbar, Kommentare tragen die jeweilige Subpage-URL:
+
+- **demo-app.html** — Task-Board („Mein Board"): 3 Spalten, Checkboxen, Filter-Chips (Alle/Meine/Überfällig), „+ Neuer Task" und Löschen funktionieren lokal.
+- **demo-login.html** — Login mit GET-Formular; Absenden führt (durch VF geroutet) echt zum Board.
+- **demo-preise.html** — Preisseite mit Vergleichstabelle und FAQ (`<details>`-Accordion).
+- **demo-blog.html** + **demo-blog-artikel.html** — Blog-Liste mit ausgearbeitetem Artikel.
+- **demo-shared.css** — gemeinsame Design-Tokens der Unterseiten (aus demo.html extrahiert).
+- Landing (`demo.html`): tote `#`-Links (Nav, CTAs, Pricing-Buttons, Footer) zeigen jetzt auf die echten Unterseiten.
+- Neue absichtliche DEMO-FEHLER zum Finden: Löschen ohne Bestätigung neben Bearbeiten, Icon-Buttons ohne Label (⚡/◫), US-Datumsformat im Blog, „OK"-Button im Login, Preis-Sternchen ohne Fußnote, Passwort landet als GET-Parameter in der URL.
+
 ## 0.6.0 — 2026-07-09 — Annotator: echter Stift + Ausklappmenü
 
 - **feat: Stift (Freihand)** — das ✎-Symbol war bisher ein transparenter Marker-Kasten; jetzt gibt es echtes Freihand-Zeichnen mit geglätteter Kurve (quadratische Interpolation durch die Mittelpunkte).
