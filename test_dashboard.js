@@ -35,7 +35,7 @@ const day = n => new Date(Date.now() - n * 864e5).toISOString();
 const seed = {
   "vibefeedback:v2:https://alpha.example/": [
     { id:"a1", selector:"h1", text:"Titel unklar", author:"Marie", category:"copy",    priority:"must",   ts: day(1), screenshot: JPEG, pageUrl:"https://alpha.example/" },
-    { id:"a2", selector:".cta", text:"Button zu klein", author:"Marie", category:"design", priority:"should", ts: day(2), screenshot: JPEG, pageUrl:"https://alpha.example/" },
+    { id:"a2", selector:".cta", text:"Button-Text unklar", author:"Marie", category:"copy", priority:"should", ts: day(2), screenshot: JPEG, pageUrl:"https://alpha.example/" },
     { id:"a3", selector:".cta", text:"Nochmal der Button", author:"Tom", category:"bug", priority:"must",   ts: day(2), pageUrl:"https://alpha.example/preise" },
     { id:"a4", selector:"footer", text:"Schön!", author:"Tom", category:"praise", priority:"nice", ts: day(40), screenshot: JPEG, pageUrl:"https://alpha.example/preise" }
   ],
@@ -96,6 +96,8 @@ const seed = {
 
   // ── Charts ─────────────────────────────────────────────────────────────
   console.log("\n[2] Charts");
+  const catCard = page.locator(".card").filter({ hasText: "Kommentare nach Kategorie" });
+  check(await catCard.locator(".bar-row").count() > 0, "Varianz in den Daten → echtes Balkenchart");
   const catBars = await page.evaluate(() => [...document.querySelectorAll("#tbl-cat")].length);
   check(catBars === 1, "Kategorie-Chart hat Tabellenansicht");
   check(await page.locator(".spark").count() === 1, "Aktivitätsverlauf gerendert");
@@ -107,7 +109,7 @@ const seed = {
   // Kategorie-Werte in der Tabelle
   const catCells = await page.locator("#tbl-cat tbody tr").allTextContents();
   const copyRow = catCells.find(r => r.includes("Copy"));
-  check(/1/.test(copyRow || ""), `Copy = 1 in Tabelle (${copyRow})`);
+  check(/Copy2/.test((copyRow || "").replace(/\s/g, "")), `Copy = 2 in Tabelle (${copyRow})`);
 
   // Prioritäten: Muss=2, Sollte=1, Könnte=1, Nice=1
   await page.locator('[data-toggle-table="tbl-pri"]').click();
@@ -191,6 +193,14 @@ const seed = {
   check(gone === null, "Store aus localStorage entfernt");
   const authorKept = await page.evaluate(() => localStorage.getItem("vibefeedback:v2:author"));
   check(authorKept === "Marie", "Meta-Keys bleiben unangetastet");
+
+  // Nur noch beta mit einem Kommentar: ein einzelner Balken zwischen fünf leeren
+  // wäre informationslos → Zahl statt Chart, und kein Tabellen-Umschalter.
+  const catCard2 = page.locator(".card").filter({ hasText: "Kommentare nach Kategorie" });
+  check(await catCard2.locator(".bar-row").count() === 0, "Ein Kommentar → kein Balkenchart in der Übersicht");
+  check(await catCard2.locator(".value").count() === 1, "Stattdessen die Zahl");
+  check(await page.locator('[data-toggle-table="tbl-cat"]').count() === 0, "Kein Tabellen-Umschalter ohne Tabelle");
+  check(await page.locator(".tile").nth(1).locator(".foot").textContent().then(t => /1 Seite/.test(t)), "Seiten-Kachel zählt korrekt weiter");
 
   // ── Leerer Zustand ─────────────────────────────────────────────────────
   console.log("\n[5] Leerer Zustand");

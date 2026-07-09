@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.9.1 — 2026-07-09 — Nachprüfung des Dashboards
+
+Eigene Nachkontrolle der 0.9.0-Änderungen; drei Fehler gefunden, die die Tests nicht abgedeckt hatten:
+
+- **Der Entartungs-Fallback war nur halb verdrahtet**: Im Detail degradierten Charts korrekt, in der Übersicht nicht. Wer einen einzigen Kommentar hatte, sah einen Balken zwischen fünf leeren, obwohl `barChart` das bereits als entartet meldete.
+- **„Seiten betroffen" zählte zu wenig**: Der Fix aus 0.9.0 zählte nur `pageUrl`-Werte und übersah damit Kommentare ohne Seitenangabe. Bei zwei Projekten (drei Seiten) stand dort „2". Jetzt die Vereinigung der bereits normalisierten Seitenlisten.
+- **Die Detailansicht verschwieg einen leeren 30-Tage-Verlauf** (die Übersicht erklärte ihn). Jetzt beide gleich.
+
+Außerdem: Der Testdatensatz hatte in jeder Kategorie genau einen Kommentar — dadurch waren alle Balken gleich lang und die Chartqualität ließ sich gar nicht prüfen. Jetzt mit Varianz, plus explizite Tests für beide Zustände (echtes Chart / degradierte Form).
+
 ## 0.9.0 — 2026-07-09 — Dashboard mit Analytics
 
 Neue Seite `dashboard.html`, erreichbar über Navigation und CTA der Startseite. Sie liest ausschließlich den `localStorage` dieses Browsers — kein Backend, nichts wird hochgeladen.

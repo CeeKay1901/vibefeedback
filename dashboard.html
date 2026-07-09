@@ -454,7 +454,7 @@ function renderOverview(){
 
     <div class="tiles">
       <div class="tile"><div class="label">Projekte</div><div class="value">${PROJECTS.length}</div><div class="foot">${new Set(PROJECTS.map(p => hostOf(p.src))).size} Domain${new Set(PROJECTS.map(p => hostOf(p.src))).size===1?"":"s"}</div></div>
-      <div class="tile"><div class="label">Kommentare</div><div class="value">${all.length}</div><div class="foot">${new Set(all.map(c => c.pageUrl).filter(Boolean)).size || PROJECTS.length} Seite(n) betroffen</div></div>
+      <div class="tile"><div class="label">Kommentare</div><div class="value">${all.length}</div><div class="foot">${new Set(PROJECTS.flatMap(p => p.pages)).size} Seite(n) betroffen</div></div>
       <div class="tile"><div class="label">Muss-Fixes</div><div class="value">${must}</div><div class="foot ${must ? "crit" : ""}">${must ? "blockierend" : "nichts blockiert"}</div></div>
       <div class="tile"><div class="label">Mit Screenshot</div><div class="value">${shotPct} %</div><div class="foot">${shots} von ${all.length}</div></div>
       <div class="tile"><div class="label">Autor:innen</div><div class="value">${authors.size || "—"}</div><div class="foot">${authors.size ? [...authors].slice(0,2).map(esc).join(", ") + (authors.size > 2 ? " +" + (authors.size-2) : "") : "keine Namen erfasst"}</div></div>
@@ -465,10 +465,10 @@ function renderOverview(){
       <section class="card">
         <div class="card-head">
           <div class="grow"><h2>Kommentare nach Kategorie</h2><p class="hint">Worüber wird gesprochen?</p></div>
-          <button class="linkish" data-toggle-table="tbl-cat" aria-expanded="false">Als Tabelle</button>
+          ${cat.degenerate ? "" : `<button class="linkish" data-toggle-table="tbl-cat" aria-expanded="false">Als Tabelle</button>`}
         </div>
-        <figure><div class="bars">${cat.bars}</div></figure>
-        <div class="table-wrap data-table" id="tbl-cat" hidden>${cat.table}</div>
+        ${barsOrFallback(cat, { only:"einzige Kategorie", empty:"Noch keine Kommentare." })}
+        ${cat.degenerate ? "" : `<div class="table-wrap data-table" id="tbl-cat" hidden>${cat.table}</div>`}
       </section>
 
       <section class="card">
@@ -622,10 +622,12 @@ function renderDetail(idx){
         </section>
       </div>
 
-      ${line ? `<section class="card" style="margin-bottom:22px">
-        <div class="card-head"><div class="grow"><h2>Aktivität der letzten 30 Tage</h2><p class="hint">Kommentare pro Tag in diesem Projekt.</p></div></div>
-        <figure>${line}<figcaption>Der markierte Punkt ist der aktivste Tag.</figcaption></figure>
-      </section>` : ""}
+      <section class="card" style="margin-bottom:22px">
+        ${line ? `<div class="card-head"><div class="grow"><h2>Aktivität der letzten 30 Tage</h2><p class="hint">Kommentare pro Tag in diesem Projekt.</p></div></div>
+          <figure>${line}<figcaption>Der markierte Punkt ist der aktivste Tag.</figcaption></figure>`
+        : `<h2>Aktivität der letzten 30 Tage</h2>
+           <p class="hint" style="margin-bottom:0">Keine Kommentare in den letzten 30 Tagen — das jüngste Feedback ist von ${fmtDate(p.lastTs)}.</p>`}
+      </section>
 
       <section class="card">
         <div class="card-head">
