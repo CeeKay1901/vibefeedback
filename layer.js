@@ -10,7 +10,7 @@
   }
   window.__vf_layer_active = true;
 
-  var VF_VERSION = "0.4.0";
+  var VF_VERSION = "0.5.0";
   var STORE_KEY = "vibefeedback:v2:" + location.origin + location.pathname;
   var AUTHOR_KEY = "vibefeedback:author";
 
@@ -129,8 +129,148 @@
     };
   }
 
-  // ---------- screenshot (SVG foreignObject → canvas) ----------
+  // ---------- screenshot ----------
+  // Engine 1: modern-screenshot (SVG foreignObject) — der Browser rendert den Klon selbst,
+  // Bilder und Webfonts werden per fetch (CORS) als dataURL eingebettet. Das zeigt, was
+  // der Nutzer wirklich sieht. Engine 2 (Legacy): naiver Klon ohne Asset-Inlining —
+  // Fallback, falls die CSP der Zielseite das CDN blockt.
+  var MS_CDN = "https://cdn.jsdelivr.net/npm/modern-screenshot@4.7.0/dist/index.js";
+  var SHOT_PLACEHOLDER = "data:image/svg+xml;base64," + btoa('<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48"><rect width="48" height="48" fill="#ececec"/><path d="M0 0l48 48M48 0L0 48" stroke="#d0d0d0" stroke-width="1"/></svg>');
+  var _msLoading = null;
+  function loadMs() {
+    if (window.modernScreenshot && window.modernScreenshot.domToCanvas) return Promise.resolve(true);
+    if (_msLoading) return _msLoading;
+    _msLoading = new Promise(function (resolve) {
+      var s = document.createElement("script");
+      s.src = MS_CDN;
+      s.onload = function () { resolve(!!(window.modernScreenshot && window.modernScreenshot.domToCanvas)); };
+      s.onerror = function () { resolve(false); };
+      document.head.appendChild(s);
+    });
+    return _msLoading;
+  }
+  function effectiveBackground(el) {
+    var node = el;
+    while (node && node.nodeType === 1) {
+      try {
+        var bg = window.getComputedStyle(node).backgroundColor;
+        if (bg && bg !== "transparent" && !/rgba\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*0\s*\)/.test(bg)) return bg;
+      } catch (e) { break; }
+      node = node.parentElement;
+    }
+    return "#ffffff";
+  }
+  function absolutizeCssUrls(css, baseHref) {
+    if (!baseHref) return css;
+    return css.replace(/url\(\s*(['"]?)([^'")]+)\1\s*\)/g, function (m, q, u) {
+      if (/^(data:|https?:|\/\/)/i.test(u)) return m;
+      try { return 'url("' + new URL(u, baseHref).href + '")'; } catch (e) { return m; }
+    });
+  }
+  function extractFontFaces(cssText, baseHref) {
+    var blocks = cssText.match(/@font-face\s*\{[^}]*\}/g) || [];
+    return blocks.filter(function (b) {
+      return !/unicode-range/i.test(b) || b.indexOf("U+0000-00FF") !== -1 || /U\+0-/.test(b);
+    }).map(function (b) { return absolutizeCssUrls(b, baseHref); }).join("\n");
+  }
+  function inlineFontData(css) {
+    var URL_RE = /url\(\s*(['"]?)(https?:[^'")]+)\1\s*\)/g;
+    var unique = [], m2;
+    while ((m2 = URL_RE.exec(css))) { if (unique.indexOf(m2[2]) === -1) unique.push(m2[2]); }
+    unique = unique.slice(0, 24);
+    var resolved = {};
+    return Promise.all(unique.map(function (u) {
+      return fetch(u, { mode: "cors", cache: "force-cache" }).then(function (res) {
+        if (!res.ok) return null;
+        return res.blob().then(function (blob) {
+          return new Promise(function (ok) {
+            var fr = new FileReader();
+            fr.onload = function () { resolved[u] = fr.result; ok(); };
+            fr.onerror = function () { ok(); };
+            fr.readAsDataURL(blob);
+          });
+        });
+      }).catch(function () {});
+    })).then(function () {
+      return css.replace(/url\(\s*(['"]?)(https?:[^'")]+)\1\s*\)/g, function (m, q, u) {
+        return resolved[u] ? 'url("' + resolved[u] + '")' : m;
+      });
+    });
+  }
+  var _fontCssP = null;
+  function collectFontCss() {
+    if (_fontCssP) return _fontCssP;
+    _fontCssP = (function () {
+      var css = "", fetches = [];
+      [].slice.call(document.styleSheets || []).forEach(function (sheet) {
+        var rules = null;
+        try { rules = sheet.cssRules; } catch (e) {}
+        if (!rules) {
+          if (sheet.href) fetches.push(fetch(sheet.href, { mode: "cors" }).then(function (res) {
+            return res.ok ? res.text().then(function (t) { css += extractFontFaces(t, sheet.href) + "\n"; }) : null;
+          }).catch(function () {}));
+          return;
+        }
+        [].slice.call(rules).forEach(function (r) {
+          if (r.type === CSSRule.FONT_FACE_RULE) css += absolutizeCssUrls(r.cssText, sheet.href || document.baseURI) + "\n";
+        });
+      });
+      return Promise.all(fetches).then(function () { return inlineFontData(css); });
+    })();
+    return _fontCssP;
+  }
+  function stripLayerArtifacts(el) {
+    var CLASSES = ["__vfl_hover", "__vfl_selected", "__vfl_marked"];
+    var touched = [];
+    [el].concat($$("." + CLASSES.join(", ."), el)).forEach(function (n) {
+      if (!n.classList) return;
+      var had = CLASSES.filter(function (c) { return n.classList.contains(c); });
+      if (had.length) { n.classList.remove.apply(n.classList, had); touched.push([n, had]); }
+    });
+    var modalOpen = document.body.classList.contains("__vfl_modal-open");
+    if (modalOpen) document.body.classList.remove("__vfl_modal-open");
+    return function () {
+      touched.forEach(function (t) { t[0].classList.add.apply(t[0].classList, t[1]); });
+      if (modalOpen) document.body.classList.add("__vfl_modal-open");
+    };
+  }
   function captureElement(el) {
+    if (!el || el.nodeType !== 1) return Promise.resolve(null);
+    var rect = el.getBoundingClientRect();
+    if (rect.width < 2 || rect.height < 2) return Promise.resolve(null);
+    return loadMs().then(function (ok) {
+      if (!ok) return captureElementLegacy(el);
+      var restore = stripLayerArtifacts(el);
+      return collectFontCss().catch(function () { return ""; }).then(function (fontCss) {
+        var opts = {
+          scale: Math.min(2, window.devicePixelRatio || 1),
+          backgroundColor: effectiveBackground(el),
+          timeout: 8000,
+          filter: function (n) {
+            return !(n.nodeType === 1 && typeof n.className === "string" && n.className.indexOf("__vfl_") !== -1);
+          },
+          fetch: { requestInit: { cache: "force-cache" }, placeholderImage: SHOT_PLACEHOLDER }
+        };
+        if (fontCss) opts.font = { cssText: fontCss };
+        return window.modernScreenshot.domToCanvas(el, opts).then(function (canvas) {
+          var MAX = 1400;
+          if (canvas.width > MAX || canvas.height > MAX) {
+            var f = Math.min(MAX / canvas.width, MAX / canvas.height);
+            var out = document.createElement("canvas");
+            out.width = Math.round(canvas.width * f);
+            out.height = Math.round(canvas.height * f);
+            out.getContext("2d").drawImage(canvas, 0, 0, out.width, out.height);
+            canvas = out;
+          }
+          return canvas.toDataURL("image/jpeg", 0.82);
+        });
+      }).then(function (r) { restore(); return r; }, function (e) {
+        restore();
+        return captureElementLegacy(el);
+      });
+    });
+  }
+  function captureElementLegacy(el) {
     return new Promise(function (resolve) {
       if (!el || el.nodeType !== 1) return resolve(null);
       try {

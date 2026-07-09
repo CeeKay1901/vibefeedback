@@ -16,7 +16,6 @@ Du teilst einen Link → deine Tester klicken direkt auf die Elemente, die sie k
 ## Was VibeFeedback bewusst NICHT tut
 
 - Kein Backend, keine Auth, keine geteilte DB. Jeder Tester schickt sein eigenes Markdown zurück.
-- Keine Zeichnung/Screenshot-Annotation — nur DOM-Element-Referenzen.
 - Keine Persistenz über Browser hinweg.
 
 ## CORS
@@ -25,6 +24,7 @@ Das Iframe wird über `fetch(src)` + `srcdoc` befüllt (damit wir Klicks auf DOM
 
 ## Features auf einen Blick
 
+- **Pixel-treue Screenshots**: Jeder Kommentar bekommt automatisch einen Screenshot des angeklickten Elements — gerendert vom Browser selbst (SVG foreignObject via [modern-screenshot](https://github.com/qq15725/modern-screenshot)), inkl. externer Bilder, Webfonts und dunkler Hintergründe. Der Screenshot zeigt, was der Tester wirklich sieht; VibeFeedback-eigene Overlays (Outlines, Badges) werden vorher entfernt. Fallback-Kaskade: html2canvas → strukturelles Drahtgitter.
 - **Autor-Name**: Beim ersten Kommentar wird der Name abgefragt und im localStorage gespeichert — erscheint im Export.
 - **Kategorie + Subtitel**: Bug, Feature, Design, Copy, Frage, Lob — jede Kategorie zeigt einen erklärenden Untertitel (z.B. "Bug = Etwas funktioniert nicht").
 - **Lesbare Element-Labels** (`humanLabel`): Badges und Sidebar zeigen zuerst `aria-label` oder sichtbaren Text, den CSS-Selector dahinter nur gedimmt.

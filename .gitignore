@@ -2,3 +2,9 @@
 *.log
 node_modules/
 .claude/settings.local.json
+
+# Test-Artefakte
+*_shots/
+audit_screenshots/
+fidelity_*
+test_screenshot_result.png
