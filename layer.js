@@ -10,9 +10,17 @@
   }
   window.__vf_layer_active = true;
 
-  var VF_VERSION = "0.5.1";
-  var STORE_KEY = "vibefeedback:v2:" + location.origin + location.pathname;
-  var AUTHOR_KEY = "vibefeedback:author";
+  var VF_VERSION = "0.7.0";
+  window.__vf_layer_version = VF_VERSION;   // Laufzeit-Marker: veraltetes Bookmarklet erkennbar
+  // search/hash mit einbeziehen: SPAs mit Hash-Router (#/seite-a) hätten sonst einen
+  // gemeinsamen Store für alle Routen → Badges landen auf falschen Elementen.
+  // Als Funktion, weil sich die Route zur Laufzeit ändert.
+  function storeKey() {
+    return "vibefeedback:v2:" + location.origin + location.pathname + location.search + location.hash;
+  }
+  var LEGACY_STORE_KEY = "vibefeedback:v2:" + location.origin + location.pathname;
+  var AUTHOR_KEY = "vibefeedback:v2:author";   // gleicher Key wie im Haupttool
+  var LEGACY_AUTHOR_KEY = "vibefeedback:author";
 
   // ---------- utils ----------
   var $ = function (s, r) { return (r || document).querySelector(s); };
@@ -144,7 +152,7 @@
       var s = document.createElement("script");
       s.src = MS_CDN;
       s.onload = function () { resolve(!!(window.modernScreenshot && window.modernScreenshot.domToCanvas)); };
-      s.onerror = function () { resolve(false); };
+      s.onerror = function () { _msLoading = null; s.remove(); resolve(false); };
       document.head.appendChild(s);
     });
     return _msLoading;
@@ -176,6 +184,10 @@
   // Erst aus dem Cache; scheitert das, frischer Request mit cache:"reload" — CDNs wie
   // image.tmdb.org senden CORS-Header nur bei Anfragen mit Origin-Header, gecachte
   // <img>-Antworten haben deshalb keine Freigabe.
+  // Ein hängender Host darf nicht die ganze Capture-Kette blockieren
+  function withTimeout(p, ms, fallback) {
+    return Promise.race([p, new Promise(function (r) { setTimeout(function () { r(fallback); }, ms); })]);
+  }
   function fetchAsDataUrl(u) {
     function attempt(cache) {
       return fetch(u, { mode: "cors", cache: cache }).then(function (res) {
@@ -215,18 +227,21 @@
         var rules = null;
         try { rules = sheet.cssRules; } catch (e) {}
         if (!rules) {
-          if (sheet.href) fetches.push(fetch(sheet.href, { mode: "cors" }).then(function (res) {
+          // Timeout: ein stallender Stylesheet-Host dürfte sonst jeden Screenshot der
+          // Session blockieren (das Ergebnis wird gecacht).
+          if (sheet.href) fetches.push(withTimeout(fetch(sheet.href, { mode: "cors" }).then(function (res) {
             return res.ok ? res.text().then(function (t) { css += extractFontFaces(t, sheet.href) + "\n"; }) : null;
-          }).catch(function () {}));
+          }).catch(function () {}), 5000, null));
           return;
         }
         [].slice.call(rules).forEach(function (r) {
           if (r.type === CSSRule.FONT_FACE_RULE) css += absolutizeCssUrls(r.cssText, sheet.href || document.baseURI) + "\n";
         });
       });
-      return Promise.all(fetches).then(function () { return inlineFontData(css); });
+      return Promise.all(fetches).then(function () { return withTimeout(inlineFontData(css), 8000, css); });
     })();
-    return _fontCssP;
+    // Leeres/gescheitertes Ergebnis nicht dauerhaft cachen
+    return _fontCssP.then(function (r) { if (!r) _fontCssP = null; return r; });
   }
   function stripLayerArtifacts(el) {
     var CLASSES = ["__vfl_hover", "__vfl_selected", "__vfl_marked"];
@@ -250,7 +265,7 @@
     return loadMs().then(function (ok) {
       if (!ok) return captureElementLegacy(el);
       var restore = stripLayerArtifacts(el);
-      return collectFontCss().catch(function () { return ""; }).then(function (fontCss) {
+      return withTimeout(collectFontCss().catch(function () { return ""; }), 8000, "").then(function (fontCss) {
         var opts = {
           scale: Math.min(2, window.devicePixelRatio || 1),
           backgroundColor: effectiveBackground(el),
@@ -354,14 +369,30 @@
   }
 
   // ---------- storage ----------
-  var comments = [];
-  try { comments = JSON.parse(localStorage.getItem(STORE_KEY) || "[]"); } catch (e) { comments = []; }
+  function readStore(key) {
+    try { var v = JSON.parse(localStorage.getItem(key) || "[]"); return Array.isArray(v) ? v : []; }
+    catch (e) { return []; }
+  }
+  var comments = readStore(storeKey());
+  // Migration: Kommentare, die unter dem alten (hash-losen) Key liegen, übernehmen
+  if (!comments.length && storeKey() !== LEGACY_STORE_KEY) comments = readStore(LEGACY_STORE_KEY);
   function saveComments() {
-    try { localStorage.setItem(STORE_KEY, JSON.stringify(comments)); return true; }
+    try { localStorage.setItem(storeKey(), JSON.stringify(comments)); return true; }
     catch (e) { toast("Storage voll — Kommentar nicht gespeichert."); return false; }
   }
-  function getAuthor() { try { return localStorage.getItem(AUTHOR_KEY) || ""; } catch (e) { return ""; } }
+  function getAuthor() {
+    try { return localStorage.getItem(AUTHOR_KEY) || localStorage.getItem(LEGACY_AUTHOR_KEY) || ""; }
+    catch (e) { return ""; }
+  }
   function setAuthor(v) { try { v ? localStorage.setItem(AUTHOR_KEY, v) : localStorage.removeItem(AUTHOR_KEY); } catch (e) {} }
+
+  // Hash-Router: Route gewechselt → Kommentare der neuen Route laden
+  window.addEventListener("hashchange", function () {
+    comments = readStore(storeKey());
+    refreshBadges();
+    renderSide();
+    updateFabCount();
+  });
 
   // ---------- styles ----------
   var style = document.createElement("style");
@@ -605,18 +636,25 @@
   function refreshBadges() {
     $$(".__vfl_badge").forEach(function (n) { n.remove(); });
     $$(".__vfl_marked").forEach(function (n) { n.classList.remove("__vfl_marked"); n.style.removeProperty("--vfl-c"); });
+    // Aufgezwungenes position:relative zurücknehmen — sonst verändert der Layer den
+    // Stacking-Kontext der Wirtsseite dauerhaft (absolut positionierte Kinder verrutschen).
+    $$("[data-vfl-pos-set]").forEach(function (n) { n.style.removeProperty("position"); delete n.dataset.vflPosSet; });
     comments.forEach(function (c, i) {
       var el = resolveEl(c);
       if (!el) return;
       var cat = CAT_MAP[c.category] || CAT_MAP.feature;
       el.classList.add("__vfl_marked");
       el.style.setProperty("--vfl-c", cat.color);
-      if (getComputedStyle(el).position === "static") { el.style.position = "relative"; el.dataset.vflPosSet = "1"; }
+      // Void-/Replaced-Elemente (img, input, svg) können keine Kinder rendern —
+      // Badge dann ans Elternelement hängen, sonst wäre er unsichtbar.
+      var host = /^(img|input|svg|video|canvas|iframe|br|hr)$/i.test(el.tagName) ? el.parentElement : el;
+      if (!host) return;
+      if (getComputedStyle(host).position === "static") { host.style.position = "relative"; host.dataset.vflPosSet = "1"; }
       var b = document.createElement("span");
       b.className = "__vfl_badge";
       b.style.setProperty("--vfl-c", cat.color);
       b.textContent = cat.emoji + " " + (i + 1);
-      el.appendChild(b);
+      host.appendChild(b);
     });
   }
   function focusComment(c) {
@@ -765,13 +803,17 @@
       });
     });
 
+    var saving = false;    // Doppel-Submit-Guard (Ctrl+Enter umgeht das Button-Disable)
+    var aborted = false;   // Esc während "Speichere…" → Ergebnis verwerfen
     function cleanup() {
+      aborted = true;
       bg.remove();
       document.body.classList.remove("__vfl_modal-open");
       if (currentEl) currentEl.classList.remove("__vfl_selected");
       document.removeEventListener("keydown", onKey, true);
     }
     function save() {
+      if (saving) return;
       var txt = textArea.value.trim();
       var tpl = TEMPLATES[currentCat];
       var struct = {}; var has = false;
@@ -781,29 +823,41 @@
       if (!txt && !has) { textArea.focus(); toast("Kommentar darf nicht leer sein."); return; }
       var author = authorInput.value.trim(); setAuthor(author);
       var btn = bg.querySelector('[data-act="save"]');
+      saving = true;
       btn.disabled = true; btn.textContent = "Speichere…";
       var shotP = pastedShot ? Promise.resolve(pastedShot)
         : (!isEdit && currentEl) ? captureElement(currentEl)
         : Promise.resolve(existing ? existing.screenshot : null);
       shotP.then(function (shot) {
+        if (aborted) return;   // Nutzer hat mit Esc abgebrochen, während der Screenshot lief
         if (isEdit) {
+          var backup = Object.assign({}, existing);   // für Rollback bei Quota-Fehler
           Object.assign(existing, { text: txt, structured: has ? struct : null, author: author || null, category: currentCat, priority: currentPri, updatedAt: new Date().toISOString() });
           if (pastedShot) existing.screenshot = pastedShot;
-        } else {
-          comments.push({
-            id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-            selector: selector, snippet: snippet, tag: tag, info: info,
-            pageUrl: location.origin + location.pathname,
-            text: txt, structured: has ? struct : null,
-            screenshot: shot || null,
-            author: author || null,
-            category: currentCat, priority: currentPri,
-            ts: new Date().toISOString(),
-          });
+          if (saveComments()) { renderSide(); refreshBadges(); cleanup(); toast("Aktualisiert."); toggleSide(true); }
+          else {
+            Object.assign(existing, backup);   // In-Memory-Stand zurückdrehen
+            saving = false; btn.disabled = false; btn.textContent = "Aktualisieren";
+          }
+          return;
         }
-        if (saveComments()) { renderSide(); refreshBadges(); cleanup(); toast(isEdit ? "Aktualisiert." : "Gespeichert."); toggleSide(true); }
-        else if (!isEdit) { comments.pop(); btn.disabled = false; btn.textContent = "Speichern"; }
-      }).catch(function() { btn.disabled = false; btn.textContent = "Speichern"; toast("Fehler beim Speichern."); });
+        comments.push({
+          id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+          selector: selector, snippet: snippet, tag: tag, info: info,
+          pageUrl: location.origin + location.pathname + location.search + location.hash,
+          text: txt, structured: has ? struct : null,
+          screenshot: shot || null,
+          author: author || null,
+          category: currentCat, priority: currentPri,
+          ts: new Date().toISOString(),
+        });
+        if (saveComments()) { renderSide(); refreshBadges(); cleanup(); toast("Gespeichert."); toggleSide(true); }
+        else { comments.pop(); saving = false; btn.disabled = false; btn.textContent = "Speichern"; }
+      }).catch(function () {
+        if (aborted) return;
+        saving = false; btn.disabled = false; btn.textContent = isEdit ? "Aktualisieren" : "Speichern";
+        toast("Fehler beim Speichern.");
+      });
     }
     function onKey(e) {
       if (e.key === "Escape") { e.preventDefault(); cleanup(); }

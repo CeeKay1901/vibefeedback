@@ -1,5 +1,37 @@
 # Changelog
 
+## 0.7.0 — 2026-07-09 — Systematische Bugfix-Runde
+
+Drei parallele Code-Reviews (Screenshot-Pipeline, Kommentar-Lifecycle, Bookmarklet) + Audit-Suiten. Alle Funde verifiziert und mit Regressionstests abgesichert.
+
+### security
+- **Stored-XSS im Import geschlossen** (kritisch): `id`, `screenshot`, `category` und `priority` aus importierten `.json`/`.md`-Dateien landeten ungefiltert in HTML-Attributen bzw. `<img src>`. Eine präparierte Feedback-Datei konnte beim Import beliebiges JavaScript im Origin des Tools ausführen (Zugriff auf alle gespeicherten Kommentare). Jetzt: strikte Validierung an der Quelle (`id` nur `[a-z0-9_-]`, `screenshot` nur vollständig geprüfte base64-Raster-dataURL — kein SVG, das Skripte tragen kann; Kategorie/Priorität gegen Whitelist) **plus** `esc()` an allen Render-Stellen (Defense-in-Depth).
+
+### fix
+- **Datenverlust bei vollem Speicher**: Das Screenshot-Pruning verglich einen ISO-String mit einer Zahl (`"2026-…" < 1751…` → immer `false`), lief also nie an. Bei Quota-Fehler ging der Kommentar verloren, statt alte Screenshots freizugeben.
+- **Subpage-Zuordnung ging bei Export/Import verloren**: Export schrieb `c.page` (existiert nie → immer `null`), Import schrieb nach `page` statt `pageUrl`. Nach Re-Import saßen alle Kommentare auf der Startseite.
+- **Badge-Nummer ≠ Sidebar-Nummer** bei Projekten mit mehreren Unterseiten — Badges zählten pro Seite neu.
+- **Screenshot-Verlust beim schnellen Speichern**: Ctrl+Enter direkt nach dem Klick speicherte still ohne Screenshot; jetzt wartet der Save kurz auf den laufenden Capture ("Screenshot…").
+- **Präsentationsmodus blieb leer**, wenn „Direkt"-Rendering aktiv war (`srcdoc` ist dort leer).
+- **`injectBase`**: Seiten mit eigenem `<base>` bekamen kein Safety-Script → SPA-Navigation warf ungefangene `SecurityError` in `about:srcdoc`.
+- **CDN-Fehlversuch wurde dauerhaft gecacht**: Ein transienter Netzfehler degradierte alle weiteren Screenshots der Sitzung aufs Drahtgitter. Ebenso wird leeres Font-CSS nicht mehr gecacht (SPAs laden Fonts nach).
+- **Hänger-Schutz**: Font-/Stylesheet-Fetches haben jetzt Timeouts — ein stallender Host konnte sonst jeden Screenshot der Sitzung blockieren.
+- **Edit-Modus**: Klick auf ein anderes Element war eine stille No-Op (jetzt Hinweis-Toast); eingefügter Screenshot wird beim Elementwechsel verworfen.
+
+### fix (Bookmarklet)
+- **Wirtsseite wurde dauerhaft verändert**: aufgezwungenes `position:relative` (für Badge-Positionierung) wurde nie zurückgenommen → verschobene Layouts auf der Zielseite.
+- **Badges an `<img>`/`<input>`/`<svg>`** waren unsichtbar (ersetzte Elemente rendern keine Kinder) — Badge hängt jetzt am Elternelement.
+- **Doppel-Submit** per gehaltenem Ctrl+Enter legte mehrere identische Kommentare an.
+- **Edit + voller Speicher**: Modal fror auf „Speichere…" ein, ohne Rollback.
+- **Esc während „Speichere…"** speicherte den Kommentar trotzdem.
+- **Hash-Router-SPAs**: alle Routen teilten sich einen Kommentar-Store (`STORE_KEY` ohne `search`/`hash`) → Badges auf falschen Elementen. Jetzt route-spezifisch inkl. Migration alter Daten und `hashchange`-Handling.
+- **Autor-Name** wird nun mit dem Haupttool geteilt (gleicher localStorage-Key, alter Key wird gelesen).
+- `window.__vf_layer_version` als Laufzeit-Marker (VF_VERSION wurde vorher wegoptimiert).
+
+### a11y
+- Import-Datei-Input hat ein `aria-label` (Audit-FAIL behoben).
+- Topbar- und Sidebar-Buttons erfüllen auf Touch-Geräten die 44-px-Mindestgröße (WCAG 2.5.5).
+
 ## 0.6.1 — 2026-07-09 — Demo: funktionierende Unterseiten
 
 Die Flowly-Demo ist jetzt eine Mini-Site — im Navigieren-Modus komplett durchklickbar, Kommentare tragen die jeweilige Subpage-URL:
