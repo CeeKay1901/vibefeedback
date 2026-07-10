@@ -27,7 +27,7 @@ Das Iframe wird über `fetch(src)` + `srcdoc` befüllt (damit wir Klicks auf DOM
 `dashboard.html` (verlinkt von der Startseite) ist das Projekt-Cockpit für alle Projekte, die du in diesem Browser kommentiert hast. Die Daten stammen ausschließlich aus dem `localStorage` — es gibt kein Backend.
 
 - **Übersicht**: Kennzahlen über alles, Kategorie-/Prioritäts-Charts, 30-Tage-Aktivität und je Projekt eine Karte mit Fortschrittsbalken, offenen Muss-Fixes und direktem „▶ Im Tool öffnen".
-- **Projekt-Detail**: Aktionsleiste (im Feedback-Tool öffnen, Feedback-Link für Tester:innen kopieren, offene Punkte als **Prompt** fürs Coding-Tool kopieren, Projekt als ZIP exportieren), „Nächste Schritte"-Arbeitsliste, Kategorie/Priorität/Seiten/Autor:innen/Brennpunkte-Auswertung und alle Kommentare mit Filtern.
+- **Projekt-Detail**: Aktionsleiste (im Feedback-Tool öffnen, Feedback-Link für Tester:innen kopieren, offene Punkte als **Prompt** fürs Coding-Tool kopieren, Projekt als ZIP exportieren), „Nächste Schritte"-Arbeitsliste mit ✓-Abhaken, Kategorie/Priorität/Seiten/Autor:innen/Brennpunkte-Auswertung und alle Kommentare mit Volltextsuche, Sortierung, Filtern und Screenshot-Lightbox. Jede Projektansicht ist per `#p=<url>` direkt verlinkbar und überlebt den Reload.
 - **Status-Workflow**: Jeder Kommentar lässt sich auf Offen ○ / In Arbeit ◐ / Erledigt ✓ setzen — im Dashboard *und* direkt in der Tool-Sidebar. Gespeichert im Browser, sichtbar in Kacheln und Fortschritt, enthalten in Export und Prompt. Grundlage für die kollaborative Nutzung: Wer beim Bauen unterstützt, arbeitet die Liste ab, exportiert — und beim Re-Import übernimmt das Tool die Status-Updates auf bereits bekannte Kommentare (Merge statt Duplikat).
 
 **„Alles exportieren"** packt sämtliche Projekte in ein ZIP: `feedback.json` (wieder importierbar, samt Bildern und Status), `kommentare.csv` für die Tabellenkalkulation und die Screenshots als Dateien in Projektordnern. In der Detailansicht gibt es dasselbe Archiv je Projekt einzeln.
@@ -84,7 +84,7 @@ python3 -m http.server 8080
 
 ```bash
 npm install
-npm test          # Playwright-Regressionssuite (263 Checks)
+npm test          # Playwright-Regressionssuite (274 Checks)
 npm run build     # layer.min.js + eingebettetes Bookmarklet aus layer.js
 npm run audit     # superaudit (Screenshots, a11y, Mobile)
 ```

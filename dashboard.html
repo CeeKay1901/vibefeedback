@@ -167,6 +167,23 @@ a.chip:hover{border-color:var(--fg);color:var(--fg)}
 .next .next-text{flex:1;min-width:180px}
 .next .who{color:var(--muted);font-size:12px;white-space:nowrap}
 
+/* ===== Suche & Sortierung in der Kommentarliste ===== */
+.ctl{border:1px solid var(--line);background:var(--panel);color:var(--fg);border-radius:8px;padding:6px 9px;font:inherit;font-size:12.5px}
+.searchbar{display:flex;align-items:center;gap:10px;margin:12px 0 2px}
+.searchbar input{flex:1;border:1px solid var(--line);background:var(--panel);color:var(--fg);border-radius:8px;padding:8px 12px;font:inherit;font-size:13.5px}
+.searchbar input:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--fg)}
+#search-note{font-size:12px;color:var(--muted);white-space:nowrap}
+
+/* ===== Screenshot-Lightbox ===== */
+.cmt .thumb{cursor:zoom-in}
+#lightbox{position:fixed;inset:0;z-index:100;background:rgba(10,10,9,.78);display:grid;place-items:center;padding:24px;cursor:zoom-out}
+#lightbox[hidden]{display:none}
+#lightbox figure{max-width:min(1100px,94vw);text-align:center}
+#lightbox img{max-width:100%;max-height:82vh;border-radius:10px;box-shadow:0 24px 80px rgba(0,0,0,.6);background:#fff}
+#lightbox figcaption{color:#f3f2ec;font-size:13.5px;margin-top:12px;max-width:70ch;margin-left:auto;margin-right:auto}
+
+.next .next-done{margin-left:auto}
+
 .empty{text-align:center;padding:56px 20px;color:var(--muted)}
 .empty h2{font-size:18px;color:var(--fg);margin-bottom:6px}
 .empty p{max-width:460px;margin:0 auto 18px}
@@ -206,6 +223,10 @@ footer{color:var(--muted);font-size:12.5px;padding:34px 0;text-align:center}
 </main>
 
 <div class="tooltip" id="tip" role="status" aria-live="polite"></div>
+
+<div id="lightbox" hidden role="dialog" aria-modal="true" aria-label="Screenshot in Großansicht — klicken oder Esc zum Schließen">
+  <figure><img alt="Screenshot des kommentierten Elements"><figcaption></figcaption></figure>
+</div>
 
 <footer class="wrap">
   Alle Daten liegen ausschließlich im <code>localStorage</code> dieses Browsers — nichts wird hochgeladen.
@@ -557,6 +578,52 @@ function buildPrompt(p){
 const app = document.getElementById("app");
 let PROJECTS = [];
 
+/* Screenshot-Lightbox: die 96px-Thumbnails sind sonst eine Sackgasse */
+const lightbox = document.getElementById("lightbox");
+function openLightbox(src, caption){
+  lightbox.querySelector("img").src = src;
+  lightbox.querySelector("figcaption").textContent = caption;
+  lightbox.hidden = false;
+  document.body.style.overflow = "hidden";
+}
+function closeLightbox(){
+  lightbox.hidden = true;
+  lightbox.querySelector("img").src = "";
+  document.body.style.overflow = "";
+}
+lightbox.addEventListener("click", closeLightbox);
+addEventListener("keydown", e => { if(e.key === "Escape" && !lightbox.hidden) closeLightbox(); });
+
+/* Volltextsuche filtert die gerenderte Liste direkt (kein Redraw — der Fokus
+   im Eingabefeld bliebe sonst nicht erhalten) */
+function applySearch(){
+  const q = detailFilter.q || "";
+  const items = app.querySelectorAll(".cmt");
+  let vis = 0;
+  items.forEach(el => {
+    const hit = !q || (el.dataset.search || "").includes(q);
+    el.style.display = hit ? "" : "none";
+    if(hit) vis++;
+  });
+  const note = app.querySelector("#search-note");
+  if(note) note.textContent = q ? `${vis} von ${items.length} passen` : "";
+}
+
+/* Hash-Routing: #p=<url> hält die Projektansicht über Reloads, macht sie
+   verlinkbar und lässt den Zurück-Button des Browsers funktionieren. */
+function route(){
+  let src = null;
+  const m = location.hash.match(/^#p=(.+)$/);
+  if(m){ try{ src = decodeURIComponent(m[1]); }catch(e){} }
+  const idx = PROJECTS.findIndex(p => p.src === src);
+  if(idx >= 0) renderDetail(idx); else renderOverview();
+}
+function gotoOverview(){
+  if(location.hash && location.hash !== "#") location.hash = "";
+  else renderOverview();
+}
+addEventListener("hashchange", route);
+
 function renderOverview(){
   const all = PROJECTS.flatMap(p => p.comments);
   if(!PROJECTS.length){
@@ -664,22 +731,31 @@ function renderOverview(){
     </div>
   `;
   bindChartHovers(app);
-  app.querySelectorAll("[data-open]").forEach(b => b.addEventListener("click", () => renderDetail(+b.dataset.open)));
+  // Über den Hash statt direkt rendern — so entsteht ein History-Eintrag
+  app.querySelectorAll("[data-open]").forEach(b => b.addEventListener("click", () => {
+    const p = PROJECTS[+b.dataset.open];
+    if(p) location.hash = "#p=" + encodeURIComponent(p.src);
+  }));
 }
 
-let detailFilter = { category:"all", priority:"all", status:"all" };
+let detailFilter = { category:"all", priority:"all", status:"all", q:"", sort:"new" };
+const SORTERS = {
+  new: (a, b) => tsMs(b) - tsMs(a),
+  old: (a, b) => tsMs(a) - tsMs(b),
+  pri: (a, b) => (PRI_ORDER[a.priority] ?? 4) - (PRI_ORDER[b.priority] ?? 4) || tsMs(b) - tsMs(a),
+};
 
 function renderDetail(idx){
   const p = PROJECTS[idx];
   if(!p) return renderOverview();
-  detailFilter = { category:"all", priority:"all", status:"all" };
+  detailFilter = { category:"all", priority:"all", status:"all", q:"", sort:"new" };
 
   const draw = () => {
     const shown = p.comments
       .filter(c => detailFilter.category === "all" || c.category === detailFilter.category)
       .filter(c => detailFilter.priority === "all" || c.priority === detailFilter.priority)
       .filter(c => detailFilter.status === "all" || st(c) === detailFilter.status)
-      .sort((a, b) => tsMs(b) - tsMs(a));
+      .sort(SORTERS[detailFilter.sort] || SORTERS.new);
 
     /* Kennzahlen je Seite: wo liegt Arbeit, und wohin springe ich ab? */
     const byPage = {};
@@ -731,7 +807,8 @@ function renderDetail(idx){
             ? `<a class="chip" href="${esc(toolHref(c.pageUrl))}" title="Diese Seite im Feedback-Tool öffnen">📍 ${esc(pathOf(c.pageUrl))}</a>`
             : `<span class="chip">📍 ${esc(pathOf(c.pageUrl) || c.pageUrl)}</span>`)
         : "";
-      return `<article class="cmt" data-done="${st(c) === "done"}">
+      const searchBlob = [c.text, c.selector, c.author, pathOf(c.pageUrl || "")].join(" ").toLowerCase();
+      return `<article class="cmt" data-done="${st(c) === "done"}" data-search="${esc(searchBlob)}">
         ${thumb}
         <div>
           <div class="meta">
@@ -775,7 +852,7 @@ function renderDetail(idx){
       <section class="card" style="margin-bottom:22px">
         <div class="card-head"><div class="grow"><h2>Nächste Schritte</h2>
         <p class="hint">Offene Punkte, dringendste zuerst — die Arbeitsliste für die nächste Iteration.</p></div></div>
-        ${next.length ? `<ol class="next">${next.map(c => {
+        ${next.length ? `<ol class="next">${next.map((c, i) => {
           const priC = PRI_MAP[c.priority] || { label:"—", cls:"" };
           const catC = CAT_MAP[c.category] || { emoji:"•" };
           return `<li>
@@ -785,6 +862,7 @@ function renderDetail(idx){
             ${st(c) === "doing" ? `<span class="chip">◐ in Arbeit</span>` : ""}
             ${(c.pageUrl && c.pageUrl !== p.src && isHttp(c.pageUrl)) ? `<a class="chip" href="${esc(toolHref(c.pageUrl))}" title="Im Feedback-Tool öffnen">📍 ${esc(pathOf(c.pageUrl))}</a>` : ""}
             ${c.author ? `<span class="who">von ${esc(c.author)}</span>` : ""}
+            <button class="chip next-done" data-next-done="${i}" title="Diesen Punkt als erledigt markieren">✓ erledigen</button>
           </li>`;
         }).join("")}</ol>${p.open > next.length ? `<p style="color:var(--muted);font-size:12.5px;margin-top:10px">+ ${p.open - next.length} weitere offene Punkte in der Liste unten.</p>` : ""}`
         : `<p style="font-size:14px">🎉 Alles erledigt — kein Punkt offen.</p>`}
@@ -866,7 +944,18 @@ function renderDetail(idx){
 
       <section class="card">
         <div class="card-head">
-          <div class="grow"><h2>Alle Kommentare</h2><p class="hint">Neueste zuerst. Status wird gespeichert und wandert in Export und Prompt.</p></div>
+          <div class="grow"><h2>Alle Kommentare</h2><p class="hint">Status wird gespeichert und wandert in Export und Prompt.</p></div>
+          <label class="sr-only" for="cmt-sort">Sortierung</label>
+          <select id="cmt-sort" class="ctl">
+            <option value="new">Neueste zuerst</option>
+            <option value="old">Älteste zuerst</option>
+            <option value="pri">Nach Priorität</option>
+          </select>
+        </div>
+        <div class="searchbar">
+          <label class="sr-only" for="cmt-search">Kommentare durchsuchen</label>
+          <input id="cmt-search" type="search" placeholder="Durchsuchen — Text, Element, Autor:in, Seite …" autocomplete="off">
+          <span id="search-note" aria-live="polite"></span>
         </div>
         <div class="filters" role="group" aria-label="Nach Kategorie filtern">
           <button class="chip ${detailFilter.category==="all"?"on":""}" data-cat="all">Alle</button>
@@ -887,7 +976,7 @@ function renderDetail(idx){
       </section>
     `;
     bindChartHovers(app);
-    app.querySelector("#btn-back").addEventListener("click", renderOverview);
+    app.querySelector("#btn-back").addEventListener("click", gotoOverview);
     app.querySelectorAll("[data-cat]").forEach(b => b.addEventListener("click", () => { detailFilter.category = b.dataset.cat; draw(); }));
     app.querySelectorAll("[data-pri]").forEach(b => b.addEventListener("click", () => { detailFilter.priority = b.dataset.pri; draw(); }));
     app.querySelectorAll("[data-st-filter]").forEach(b => b.addEventListener("click", () => { detailFilter.status = b.dataset.stFilter; draw(); }));
@@ -897,6 +986,20 @@ function renderDetail(idx){
       const c = shown[+g.dataset.i];
       if(c && setStatus(p, c, b.dataset.st)) draw();
     }));
+    app.querySelectorAll("[data-next-done]").forEach(b => b.addEventListener("click", () => {
+      const c = next[+b.dataset.nextDone];
+      if(c && setStatus(p, c, "done")) draw();
+    }));
+    app.querySelectorAll(".cmt .thumb").forEach(img => img.addEventListener("click", () => {
+      openLightbox(img.src, img.closest(".cmt")?.querySelector(".txt")?.textContent || "");
+    }));
+    const sortSel = app.querySelector("#cmt-sort");
+    sortSel.value = detailFilter.sort;
+    sortSel.addEventListener("change", () => { detailFilter.sort = sortSel.value; draw(); });
+    const searchIn = app.querySelector("#cmt-search");
+    searchIn.value = detailFilter.q;
+    searchIn.addEventListener("input", () => { detailFilter.q = searchIn.value.trim().toLowerCase(); applySearch(); });
+    applySearch();
     app.querySelector("#btn-copy-link").addEventListener("click", async e => {
       const link = new URL(toolHref(p.src, false), location.href).href;
       flashBtn(e.currentTarget, (await copyText(link)) ? "✓ Link kopiert" : "Kopieren fehlgeschlagen");
@@ -911,7 +1014,7 @@ function renderDetail(idx){
       if(!confirm(`Alle ${p.comments.length} Kommentare zu diesem Projekt endgültig löschen?\n\n${p.src}`)) return;
       localStorage.removeItem(p.key);
       PROJECTS = loadProjects();
-      renderOverview();
+      gotoOverview();
     });
   };
   draw();
@@ -1066,7 +1169,7 @@ function boot(){
     return;
   }
   document.getElementById("btn-export-all").disabled = !PROJECTS.length || !VFZIP;
-  renderOverview();
+  route();
 }
 document.getElementById("btn-refresh").addEventListener("click", boot);
 document.getElementById("btn-export-all").addEventListener("click", exportAll);
@@ -1080,7 +1183,7 @@ addEventListener("storage", e => {
 boot();
 
 if(new URLSearchParams(location.search).get("__vftest") === "1"){
-  window.__vftest = { loadProjects, dailySeries, countBy, barChart, lineChart, renderOverview, renderDetail, exportAll, exportProjects, buildCsv, buildPrompt, projectSlug, setStatus, STATUSES, get PROJECTS(){ return PROJECTS; } };
+  window.__vftest = { loadProjects, dailySeries, countBy, barChart, lineChart, renderOverview, renderDetail, route, exportAll, exportProjects, buildCsv, buildPrompt, projectSlug, setStatus, STATUSES, get PROJECTS(){ return PROJECTS; } };
 }
 </script>
 </body>

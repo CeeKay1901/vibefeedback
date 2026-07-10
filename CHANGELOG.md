@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.13.0 — 2026-07-10 — Dashboard-Ergonomie: Deep-Links, Suche, Lightbox
+
+### feat
+- **Hash-Routing**: Jede Projektansicht hat jetzt eine eigene URL (`dashboard.html#p=<url>`). Reload bleibt im Projekt, der Browser-Zurück-Button funktioniert, und die Ansicht lässt sich als Link teilen — wichtig für die kollaborative Nutzung. Unbekannte oder kaputte Hashes fallen sauber auf die Übersicht zurück.
+- **Screenshot-Lightbox**: Klick auf ein Thumbnail öffnet den (ggf. annotierten) Screenshot in Großansicht mit dem Kommentartext als Bildunterschrift; Klick oder Esc schließt. Vorher waren die 96-px-Vorschauen eine Sackgasse.
+- **Volltextsuche** in der Kommentarliste (Text, Selektor, Autor:in, Seitenpfad) — filtert live ohne Redraw, mit Trefferanzeige, kombinierbar mit den Kategorie-/Prioritäts-/Status-Filtern.
+- **Sortierung** der Kommentare: Neueste zuerst, Älteste zuerst oder nach Priorität.
+- **Abhaken direkt in der Arbeitsliste**: Jeder Punkt in „Nächste Schritte" hat einen „✓ erledigen"-Button.
+
+Tests: 274 Checks; neu abgedeckt Deep-Link über Reload, Suche inkl. Trefferzahl, Prioritäts-Sortierung, Lightbox öffnen/schließen, Arbeitslisten-Haken.
+
 ## 0.12.0 — 2026-07-10 — Status-Workflow im Tool + Kollaborations-Merge
 
 Der in 0.11.0 eingeführte Bearbeitungsstatus war nur im Dashboard sichtbar. Jetzt ist der Kreis geschlossen:

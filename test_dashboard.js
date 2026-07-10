@@ -194,6 +194,34 @@ const seed = {
   check(await nextCard.locator(".next li").count() === 4, `4 offene Punkte in der Arbeitsliste (${await nextCard.locator(".next li").count()})`);
   check(/Muss/.test(await nextCard.locator(".next li").first().textContent()), "Muss-Punkte stehen oben");
 
+  // ── Cockpit-Ergonomie: Deep-Link, Suche, Sortierung, Lightbox ──────────
+  console.log("\n[3c'] Deep-Link, Suche, Sortierung, Lightbox");
+  check(page.url().includes("#p="), `Detailansicht hat Deep-Link im Hash (${page.url().split("#")[1] || "—"})`);
+  await page.locator('[data-pri="all"]').click();   // Prioritätsfilter aus [3] zurücksetzen
+  await page.waitForTimeout(250);
+
+  await page.locator("#cmt-search").fill("button");
+  await page.waitForTimeout(200);
+  check(await page.locator(".cmt:visible").count() === 2, `Suche "button" → 2 Treffer (${await page.locator(".cmt:visible").count()})`);
+  check(/2 von 4/.test(await page.locator("#search-note").textContent()), "Trefferanzeige neben dem Suchfeld");
+  await page.locator("#cmt-search").fill("");
+  await page.waitForTimeout(200);
+  check(await page.locator(".cmt:visible").count() === 4, "Suche geleert → alle sichtbar");
+
+  await page.locator("#cmt-sort").selectOption("pri");
+  await page.waitForTimeout(250);
+  check(/Muss/.test(await page.locator(".cmt").first().textContent()), "Sortierung nach Priorität: Muss zuerst");
+  await page.locator("#cmt-sort").selectOption("new");
+  await page.waitForTimeout(250);
+
+  await page.locator(".cmt .thumb").first().click();
+  await page.waitForTimeout(200);
+  check(await page.locator("#lightbox").isVisible(), "Thumbnail öffnet Lightbox");
+  check(((await page.locator("#lightbox img").getAttribute("src")) || "").startsWith("data:image/"), "Lightbox zeigt den Screenshot");
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(200);
+  check(await page.locator("#lightbox").isHidden(), "Esc schließt die Lightbox");
+
   // Kopier-Aktionen: Feedback-Link (für Tester) und Prompt (fürs Coding-Tool)
   await ctx.grantPermissions(["clipboard-read", "clipboard-write"], { origin: `http://127.0.0.1:${PORT}` });
   await page.locator("#btn-copy-link").click();
@@ -234,10 +262,23 @@ const seed = {
   check(prompt.includes("Nochmal der Button") && prompt.includes(".cta"), "Prompt nennt Text und Selektor");
   check(!prompt.includes("Titel unklar"), "Erledigtes bleibt aus dem Prompt draußen");
 
-  // Status überlebt den Reload
+  // Abhaken direkt aus der Arbeitsliste
+  await page.locator("[data-next-done]").first().click();
+  await page.waitForTimeout(300);
+  const stored2 = await page.evaluate(() => JSON.parse(localStorage.getItem("vibefeedback:v2:https://alpha.example/")));
+  check(stored2.filter(c => c.status === "done").length === 2, `Arbeitslisten-Haken setzt Status (${stored2.filter(c => c.status === "done").length} erledigt)`);
+  // zurücksetzen, damit die Prozent-Checks unten stimmen
+  await page.locator(".cmt").filter({ hasText: "Nochmal der Button" }).locator('button[data-st="open"]').click();
+  await page.waitForTimeout(300);
+
+  // Status und Ansicht überleben den Reload (Hash-Routing)
   await page.reload({ waitUntil: "networkidle" });
   await page.waitForTimeout(400);
   check(await page.evaluate(() => window.__vftest.PROJECTS.find(p => p.src.includes("alpha")).done) === 1, "Status überlebt den Reload");
+  check(await page.locator("#btn-back").count() === 1, "Reload bleibt dank Hash in der Detailansicht");
+  await page.evaluate(() => { location.hash = ""; });
+  await page.waitForTimeout(300);
+  check(await page.locator(".proj-card").count() === 2, "Hash leeren → zurück zur Übersicht");
 
   // ── Projekt-Karten in der Übersicht ────────────────────────────────────
   console.log("\n[3d] Projekt-Karten");
