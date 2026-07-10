@@ -21,7 +21,15 @@ Alle Flows funktionieren. **Ein systematischer Defekt:** die Element-Screenshots
 
 ---
 
-## Finding 1 (KRITISCH): Element-Screenshots vertikal abgeschnitten
+## Finding 1 (KRITISCH): Element-Screenshots vertikal abgeschnitten — ✅ BEHOBEN (0.14.0)
+
+> **Umgesetzt:** großzügig hoch rastern + Ink-Trim (`extraCaptureHeight` /
+> `trimCanvasBottom` in `index.html`), `document.fonts.ready` vor Capture.
+> Ursache war NICHT die verlorene `line-height` im Klon (die überlebt), sondern
+> dass enge Zeilenhöhe die Glyphen ÜBER die Element-Box treibt (sichtbarer
+> Overflow, den `scrollHeight` nicht zählt). Rote Fixtures + Ink-Assertion in
+> `test_screenshot.js`; gegen alle fünf Live-Seiten verifiziert.
+
 
 **Symptom:** Auf allen fünf echten Seiten ist der automatische Element-Screenshot
 unten beschnitten — bei mehrzeiligen Überschriften fehlt die letzte Zeile ganz

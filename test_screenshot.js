@@ -214,6 +214,52 @@ const sleep = ms => new Promise(r=>setTimeout(r,ms));
       bad("Kein Screenshot in STATE.comments", JSON.stringify(stateCheck));
   }
 
+  // ── 7. Reale-Welt-Typografie: enge line-height darf nichts abschneiden ────
+  // Auf echten Seiten (Headlines mit line-height 0.95–1.1, Webfonts) wurde die
+  // letzte Zeile bzw. die Unterlängen abgeschnitten, weil die Canvas-Höhe blind
+  // der Element-Rect-Höhe folgte. Assertion: das Bild deckt die volle
+  // Inhaltshöhe (scrollHeight) ab UND unten im Bild liegt Glyphen-Tinte.
+  console.log("\n[7] Enge line-height (Clipping-Regression)…");
+  for(const sel of ["#tight-lh-web", "#tight-lh-sys"]){
+    const r = await page.evaluate(async sel=>{
+      const doc = document.querySelector("#frame").contentDocument;
+      const el  = doc.querySelector(sel);
+      if(!el) return { err: "Element fehlt" };
+      try{ await Promise.race([doc.fonts.ready, new Promise(res=>setTimeout(res, 4000))]); }catch(e){}
+      const rect = el.getBoundingClientRect();
+      const contentH = Math.max(rect.height, el.scrollHeight);
+      const dataUrl = await captureElement(el);
+      if(!dataUrl) return { err: "kein Capture" };
+      const img = new Image();
+      await new Promise((res, rej)=>{ img.onload=res; img.onerror=()=>rej(new Error("img")); img.src=dataUrl; });
+      const cv = document.createElement("canvas");
+      cv.width = img.naturalWidth; cv.height = img.naturalHeight;
+      const g = cv.getContext("2d");
+      g.drawImage(img, 0, 0);
+      const ink = (y0, y1)=>{
+        const d = g.getImageData(0, Math.floor(cv.height*y0), cv.width, Math.max(1, Math.floor(cv.height*(y1-y0)))).data;
+        let n = 0;
+        for(let i=0;i<d.length;i+=16){ const lum = d[i]*.3+d[i+1]*.6+d[i+2]*.1; if(lum<120) n++; }
+        return n;
+      };
+      return {
+        rectW: Math.round(rect.width), rectH: Math.round(rect.height), contentH: Math.round(contentH),
+        imgW: img.naturalWidth, imgH: img.naturalHeight,
+        aspectImg: img.naturalHeight / img.naturalWidth,
+        aspectContent: contentH / rect.width,
+        inkMid: ink(.40, .60), inkBottom: ink(.87, 1)
+      };
+    }, sel).catch(e=>({ err: e.message }));
+    if(r.err){ bad(`${sel}: ${r.err}`); continue; }
+    const aspectOk = r.aspectImg >= r.aspectContent * 0.97;
+    aspectOk
+      ? pass(`${sel}: Bild deckt volle Inhaltshöhe`, `img ${r.imgW}×${r.imgH}, Inhalt ${r.rectW}×${r.contentH}`)
+      : bad(`${sel}: Bild zu flach → Clipping`, `img-Aspekt ${r.aspectImg.toFixed(3)} < Inhalt ${r.aspectContent.toFixed(3)} (img ${r.imgW}×${r.imgH}, Inhalt ${r.rectW}×${r.contentH})`);
+    (r.inkBottom > Math.max(8, r.inkMid * 0.15))
+      ? pass(`${sel}: letzte Zeile/Unterlängen im Bild`, `ink bottom=${r.inkBottom} mid=${r.inkMid}`)
+      : bad(`${sel}: unten keine Glyphen — abgeschnitten`, `ink bottom=${r.inkBottom} mid=${r.inkMid}`);
+  }
+
   // ── Screenshot of final state ─────────────────────────────────────────────
   await page.screenshot({path: path.join(VF_DIR, "test_screenshot_result.png")});
 

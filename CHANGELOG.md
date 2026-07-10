@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.14.0 — 2026-07-10 — Screenshots schneiden die letzte Zeile nicht mehr ab
+
+Der Kernfeature-Test gegen fünf echte Seiten (`npm run test:sites`) förderte einen systematischen Screenshot-Defekt zutage — jetzt behoben.
+
+### fix
+- **Element-Screenshots waren vertikal abgeschnitten** (Finding 1 aus `FIXPLAN.md`): Bei Überschriften mit enger `line-height` (< Glyphenhöhe, auf echten Seiten der Normalfall) ragen die Zeichen über die Element-Box hinaus. modern-screenshot rasterte aber stur auf die Box-Höhe → die letzte Zeile bzw. die Unterlängen fehlten. Auf **allen** fünf Testseiten sichtbar (kippflix.com, ideen-hangar, pilot-skillmarkt, WochenplanerAnna, cv).
+  - Fix ohne fragile Font-Metrik-Rechnung: großzügig höher rastern (`domToCanvas` mit `height`-Reserve proportional zu Rect-Höhe und `font-size`), dann den einfarbigen Überschuss am unteren Rand per Ink-Scan wieder abschneiden (`trimCanvasBottom`). Robust gegen jede Metrik-Drift, egal ob Webfont, Fallback-Font oder enge Zeilenhöhe.
+  - Vor dem Capture wird zusätzlich `document.fonts.ready` abgewartet, damit Klon und Original dieselbe Metrik sehen.
+- Regressionstest: `test_screenshot.html` hat zwei neue Fixtures (enge `line-height` mit Webfont und mit System-Font); `test_screenshot.js` prüft, dass das Bild die volle Inhaltshöhe abdeckt **und** unten tatsächlich Glyphen-Tinte liegt (gegen ein „genug hoch, aber leer"-Scheingrün).
+
+Tests: 267 Checks (+4 im Screenshot-Test). Verifiziert gegen alle fünf Live-Seiten via `npm run test:sites`.
+
 ## 0.13.1 — 2026-07-10 — Usability-Audit umgesetzt
 
 Fokussierter Usability-Audit (Mobile, Tastatur, Touch, Leere Zustände) mit fünf Findings — alle behoben:

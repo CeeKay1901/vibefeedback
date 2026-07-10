@@ -84,7 +84,8 @@ python3 -m http.server 8080
 
 ```bash
 npm install
-npm test          # Playwright-Regressionssuite (291 Checks)
+npm test          # Playwright-Regressionssuite (267 Checks)
+npm run test:sites # Kernfeature-Matrix gegen echte Live-Seiten (netzabhängig)
 npm run build     # layer.min.js + eingebettetes Bookmarklet aus layer.js
 npm run audit     # superaudit (Screenshots, a11y, Mobile)
 ```

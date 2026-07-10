@@ -1868,6 +1868,52 @@ function scaleDownCanvas(rawCanvas, MAX_W, MAX_H, DPR){
   return out;
 }
 
+/* Sicherheitsnetz gegen vertikales Clipping.
+   modern-screenshot rastert das Element auf exakt seine Rect-Höhe. Bei enger
+   line-height (< Glyphenhöhe) ragen die Zeichen aber ÜBER die Box hinaus —
+   sichtbarer Overflow, den scrollHeight nicht mitzählt — und die letzte Zeile
+   wird abgeschnitten (auf echten Seiten mit Headline-Fonts der Normalfall).
+   Lösung ohne fragile Font-Metrik-Rechnung: großzügig hoch rastern, danach die
+   überschüssige Hintergrundfläche am unteren Rand wieder abschneiden (Trim). */
+function extraCaptureHeight(el, rectH){
+  try{
+    const cs = el.ownerDocument.defaultView.getComputedStyle(el);
+    const fs = parseFloat(cs.fontSize) || 16;
+    return Math.ceil(Math.max(rectH * 0.30, fs * 0.6, 28));
+  }catch(e){ return Math.ceil(Math.max(rectH * 0.30, 28)); }
+}
+// Unten aufgefüllte Hintergrundfläche abschneiden: von unten die erste Zeile mit
+// „Tinte" suchen (Pixel, das sich deutlich vom Hintergrund abhebt) und darunter kappen.
+function trimCanvasBottom(canvas, keptBelow){
+  const g = canvas.getContext("2d");
+  let ref;
+  try{
+    const px = g.getImageData(1, 1, 1, 1).data;   // Ecke = sicher Hintergrund
+    ref = [px[0], px[1], px[2], px[3]];
+  }catch(e){ return canvas; }
+  let lastInk = -1;
+  try{
+    const data = g.getImageData(0, 0, canvas.width, canvas.height).data;
+    const W = canvas.width;
+    outer:
+    for(let y = canvas.height - 1; y >= 0; y--){
+      const row = y * W * 4;
+      for(let x = 0; x < W; x++){
+        const i = row + x * 4;
+        const diff = Math.abs(data[i]-ref[0]) + Math.abs(data[i+1]-ref[1]) + Math.abs(data[i+2]-ref[2]) + Math.abs(data[i+3]-ref[3]);
+        if(diff > 48){ lastInk = y; break outer; }
+      }
+    }
+  }catch(e){ return canvas; }
+  if(lastInk < 0) return canvas;                       // nichts gefunden → so lassen
+  const cut = Math.min(canvas.height, lastInk + 1 + (keptBelow || 0));
+  if(cut >= canvas.height - 1) return canvas;          // kein nennenswerter Überschuss
+  const out = document.createElement("canvas");
+  out.width = canvas.width; out.height = cut;
+  out.getContext("2d").drawImage(canvas, 0, 0);
+  return out;
+}
+
 async function captureElement(el){
   if(!el || el.nodeType!==1) return null;
   const win = el.ownerDocument?.defaultView;
@@ -1885,17 +1931,27 @@ async function captureElement(el){
     // ---- Engine 1: modern-screenshot (foreignObject — pixel-treu) ----
     if(await loadModernScreenshot()){
       try{
+        // Halb geladene Webfonts hießen: der Klon misst und rendert anders als das Original
+        try{ await withTimeout(el.ownerDocument.fonts.ready, 3000, null); }catch(e){}
         const fontCss = await withTimeout(collectFontCss(el.ownerDocument).catch(()=> ""), 8000, "");
-        const rawCanvas = await window.modernScreenshot.domToCanvas(el, {
+        const bg = effectiveBackground(el);
+        // Großzügig höher rastern, damit überlaufende Glyphen (enge line-height)
+        // nicht abgeschnitten werden — der Überschuss wird danach getrimmt.
+        const extraH = extraCaptureHeight(el, rootRect.height);
+        const msOpts = {
           scale: DPR,
-          backgroundColor: effectiveBackground(el),
+          height: rootRect.height + extraH,
+          backgroundColor: bg,
           timeout: 8000,
           filter: n => !isVfNode(n),
           fetch: { requestInit: { cache: "force-cache" }, placeholderImage: SHOT_PLACEHOLDER },
           fetchFn: fetchAsDataUrl,   // Bilder: Cache-Versuch, dann frischer CORS-Request
           ...(fontCss ? { font: { cssText: fontCss } } : {}),
-        });
-        const result = scaleDownCanvas(rawCanvas, MAX_W, MAX_H, DPR).toDataURL("image/jpeg", 0.82);
+        };
+        const rawCanvas = await window.modernScreenshot.domToCanvas(el, msOpts);
+        // bg gesetzt → der Überschuss ist einfarbig und lässt sich sauber wegschneiden
+        const trimmed = bg ? trimCanvasBottom(rawCanvas, Math.round(4 * DPR)) : rawCanvas;
+        const result = scaleDownCanvas(trimmed, MAX_W, MAX_H, DPR).toDataURL("image/jpeg", 0.82);
         console.log("[vf] capture success (modern-screenshot), dataURL length:", result.length);
         return result;
       }catch(e){
