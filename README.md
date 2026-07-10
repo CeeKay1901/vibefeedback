@@ -28,7 +28,7 @@ Das Iframe wird über `fetch(src)` + `srcdoc` befüllt (damit wir Klicks auf DOM
 
 - **Übersicht**: Kennzahlen über alles, Kategorie-/Prioritäts-Charts, 30-Tage-Aktivität und je Projekt eine Karte mit Fortschrittsbalken, offenen Muss-Fixes und direktem „▶ Im Tool öffnen".
 - **Projekt-Detail**: Aktionsleiste (im Feedback-Tool öffnen, Feedback-Link für Tester:innen kopieren, offene Punkte als **Prompt** fürs Coding-Tool kopieren, Projekt als ZIP exportieren), „Nächste Schritte"-Arbeitsliste, Kategorie/Priorität/Seiten/Autor:innen/Brennpunkte-Auswertung und alle Kommentare mit Filtern.
-- **Status-Workflow**: Jeder Kommentar lässt sich auf Offen ○ / In Arbeit ◐ / Erledigt ✓ setzen — gespeichert im Browser, sichtbar in Kacheln und Fortschritt, enthalten in Export und Prompt. Grundlage für die kollaborative Nutzung: Wer beim Bauen unterstützt, arbeitet die Liste hier ab.
+- **Status-Workflow**: Jeder Kommentar lässt sich auf Offen ○ / In Arbeit ◐ / Erledigt ✓ setzen — im Dashboard *und* direkt in der Tool-Sidebar. Gespeichert im Browser, sichtbar in Kacheln und Fortschritt, enthalten in Export und Prompt. Grundlage für die kollaborative Nutzung: Wer beim Bauen unterstützt, arbeitet die Liste ab, exportiert — und beim Re-Import übernimmt das Tool die Status-Updates auf bereits bekannte Kommentare (Merge statt Duplikat).
 
 **„Alles exportieren"** packt sämtliche Projekte in ein ZIP: `feedback.json` (wieder importierbar, samt Bildern und Status), `kommentare.csv` für die Tabellenkalkulation und die Screenshots als Dateien in Projektordnern. In der Detailansicht gibt es dasselbe Archiv je Projekt einzeln.
 
@@ -60,9 +60,12 @@ Das Iframe wird über `fetch(src)` + `srcdoc` befüllt (damit wir Klicks auf DOM
   "category": "bug",
   "priority": "must",
   "sub": "Etwas funktioniert nicht",
-  "ts": "ISO-Zeitstempel"
+  "ts": "ISO-Zeitstempel",
+  "status": "done"
 }
 ```
+
+`status` ist optional (`doing` | `done`) — ein fehlendes Feld bedeutet „offen". Beim Import wird ein mitgelieferter Status auf bereits vorhandene Kommentare übernommen.
 
 ## Loop-Prompt zur Selbst-Iteration
 
@@ -81,7 +84,7 @@ python3 -m http.server 8080
 
 ```bash
 npm install
-npm test          # Playwright-Regressionssuite (243 Checks)
+npm test          # Playwright-Regressionssuite (263 Checks)
 npm run build     # layer.min.js + eingebettetes Bookmarklet aus layer.js
 npm run audit     # superaudit (Screenshots, a11y, Mobile)
 ```

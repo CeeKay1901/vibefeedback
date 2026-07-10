@@ -265,6 +265,12 @@ body:has(.mode-toggle button[data-mode=nav].active) .canvas iframe{outline:2px s
 .item .actions button:hover{color:var(--fg);background:var(--panel);transform:none}
 .item .actions .del:hover{color:var(--danger)}
 .item .row2{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px}
+.item .st{margin-left:auto;padding:1px 8px;border-radius:99px;font-size:10.5px;font-weight:600;border:1px solid var(--line);background:transparent;color:var(--muted);cursor:pointer}
+.item .st:hover{border-color:var(--fg);color:var(--fg);transform:none}
+.item .st[data-status=doing]{color:var(--warn);border-color:var(--warn)}
+.item .st[data-status=done]{color:var(--success);border-color:var(--success)}
+.item[data-done="true"]{opacity:.62}
+.item[data-done="true"]:hover,.item[data-done="true"].active{opacity:1}
 .item .cat{padding:1px 8px;border-radius:99px;font-size:10.5px;font-weight:600}
 .item .cat[data-cat=bug]{background:rgba(227,95,95,.15);color:var(--cat-bug)}
 .item .cat[data-cat=feature]{background:var(--accent);color:var(--fg)}
@@ -877,6 +883,16 @@ const PRIORITIES = [
   { id:"nice",   label:"Nice-to-have" },
 ];
 const PRI_MAP = Object.fromEntries(PRIORITIES.map(p=>[p.id,p]));
+
+/* Bearbeitungsstatus (geteilt mit dem Dashboard): fehlendes Feld = offen,
+   damit Bestandsdaten und fremde Importe ohne Migration funktionieren. */
+const STATUSES = [
+  { id:"open",  label:"Offen",     chip:"○" },
+  { id:"doing", label:"In Arbeit", chip:"◐" },
+  { id:"done",  label:"Erledigt",  chip:"✓" },
+];
+const ST_MAP = Object.fromEntries(STATUSES.map(s=>[s.id,s]));
+const stOf = c => ST_MAP[c.status] ? c.status : "open";
 
 // Kategorie-spezifische Feld-Templates. Wenn `fields` leer ist, nur Freitext.
 const TEMPLATES = {
@@ -2807,6 +2823,8 @@ function renderAll(){
   if(priosCount.should) parts.push(`<span class="stat" style="color:var(--warn)"><b>${priosCount.should}</b> Sollte</span>`);
   if(priosCount.could) parts.push(`<span class="stat"><b>${priosCount.could}</b> Könnte</span>`);
   if(priosCount.nice) parts.push(`<span class="stat"><b>${priosCount.nice}</b> Nice</span>`);
+  const doneCount = STATE.comments.filter(x => stOf(x) === "done").length;
+  if(doneCount) parts.push(`<span class="stat" style="color:var(--success)"><b>${doneCount}</b> ✓ erledigt</span>`);
   stats.innerHTML = parts.join("");
 
   // Filter chips
@@ -2857,7 +2875,7 @@ function renderAll(){
         </div>
       </div>`;
     }).join("");
-    return `<div class="item" data-id="${esc(c.id)}" data-cat="${esc(c.category)}">
+    return `<div class="item" data-id="${esc(c.id)}" data-cat="${esc(c.category)}" data-done="${stOf(c)==="done"}">
       <div class="h">
         <div style="display:flex;gap:8px;align-items:center">
           <div class="num">${i+1}</div>
@@ -2870,6 +2888,7 @@ function renderAll(){
       <div class="row2">
         <span class="cat" data-cat="${c.category}">${cat.emoji} ${cat.label}</span>
         <span class="prio" data-p="${c.priority}">${pri.label}</span>
+        <button class="st" data-status-btn="${esc(c.id)}" data-status="${stOf(c)}" title="Status weiterschalten (Offen → In Arbeit → Erledigt)">${ST_MAP[stOf(c)].chip} ${ST_MAP[stOf(c)].label}</button>
       </div>
       <div class="sel">${esc(truncate(c.selector,90))}</div>
       <div class="txt">${esc(commentSummary(c))}</div>
@@ -2906,6 +2925,16 @@ function renderAll(){
     e.stopPropagation();
     const c = STATE.comments.find(x=>x.id===b.dataset.edit);
     if(c) openCommentModal(null, c);
+  }));
+  $$("[data-status-btn]", list).forEach(b=>b.addEventListener("click", e=>{
+    e.stopPropagation();
+    const c = STATE.comments.find(x=>x.id===b.dataset.statusBtn);
+    if(!c) return;
+    const order = STATUSES.map(s=>s.id);
+    const next = order[(order.indexOf(stOf(c)) + 1) % order.length];
+    if(next === "open") delete c.status; else c.status = next;   // offen = Feld weglassen
+    saveComments(STATE.src, STATE.comments);
+    renderAll();
   }));
   $$("[data-rxn]", list).forEach(b=>b.addEventListener("click", e=>{
     e.stopPropagation();
@@ -3167,9 +3196,14 @@ function buildMarkdown(opts){
   md += `> 1. Finde das Ziel-Element per CSS-Selector — nutze die Fallback-Identifier (Text, ARIA-Label, data-testid, href) falls der Selector veraltet ist.\n`;
   md += `> 2. Schlage einen minimalen Patch vor (HTML/CSS/JS-Diff). Keine Umfangsausweitung.\n`;
   md += `> 3. Bei Mehrdeutigkeit: liste Rückfragen statt zu raten.\n`;
-  md += `> 4. „Muss" ist blockierend, „Nice" ist optional. Antworte gruppiert nach Datei.\n\n`;
+  md += `> 4. „Muss" ist blockierend, „Nice" ist optional. Antworte gruppiert nach Datei.\n`;
+  const stCount = { open:0, doing:0, done:0 };
+  cs.forEach(c => stCount[stOf(c)]++);
+  if(stCount.done || stCount.doing) md += `> 5. Items mit ✓ sind bereits erledigt, ◐ ist in Arbeit — beide nur prüfen, nicht neu umsetzen.\n`;
+  md += `\n`;
 
   md += `**Session:** ${cs.length} Item${cs.length===1?"":"s"} · exportiert ${now}\n\n`;
+  if(stCount.done || stCount.doing) md += `**Status:** ${STATUSES.filter(s=>stCount[s.id]).map(s=>`${s.chip} ${s.label} ${stCount[s.id]}`).join(" · ")}\n\n`;
   md += `**Aufwand nach Priorität:** `;
   md += PRIORITIES.filter(p=>priCount[p.id]).map(p=>`${p.label} ${priCount[p.id]}`).join(" · ") || "—";
   md += `\n\n**Verteilung:** `;
@@ -3189,7 +3223,7 @@ function buildMarkdown(opts){
     const attrs = info.attrs || {};
     const title = (info.text && info.text.length<70 ? info.text : null) || attrs.ariaLabel || attrs.alt || attrs.title || attrs.placeholder || (`<${c.tag}>`);
 
-    md += `## ${idx+1}. [${pri.label}] ${cat.emoji} ${verb}: ${title}\n\n`;
+    md += `## ${idx+1}. [${pri.label}]${stOf(c)!=="open" ? " " + ST_MAP[stOf(c)].chip : ""} ${cat.emoji} ${verb}: ${title}\n\n`;
 
     const fp = [];
     fp.push(`\`${c.selector}\``);
@@ -3204,6 +3238,7 @@ function buildMarkdown(opts){
     const metaParts = [];
     metaParts.push(`Kategorie ${cat.label}`);
     metaParts.push(`Priorität ${pri.label}`);
+    if(stOf(c) !== "open") metaParts.push(`Status ${ST_MAP[stOf(c)].label} ${ST_MAP[stOf(c)].chip}`);
     if(info.rect) metaParts.push(`${info.rect.w}×${info.rect.h}px @ ${info.rect.viewport}${info.rect.visible===false?" · unsichtbar":""}`);
     if(info.docTitle) metaParts.push(`Seite: "${info.docTitle}"`);
     if(c.author) metaParts.push(`von ${c.author}`);
@@ -3301,14 +3336,24 @@ function importItems(items, existingIds, existingFp){
     && /^data:image\/(png|jpeg|jpg|gif|webp);base64,[A-Za-z0-9+/]+=*$/i.test(v)
     && v.length < 4e6) ? v : null;
 
-  let added = 0, skipped = 0;
+  let added = 0, skipped = 0, merged = 0;
   for(const item of items){
     if(!item || !item.selector) continue;
     const fp = item.selector + ":" + item.ts;
 
-    // Dedup: skip if same id OR same selector+ts fingerprint
-    if(item.id && existingIds.has(item.id)){ skipped++; continue; }
-    if(existingFp.has(fp)){ skipped++; continue; }
+    // Dedup: skip if same id OR same selector+ts fingerprint.
+    // Kollaborations-Roundtrip: Der bekannte Kommentar wird nicht dupliziert,
+    // aber ein mitgelieferter Bearbeitungsstatus übernommen — so landet
+    // "erledigt" aus dem Export eines Helfers wieder beim Owner.
+    if((item.id && existingIds.has(item.id)) || existingFp.has(fp)){
+      const mine = STATE.comments.find(x => (item.id && x.id === item.id) || (x.selector + ":" + x.ts) === fp);
+      const incoming = ST_MAP[item.status] ? item.status : null;
+      if(mine && incoming && stOf(mine) !== incoming){
+        if(incoming === "open") delete mine.status; else mine.status = incoming;
+        merged++;
+      }
+      skipped++; continue;
+    }
 
     const id = safeId(item.id) || (Date.now().toString(36) + Math.random().toString(36).slice(2));
     existingIds.add(id);
@@ -3350,7 +3395,7 @@ function importItems(items, existingIds, existingFp){
     });
     added++;
   }
-  return { added, skipped };
+  return { added, skipped, merged };
 }
 
 async function importComments(fileInput){
@@ -3363,7 +3408,7 @@ async function importComments(fileInput){
   const existingIds = new Set(STATE.comments.map(c=>c.id).filter(Boolean));
   const existingFp  = new Set(STATE.comments.map(c=>c.selector+":"+c.ts));
 
-  let newCount = 0, skipCount = 0, errorFiles = [];
+  let newCount = 0, skipCount = 0, mergeCount = 0, errorFiles = [];
 
   for(const file of files){
     let items = [];
@@ -3372,7 +3417,7 @@ async function importComments(fileInput){
       try{ items = await itemsFromZip(file); }
       catch(e){ console.warn("[vf] zip-import", e); errorFiles.push(file.name); continue; }
       const res = importItems(items, existingIds, existingFp);
-      newCount += res.added; skipCount += res.skipped;
+      newCount += res.added; skipCount += res.skipped; mergeCount += res.merged;
       continue;
     }
 
@@ -3394,18 +3439,22 @@ async function importComments(fileInput){
     }catch(e){ errorFiles.push(file.name); continue; }
 
     const res = importItems(items, existingIds, existingFp);
-    newCount += res.added; skipCount += res.skipped;
+    newCount += res.added; skipCount += res.skipped; mergeCount += res.merged;
   }
 
-  if(newCount){
+  // Auch ein reiner Status-Merge (0 neue Kommentare) muss gespeichert werden
+  if(newCount || mergeCount){
     saveComments(STATE.src, STATE.comments);
     renderAll();
     refreshFrameBadges();
   }
 
+  // Ein Status-Merge zählt intern auch als "skipped" — dem Nutzer aber nur eines melden
+  const dupCount = skipCount - mergeCount;
   const parts = [];
   if(newCount)       parts.push(`${newCount} Kommentar${newCount===1?"":"e"} importiert`);
-  if(skipCount)      parts.push(`${skipCount} Duplikat${skipCount===1?"":"e"} übersprungen`);
+  if(mergeCount)     parts.push(`${mergeCount} Status übernommen`);
+  if(dupCount > 0)   parts.push(`${dupCount} Duplikat${dupCount===1?"":"e"} übersprungen`);
   if(errorFiles.length) parts.push(`${errorFiles.length} Datei${errorFiles.length===1?" unlesbar":"en unlesbar"}: ${errorFiles.join(", ")}`);
   toast(parts.join(" · ") || "Nichts importiert.", newCount ? 3000 : 4500);
 }

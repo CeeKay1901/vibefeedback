@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.12.0 — 2026-07-10 — Status-Workflow im Tool + Kollaborations-Merge
+
+Der in 0.11.0 eingeführte Bearbeitungsstatus war nur im Dashboard sichtbar. Jetzt ist der Kreis geschlossen:
+
+### feat
+- **Status direkt in der Tool-Sidebar**: Jeder Kommentar trägt ein Status-Badge (○ Offen / ◐ In Arbeit / ✓ Erledigt), ein Klick schaltet weiter. Erledigte Items werden gedimmt, die Stats-Zeile zählt Erledigtes mit.
+- **Import übernimmt Status statt ihn zu verwerfen**: Bisher wurden bekannte Kommentare (gleiche id oder Selector+Zeitstempel) beim Import komplett übersprungen — Status-Updates aus dem Export eines Helfers gingen verloren. Jetzt wird der mitgelieferte Status auf den vorhandenen Kommentar gemergt (auch als *reiner* Merge ohne ein einziges neues Item, inkl. Speichern). Der Toast meldet „N Status übernommen" statt fälschlich „Duplikate übersprungen". Das ist der Kollaborations-Roundtrip: Helfer arbeitet Punkte ab → exportiert → Owner importiert → Fortschritt ist da.
+- **Markdown-Export kennzeichnet den Status**: ✓/◐ in der Überschrift, Status in der Meta-Zeile, Status-Summe im Kopf und eine explizite Anweisung an den KI-Assistenten, Erledigtes nur zu prüfen statt neu umzusetzen.
+
+### fix
+- Ungültige/fremde `status`-Werte aus Importen werden ignoriert (Whitelist), offen bleibt als fehlendes Feld gespeichert.
+
+Tests: 263 Checks; neu `test_status_tool.js` (Sidebar-Toggle, Markdown-Kennzeichnung, Merge per id und per Fingerprint, Merge-only-Persistenz, Whitelist).
+
 ## 0.11.0 — 2026-07-10 — Dashboard wird Projekt-Cockpit
 
 Das Dashboard ist jetzt der Ort, an dem man ein Projekt *steuert*, nicht nur ansieht — gedacht auch für die spätere kollaborative Nutzung (jemand bietet Unterstützung beim Bauen an und arbeitet die Punkte ab).
