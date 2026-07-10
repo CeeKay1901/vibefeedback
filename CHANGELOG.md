@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.11.0 — 2026-07-10 — Dashboard wird Projekt-Cockpit
+
+Das Dashboard ist jetzt der Ort, an dem man ein Projekt *steuert*, nicht nur ansieht — gedacht auch für die spätere kollaborative Nutzung (jemand bietet Unterstützung beim Bauen an und arbeitet die Punkte ab).
+
+### feat
+- **Status-Workflow pro Kommentar**: Offen ○ / In Arbeit ◐ / Erledigt ✓, direkt am Kommentar umschaltbar. Persistiert im `localStorage` (fehlendes Feld = offen, keine Migration nötig), überlebt Export → ZIP → Re-Import ins Tool (`importItems`-Whitelist und der JSON-Block des Markdown-Exports kennen `status` jetzt). Erledigtes wird gedimmt, zählt aus „Offen"-Kacheln, Arbeitsliste und Prompt heraus.
+- **Projekt-Karten in der Übersicht** statt Tabelle: Fortschrittsbalken (erledigt/gesamt), offene Muss-Fixes, Screenshots, Seiten, Top-Kategorien, Autor:innen — und je Karte der direkte Sprung „▶ Im Tool öffnen".
+- **Detailansicht als Cockpit** mit Aktionsleiste:
+  - **▶ Im Feedback-Tool öffnen** (Primär-CTA) — das Projekt direkt im Owner-Modus.
+  - **🔗 Feedback-Link kopieren** — der Teilen-Link für Tester:innen.
+  - **🤖 Prompt kopieren** — alle offenen Punkte als fertiger Arbeitsauftrag fürs Coding-Tool, nach Priorität gruppiert, mit Seite + Selektor.
+  - **⬇ Projekt exportieren** — ZIP nur für dieses Projekt (gleiches Format wie „Alles exportieren").
+- **Mehr Insights pro Projekt**: eigene Kategorie- und Prioritäts-Charts, „Nächste Schritte"-Arbeitsliste (offene Punkte, dringendste zuerst), Seiten-Tabelle mit Muss/Offen-Spalten und Absprung je Unterseite, „Brennpunkte" (mehrfach kommentierte Elemente), Status-Filter zusätzlich zu Kategorie/Priorität, Kacheln für Offen/Erledigt/Muss-offen.
+- **Export kennt den Status**: `kommentare.csv` hat eine Status-Spalte, `feedback.json` trägt das Feld unverändert.
+
+### fix
+- Übersichts-Kachel „Muss-Fixes" zählt jetzt nur noch *offene* Muss-Punkte — erledigte Blocker sind keine Blocker mehr.
+
+Tests: 243 Checks (vorher 208); neu abgedeckt u. a. Status-Persistenz über Reload und Re-Import, Prompt-Inhalt, Einzelprojekt-Export, Seiten-Links, Projekt-Karten.
+
 ## 0.10.0 — 2026-07-09 — Alles exportieren + ein ZIP-Writer statt zwei
 
 ### feat

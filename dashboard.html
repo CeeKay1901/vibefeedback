@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>VibeFeedback — Dashboard</title>
-<meta name="description" content="Übersicht aller kommentierten Projekte und Auswertung deines Feedbacks — lokal in deinem Browser.">
+<meta name="description" content="Projekt-Cockpit für dein Feedback: Insights, Status-Workflow und direkter Absprung ins Feedback-Tool — lokal in deinem Browser.">
 <link rel="icon" href="pilot-logo.svg">
 <style>
 /* ===== Tokens: pilot-CI für Chrome, validierte Data-Viz-Palette für Charts ===== */
@@ -33,6 +33,7 @@
     --ord-1:#cde2fb; --ord-2:#9ec5f4; --ord-3:#6da7ec; --ord-4:#3987e5;
     --chart-ink:#fff; --chart-ink-2:#c3c2b7; --chart-muted:#898781;
     --grid:#2c2c2a; --axis:#383835;
+    --status-good:#3cc13c;
   }
 }
 
@@ -49,7 +50,7 @@ button{font:inherit;cursor:pointer}
 .brand img{height:22px;display:block}
 .brand .sep{color:var(--muted);font-weight:400}
 .grow{flex:1}
-.btn{border:1px solid var(--line);background:var(--panel);color:var(--fg);border-radius:99px;padding:8px 15px;font-size:13.5px;font-weight:600;min-height:40px;display:inline-flex;align-items:center;gap:6px}
+.btn{border:1px solid var(--line);background:var(--panel);color:var(--fg);border-radius:99px;padding:8px 15px;font-size:13.5px;font-weight:600;min-height:40px;display:inline-flex;align-items:center;gap:6px;text-decoration:none}
 .btn:hover{border-color:var(--fg)}
 .btn.primary{background:var(--fg);color:var(--accent);border-color:var(--fg)}
 .btn.danger{color:var(--danger);border-color:var(--danger)}
@@ -57,10 +58,11 @@ button{font:inherit;cursor:pointer}
 .btn[disabled]{opacity:.45;cursor:not-allowed}
 
 h1{font-size:26px;font-weight:800;letter-spacing:-.3px;margin:28px 0 4px}
-.sub{color:var(--muted);font-size:14px;margin-bottom:24px}
+.sub{color:var(--muted);font-size:14px;margin-bottom:18px;word-break:break-all}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 24px}
 
 /* ===== Stat-Kacheln (die Zahl IST das Chart) ===== */
-.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:12px;margin-bottom:26px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:12px;margin-bottom:26px}
 .tile{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:15px 17px;box-shadow:var(--shadow)}
 .tile .label{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
 .tile .value{font-size:30px;font-weight:800;letter-spacing:-.5px;line-height:1.15;margin-top:5px}
@@ -105,8 +107,6 @@ figcaption{font-size:12px;color:var(--muted);margin-top:12px}
 /* [hidden] wirkt nur auf HTML-Elemente (UA-Stylesheet) — SVG-Gruppen brauchen die Regel selbst,
    sonst hängt der Crosshair-Punkt sichtbar bei 0,0 */
 .spark [data-role="cursor"][hidden]{display:none}
-/* Das hidden-Attribut wird von der UA-Stylesheet nur für HTML gesetzt, nicht für SVG */
-.spark [data-role="cursor"][hidden]{display:none}
 
 .tooltip{position:fixed;z-index:50;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow-lg);padding:7px 10px;font-size:12.5px;pointer-events:none;opacity:0;transition:opacity .1s;white-space:nowrap}
 .tooltip[data-show="true"]{opacity:1}
@@ -121,9 +121,10 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 tbody tr:hover{background:var(--panel-2)}
 tr:last-child td{border-bottom:0}
 .proj-url{font-weight:600;display:block;max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.proj-host{font-size:11.5px;color:var(--muted)}
+.proj-host{font-size:11.5px;color:var(--muted);display:block}
 .data-table{margin-top:14px;border-top:1px solid var(--line)}
 .data-table[hidden]{display:none}
+.pagelink{font-size:12.5px;white-space:nowrap}
 
 /* Priorität als Ordinal-Rampe, immer mit Text daneben */
 .pri-dot{width:10px;height:10px;border-radius:2px;display:inline-block;vertical-align:-1px;margin-right:6px}
@@ -132,6 +133,39 @@ tr:last-child td{border-bottom:0}
 
 .chip{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);background:var(--panel-2);border-radius:99px;padding:3px 9px;font-size:12px;color:var(--muted)}
 .chip.on{background:var(--fg);color:var(--accent);border-color:var(--fg)}
+a.chip{text-decoration:none}
+a.chip:hover{border-color:var(--fg);color:var(--fg)}
+
+/* Fortschritt (erledigte Kommentare) */
+.progress{height:8px;background:var(--panel-2);border-radius:99px;overflow:hidden}
+.progress>span{display:block;height:100%;border-radius:99px;background:var(--status-good);transition:width .3s ease}
+
+/* ===== Projekt-Karten in der Übersicht ===== */
+.proj-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px;margin-bottom:22px}
+.proj-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px 18px 14px;display:flex;flex-direction:column;gap:10px}
+.proj-title{background:none;border:0;text-align:left;padding:0;cursor:pointer}
+.proj-card .proj-url{max-width:100%;font-size:15.5px}
+.proj-title:hover .proj-url{text-decoration:underline}
+.proj-stats{display:flex;flex-wrap:wrap;gap:5px 14px;font-size:12.5px;color:var(--muted)}
+.proj-stats b{color:var(--fg);font-variant-numeric:tabular-nums}
+.proj-chips{display:flex;flex-wrap:wrap;gap:6px}
+.proj-foot{font-size:12px;color:var(--muted);margin-top:auto}
+.proj-actions{display:flex;gap:8px;flex-wrap:wrap}
+
+/* ===== Status-Workflow ===== */
+.st-btns{display:inline-flex;border:1px solid var(--line);border-radius:99px;overflow:hidden;background:var(--panel)}
+.st-btns button{border:0;background:transparent;padding:3px 10px;font-size:11.5px;color:var(--muted);white-space:nowrap}
+.st-btns button+button{border-left:1px solid var(--line)}
+.st-btns button.on{background:var(--fg);color:var(--accent)}
+.st-btns button:hover:not(.on){color:var(--fg)}
+.cmt[data-done="true"]{opacity:.62}
+.cmt[data-done="true"] .thumb{filter:grayscale(.8)}
+
+/* ===== Nächste Schritte ===== */
+.next{list-style:none;display:flex;flex-direction:column;gap:8px;margin-top:4px}
+.next li{display:flex;align-items:center;gap:9px;flex-wrap:wrap;font-size:13.5px;padding:9px 12px;border:1px solid var(--line);border-radius:8px}
+.next .next-text{flex:1;min-width:180px}
+.next .who{color:var(--muted);font-size:12px;white-space:nowrap}
 
 .empty{text-align:center;padding:56px 20px;color:var(--muted)}
 .empty h2{font-size:18px;color:var(--fg);margin-bottom:6px}
@@ -203,6 +237,18 @@ const PRIORITIES = [
   { id:"nice",   label:"Nice",   cls:"pri-nice" },
 ];
 const PRI_MAP = Object.fromEntries(PRIORITIES.map(p => [p.id, p]));
+const PRI_ORDER = { must:0, should:1, could:2, nice:3 };
+
+/* Status-Workflow: Grundlage für die kollaborative Nutzung — wer beim Bauen
+   unterstützt, arbeitet die Punkte hier ab. Fehlendes Feld = offen, damit
+   alle Bestandsdaten und Importe ohne Migration funktionieren. */
+const STATUSES = [
+  { id:"open",  label:"Offen",     chip:"○" },
+  { id:"doing", label:"In Arbeit", chip:"◐" },
+  { id:"done",  label:"Erledigt",  chip:"✓" },
+];
+const ST_MAP = Object.fromEntries(STATUSES.map(s => [s.id, s]));
+const st = c => ST_MAP[c.status] ? c.status : "open";
 
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
 const tsMs = c => typeof c.ts === "number" ? c.ts : (Date.parse(c.ts) || 0);
@@ -222,6 +268,29 @@ const hostOf = url => { try { return new URL(url).host; } catch(e){ return url; 
 // Tracking-Pixel (Referer-Leak), SVG könnte Skripte tragen.
 const safeShot = v => (typeof v === "string" && /^data:image\/(png|jpeg|jpg|gif|webp);base64,/i.test(v)) ? v : null;
 const pathOf = url => { try { const u = new URL(url); return (u.pathname + u.search + u.hash) || "/"; } catch(e){ return ""; } };
+const isHttp = u => /^https?:\/\//i.test(u || "");
+const trunc = (s, n) => s.length > n ? s.slice(0, n - 1).trimEnd() + "…" : s;
+// pageUrl stammt aus Importen und ist damit fremde Eingabe — nur http(s) verlinken
+const toolHref = (url, owner = true) => `./?src=${encodeURIComponent(url)}${owner ? "&owner=1" : ""}`;
+const projTitle = p => pathOf(p.src) === "/" ? hostOf(p.src) : pathOf(p.src);
+
+/* Alle abgeleiteten Kennzahlen an einem Ort — läuft beim Laden und nach jeder
+   Status-Änderung, damit Kacheln und Karten nie auseinanderlaufen. */
+function decorate(p){
+  const maxOf = (arr, fn) => arr.reduce((m, x) => Math.max(m, fn(x)), 0);
+  const minOf = (arr, fn) => arr.reduce((m, x) => { const v = fn(x); return v ? Math.min(m, v) : m; }, Infinity);
+  p.lastTs   = maxOf(p.comments, tsMs);
+  p.firstTs  = minOf(p.comments, tsMs);
+  p.authors  = [...new Set(p.comments.map(c => (c.author || "").trim()).filter(Boolean))];
+  p.shots    = p.comments.filter(c => safeShot(c.screenshot)).length;
+  p.must     = p.comments.filter(c => c.priority === "must").length;
+  p.done     = p.comments.filter(c => st(c) === "done").length;
+  p.doing    = p.comments.filter(c => st(c) === "doing").length;
+  p.open     = p.comments.length - p.done;
+  p.openMust = p.comments.filter(c => c.priority === "must" && st(c) !== "done").length;
+  p.pages    = [...new Set(p.comments.map(c => c.pageUrl || p.src))];
+  return p;
+}
 
 function loadProjects(){
   const projects = [];
@@ -236,23 +305,47 @@ function loadProjects(){
       if(!Array.isArray(comments)) continue;
     }catch(e){ continue; }
     if(!comments.length) continue;
-    projects.push({ key, src, comments });
+    projects.push(decorate({ key, src, comments }));
   }
-  const maxOf = (arr, fn) => arr.reduce((m, x) => Math.max(m, fn(x)), 0);
-  const minOf = (arr, fn) => arr.reduce((m, x) => { const v = fn(x); return v ? Math.min(m, v) : m; }, Infinity);
-  projects.forEach(p => {
-    p.lastTs  = maxOf(p.comments, tsMs);
-    p.firstTs = minOf(p.comments, tsMs);
-    p.authors = [...new Set(p.comments.map(c => (c.author || "").trim()).filter(Boolean))];
-    p.shots   = p.comments.filter(c => safeShot(c.screenshot)).length;
-    p.must    = p.comments.filter(c => c.priority === "must").length;
-    p.pages   = [...new Set(p.comments.map(c => c.pageUrl || p.src))];
-  });
   projects.sort((a, b) => b.lastTs - a.lastTs);
   return projects;
 }
 
+/* Status zurück in den Store schreiben. Frisch lesen statt die geladene Kopie
+   zu speichern — ein zweiter Tab könnte inzwischen kommentiert haben. */
+function setStatus(p, cmt, status){
+  if(!ST_MAP[status]) return false;
+  try{
+    const arr = JSON.parse(localStorage.getItem(p.key) || "[]");
+    const hit = arr.find(x => (cmt.id && x.id === cmt.id) || (x.selector === cmt.selector && x.ts === cmt.ts));
+    if(!hit) return false;
+    if(status === "open") delete hit.status; else hit.status = status;
+    localStorage.setItem(p.key, JSON.stringify(arr));
+  }catch(e){ console.warn("[vf] status", e); return false; }
+  if(status === "open") delete cmt.status; else cmt.status = status;
+  decorate(p);
+  return true;
+}
+
 const countBy = (items, keyFn) => items.reduce((acc, x) => { const k = keyFn(x); acc[k] = (acc[k] || 0) + 1; return acc; }, {});
+
+async function copyText(text){
+  try{ await navigator.clipboard.writeText(text); return true; }
+  catch(e){
+    const ta = document.createElement("textarea");
+    ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta); ta.select();
+    let done = false;
+    try{ done = document.execCommand("copy"); }catch(e2){}
+    ta.remove();
+    return done;
+  }
+}
+function flashBtn(btn, label){
+  const old = btn.textContent;
+  btn.textContent = label; btn.disabled = true;
+  setTimeout(() => { btn.textContent = old; btn.disabled = false; }, 1400);
+}
 
 /* ============================================================================
    Charts. Regeln: eine Serie → ein Farbton; Prioritäten sind geordnet →
@@ -410,6 +503,54 @@ function dailySeries(comments, days = 30){
   return out;
 }
 
+/* Kategorie-/Prioritäts-Charts, in Übersicht wie Projekt-Detail identisch gebaut */
+function categoryChart(comments){
+  const rows = CATEGORIES.map(c => ({ label:c.label, icon:c.emoji, value: comments.filter(x => x.category === c.id).length }))
+                         .sort((a, b) => b.value - a.value);
+  const other = comments.filter(x => !CAT_MAP[x.category]).length;
+  if(other) rows.push({ label:"Sonstige", icon:"•", value: other });
+  return barChart(rows, { title:"Kommentare nach Kategorie", dimension:"Kategorie" });
+}
+function priorityChart(comments){
+  const rows = PRIORITIES.map((p, i) => ({
+    label: p.label, value: comments.filter(x => x.priority === p.id).length,
+    color: `var(--ord-${i + 1})`
+  }));
+  const other = comments.filter(x => !PRI_MAP[x.priority]).length;
+  if(other) rows.push({ label:"Ohne Priorität", value: other });
+  return barChart(rows, { title:"Kommentare nach Priorität", dimension:"Priorität", keepOrder:true });
+}
+
+/* ============================================================================
+   Prompt-Baustein: die offenen Punkte eines Projekts als fertiger Arbeitsauftrag
+   für ein Coding-Tool — das Bindeglied zwischen Feedback und nächster Iteration.
+   ========================================================================== */
+function buildPrompt(p){
+  const open = p.comments.filter(c => st(c) !== "done")
+    .sort((a, b) => (PRI_ORDER[a.priority] ?? 4) - (PRI_ORDER[b.priority] ?? 4) || tsMs(a) - tsMs(b));
+  const L = [];
+  L.push(`Du bekommst Nutzer-Feedback zur Seite ${p.src}.`);
+  L.push(`Setze die offenen Punkte um — in der Reihenfolge unten, dringendste zuerst.`);
+  L.push(`Wenn ein Punkt unklar ist, triff eine sinnvolle Annahme und dokumentiere sie kurz.`);
+  L.push("");
+  const groups = PRIORITIES.map(pr => ({ pr, items: open.filter(c => c.priority === pr.id) })).filter(g => g.items.length);
+  const rest = open.filter(c => !PRI_MAP[c.priority]);
+  if(rest.length) groups.push({ pr: { label:"Weitere" }, items: rest });
+  groups.forEach(g => {
+    L.push(`## ${g.pr.label} (${g.items.length})`);
+    g.items.forEach((c, i) => {
+      const cat = CAT_MAP[c.category] || { label:"Hinweis" };
+      const loc = [];
+      if(c.pageUrl) loc.push(`Seite \`${pathOf(c.pageUrl) || c.pageUrl}\``);
+      if(c.selector) loc.push(`Element \`${c.selector}\``);
+      L.push(`${i + 1}. [${cat.label}] ${c.text || "(ohne Text)"}${loc.length ? " — " + loc.join(", ") : ""}${c.author ? ` (von ${c.author})` : ""}${st(c) === "doing" ? " _(bereits in Arbeit)_" : ""}`);
+    });
+    L.push("");
+  });
+  L.push(`Insgesamt ${open.length} offene${open.length === 1 ? "r" : ""} Punkt${open.length === 1 ? "" : "e"}, Stand ${new Date().toLocaleDateString("de-DE")}.`);
+  return L.join("\n");
+}
+
 /* ============================================================================
    Views
    ========================================================================== */
@@ -428,24 +569,16 @@ function renderOverview(){
   }
 
   const authors  = new Set(all.map(c => (c.author || "").trim()).filter(Boolean));
-  const must     = all.filter(c => c.priority === "must").length;
+  const openMust = all.filter(c => c.priority === "must" && st(c) !== "done").length;
+  const doneN    = all.filter(c => st(c) === "done").length;
+  const openN    = all.length - doneN;
   const shots    = all.filter(c => safeShot(c.screenshot)).length;
   const lastTs   = all.reduce((m, c) => Math.max(m, tsMs(c)), 0);
   const shotPct  = Math.round(shots / all.length * 100);
+  const domains  = new Set(PROJECTS.map(p => hostOf(p.src))).size;
 
-  const catRows = CATEGORIES.map(c => ({ label:c.label, icon:c.emoji, value: all.filter(x => x.category === c.id).length }))
-                            .sort((a, b) => b.value - a.value);
-  const otherCat = all.filter(x => !CAT_MAP[x.category]).length;
-  if(otherCat) catRows.push({ label:"Sonstige", icon:"•", value: otherCat });
-
-  const priRows = PRIORITIES.map(p => ({
-    label: p.label, value: all.filter(x => x.priority === p.id).length,
-    color: `var(--ord-${PRIORITIES.findIndex(q => q.id === p.id) + 1})`
-  }));
-  const otherPri = all.filter(x => !PRI_MAP[x.priority]).length;
-  if(otherPri) priRows.push({ label:"Ohne Priorität", value: otherPri });
-  const cat = barChart(catRows, { title:"Kommentare nach Kategorie", dimension:"Kategorie" });
-  const pri = barChart(priRows, { title:"Kommentare nach Priorität", dimension:"Priorität", keepOrder:true });
+  const cat = categoryChart(all);
+  const pri = priorityChart(all);
   const series = dailySeries(all, 30);
   const line = lineChart(series, "activity");
   const activeDays = series.filter(d => d.value).length;
@@ -455,9 +588,10 @@ function renderOverview(){
     <p class="sub">${PROJECTS.length} Projekt${PROJECTS.length===1?"":"e"} · ${all.length} Kommentar${all.length===1?"":"e"} · zuletzt ${relTime(lastTs)}</p>
 
     <div class="tiles">
-      <div class="tile"><div class="label">Projekte</div><div class="value">${PROJECTS.length}</div><div class="foot">${new Set(PROJECTS.map(p => hostOf(p.src))).size} Domain${new Set(PROJECTS.map(p => hostOf(p.src))).size===1?"":"s"}</div></div>
+      <div class="tile"><div class="label">Projekte</div><div class="value">${PROJECTS.length}</div><div class="foot">${domains} Domain${domains===1?"":"s"}</div></div>
       <div class="tile"><div class="label">Kommentare</div><div class="value">${all.length}</div><div class="foot">${new Set(PROJECTS.flatMap(p => p.pages)).size} Seite(n) betroffen</div></div>
-      <div class="tile"><div class="label">Muss-Fixes</div><div class="value">${must}</div><div class="foot ${must ? "crit" : ""}">${must ? "blockierend" : "nichts blockiert"}</div></div>
+      <div class="tile"><div class="label">Offen</div><div class="value">${openN}</div><div class="foot">${doneN} erledigt</div></div>
+      <div class="tile"><div class="label">Muss-Fixes offen</div><div class="value">${openMust}</div><div class="foot ${openMust ? "crit" : ""}">${openMust ? "blockierend" : "nichts blockiert"}</div></div>
       <div class="tile"><div class="label">Mit Screenshot</div><div class="value">${shotPct} %</div><div class="foot">${shots} von ${all.length}</div></div>
       <div class="tile"><div class="label">Autor:innen</div><div class="value">${authors.size || "—"}</div><div class="foot">${authors.size ? [...authors].slice(0,2).map(esc).join(", ") + (authors.size > 2 ? " +" + (authors.size-2) : "") : "keine Namen erfasst"}</div></div>
       <div class="tile"><div class="label">Aktive Tage</div><div class="value">${activeDays}</div><div class="foot">von 30</div></div>
@@ -500,84 +634,115 @@ function renderOverview(){
       </div>
     </section>`}
 
-    <section class="card">
-      <div class="card-head"><div class="grow"><h2>Projekte</h2><p class="hint">Klick auf ein Projekt für Details und alle Kommentare.</p></div></div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr>
-            <th>Projekt</th><th class="num">Kommentare</th><th class="num">Muss</th>
-            <th class="num">Seiten</th><th class="num">Screenshots</th><th>Autor:innen</th><th>Zuletzt</th><th></th>
-          </tr></thead>
-          <tbody>
-            ${PROJECTS.map((p, i) => `<tr>
-              <td><button class="linkish" style="text-align:left;text-decoration:none" data-open="${i}">
-                    <span class="proj-url">${esc(pathOf(p.src) === "/" ? hostOf(p.src) : pathOf(p.src))}</span>
-                    <span class="proj-host">${esc(hostOf(p.src))}</span>
-                  </button></td>
-              <td class="num">${p.comments.length}</td>
-              <td class="num">${p.must ? `<span class="pri-dot pri-must"></span>${p.must}` : "0"}</td>
-              <td class="num">${p.pages.length}</td>
-              <td class="num">${p.shots}</td>
-              <td>${p.authors.length ? esc(p.authors.slice(0,2).join(", ")) + (p.authors.length > 2 ? ` +${p.authors.length-2}` : "") : "<span style='color:var(--muted)'>—</span>"}</td>
-              <td title="${esc(fmtDateTime(p.lastTs))}">${relTime(p.lastTs)}</td>
-              <td style="white-space:nowrap">
-                <button class="btn sm" data-open="${i}">Details</button>
-                <a class="btn sm" href="./?src=${encodeURIComponent(p.src)}&owner=1" title="Projekt im Feedback-Modus öffnen">Öffnen</a>
-              </td>
-            </tr>`).join("")}
-          </tbody>
-        </table>
-      </div>
-    </section>
+    <h2 style="font-size:18px;margin:26px 0 4px">Projekte</h2>
+    <p class="hint" style="color:var(--muted);font-size:13px;margin-bottom:14px">Karte öffnen für alle Insights — oder direkt im Feedback-Tool weiterarbeiten.</p>
+    <div class="proj-cards">
+      ${PROJECTS.map((p, i) => {
+        const donePct = Math.round(p.done / p.comments.length * 100);
+        const catTop = CATEGORIES.map(c => ({ c, n: p.comments.filter(x => x.category === c.id).length }))
+                                 .filter(x => x.n).sort((a, b) => b.n - a.n).slice(0, 3);
+        return `<article class="proj-card">
+          <button class="proj-title" data-open="${i}" title="Details und alle Kommentare ansehen">
+            <span class="proj-url">${esc(projTitle(p))}</span>
+            <span class="proj-host">${esc(hostOf(p.src))}</span>
+          </button>
+          <div class="progress" role="img" aria-label="${p.done} von ${p.comments.length} Kommentaren erledigt" title="${p.done} von ${p.comments.length} erledigt (${donePct} %)"><span style="width:${donePct}%"></span></div>
+          <div class="proj-stats">
+            <span>💬 <b>${p.comments.length}</b></span>
+            <span><span class="pri-dot pri-must"></span><b>${p.openMust}</b> Muss offen</span>
+            <span>📸 <b>${p.shots}</b></span>
+            <span><b>${p.pages.length}</b> Seite${p.pages.length===1?"":"n"}</span>
+          </div>
+          ${catTop.length ? `<div class="proj-chips">${catTop.map(x => `<span class="chip">${x.c.emoji} ${x.c.label} ${x.n}</span>`).join("")}</div>` : ""}
+          <div class="proj-foot">${p.authors.length ? esc(p.authors.slice(0,2).join(", ")) + (p.authors.length > 2 ? ` +${p.authors.length-2}` : "") + " · " : ""}${relTime(p.lastTs)}</div>
+          <div class="proj-actions">
+            <button class="btn sm" data-open="${i}">Details</button>
+            <a class="btn sm" href="${toolHref(p.src)}" title="Projekt im Feedback-Modus öffnen">▶ Im Tool öffnen</a>
+          </div>
+        </article>`;
+      }).join("")}
+    </div>
   `;
   bindChartHovers(app);
   app.querySelectorAll("[data-open]").forEach(b => b.addEventListener("click", () => renderDetail(+b.dataset.open)));
 }
 
-let detailFilter = { category:"all", priority:"all" };
+let detailFilter = { category:"all", priority:"all", status:"all" };
 
 function renderDetail(idx){
   const p = PROJECTS[idx];
   if(!p) return renderOverview();
-  detailFilter = { category:"all", priority:"all" };
+  detailFilter = { category:"all", priority:"all", status:"all" };
 
   const draw = () => {
     const shown = p.comments
       .filter(c => detailFilter.category === "all" || c.category === detailFilter.category)
       .filter(c => detailFilter.priority === "all" || c.priority === detailFilter.priority)
+      .filter(c => detailFilter.status === "all" || st(c) === detailFilter.status)
       .sort((a, b) => tsMs(b) - tsMs(a));
 
-    const byPage = countBy(p.comments, c => c.pageUrl || p.src);
-    const pageRows = Object.entries(byPage)
-      .map(([url, n]) => ({ label: pathOf(url) || "/", value: n }))
-      .sort((a, b) => b.value - a.value).slice(0, 8);
+    /* Kennzahlen je Seite: wo liegt Arbeit, und wohin springe ich ab? */
+    const byPage = {};
+    p.comments.forEach(c => {
+      const url = c.pageUrl || p.src;
+      const e = (byPage[url] ||= { url, n:0, must:0, open:0 });
+      e.n++;
+      if(c.priority === "must") e.must++;
+      if(st(c) !== "done") e.open++;
+    });
+    const pageRows = Object.values(byPage).sort((a, b) => b.n - a.n);
+
     const byAuthor = countBy(p.comments.filter(c => (c.author||"").trim()), c => c.author.trim());
     const authorRows = Object.entries(byAuthor).map(([a, n]) => ({ label:a, value:n })).sort((a,b) => b.value - a.value);
-    const byElement = countBy(p.comments, c => c.selector || "?");
-    const hotspots = Object.entries(byElement).filter(([, n]) => n > 1).sort((a,b) => b[1] - a[1]).slice(0, 5);
-
-    const pages   = barChart(pageRows,   { title:"Kommentare pro Seite", dimension:"Seite" });
     const authors = barChart(authorRows, { title:"Kommentare pro Autor:in", dimension:"Autor:in" });
+
+    /* Brennpunkte: Elemente, die mehrfach kommentiert wurden */
+    const byEl = {};
+    p.comments.forEach(c => {
+      const k = c.selector || "?";
+      const e = (byEl[k] ||= { sel:k, n:0, open:0, label:null });
+      e.n++;
+      if(st(c) !== "done") e.open++;
+      if(!e.label && c.info && c.info.text) e.label = c.info.text;
+    });
+    const hotspots = Object.values(byEl).filter(e => e.n > 1).sort((a, b) => b.n - a.n).slice(0, 6);
+
+    const cat = categoryChart(p.comments);
+    const pri = priorityChart(p.comments);
     const series  = dailySeries(p.comments, 30);
     const line    = lineChart(series, "detail-activity");
+    const donePct = Math.round(p.done / p.comments.length * 100);
+
+    /* Arbeitsliste: offene Punkte, dringendste zuerst */
+    const next = p.comments.filter(c => st(c) !== "done")
+      .sort((a, b) => (PRI_ORDER[a.priority] ?? 4) - (PRI_ORDER[b.priority] ?? 4) || tsMs(a) - tsMs(b))
+      .slice(0, 6);
 
     const cmtHtml = shown.map((c, i) => {
       // Unbekannte Werte nicht als "Könnte" ausgeben — das wäre eine Behauptung
-      const cat = CAT_MAP[c.category] || { emoji:"•", label:"Sonstige" };
-      const pri = PRI_MAP[c.priority] || { label:"ohne Priorität", cls:"" };
+      const catC = CAT_MAP[c.category] || { emoji:"•", label:"Sonstige" };
+      const priC = PRI_MAP[c.priority] || { label:"ohne Priorität", cls:"" };
       const shot = safeShot(c.screenshot);
       const thumb = shot
         ? `<img class="thumb" src="${esc(shot)}" alt="Screenshot des kommentierten Elements" loading="lazy">`
         : `<div class="thumb-ph">kein Screenshot</div>`;
-      return `<article class="cmt">
+      const pageChip = (c.pageUrl && c.pageUrl !== p.src)
+        ? (isHttp(c.pageUrl)
+            ? `<a class="chip" href="${esc(toolHref(c.pageUrl))}" title="Diese Seite im Feedback-Tool öffnen">📍 ${esc(pathOf(c.pageUrl))}</a>`
+            : `<span class="chip">📍 ${esc(pathOf(c.pageUrl) || c.pageUrl)}</span>`)
+        : "";
+      return `<article class="cmt" data-done="${st(c) === "done"}">
         ${thumb}
         <div>
           <div class="meta">
-            <span>${cat.emoji} ${esc(cat.label)}</span>
-            <span><span class="pri-dot ${pri.cls}"></span>${esc(pri.label)}</span>
+            <span>${catC.emoji} ${esc(catC.label)}</span>
+            <span><span class="pri-dot ${priC.cls}"></span>${esc(priC.label)}</span>
             ${c.author ? `<span>von ${esc(c.author)}</span>` : ""}
             <span title="${esc(fmtDateTime(tsMs(c)))}">${relTime(tsMs(c))}</span>
-            ${(c.pageUrl && c.pageUrl !== p.src) ? `<span class="chip">📍 ${esc(pathOf(c.pageUrl))}</span>` : ""}
+            ${pageChip}
+            <span class="st-btns" data-i="${i}" role="group" aria-label="Status dieses Kommentars">
+              ${STATUSES.map(s => `<button type="button" data-st="${s.id}" class="${st(c)===s.id?"on":""}" aria-pressed="${st(c)===s.id}">${s.chip} ${s.label}</button>`).join("")}
+            </span>
           </div>
           <p class="txt">${esc(c.text || "(kein Text)")}</p>
           <div class="sel">${esc(c.selector || "")}</div>
@@ -587,42 +752,110 @@ function renderDetail(idx){
 
     app.innerHTML = `
       <div class="back"><button class="btn sm" id="btn-back">← Alle Projekte</button></div>
-      <h1>${esc(pathOf(p.src) === "/" ? hostOf(p.src) : pathOf(p.src))}</h1>
-      <p class="sub">${esc(p.src)}</p>
+      <h1>${esc(projTitle(p))}</h1>
+      <p class="sub"><a href="${esc(p.src)}" target="_blank" rel="noopener noreferrer">${esc(p.src)}</a></p>
+
+      <div class="actions">
+        <a class="btn primary" id="btn-open-tool" href="${toolHref(p.src)}">▶ Im Feedback-Tool öffnen</a>
+        <button class="btn" id="btn-copy-link" title="Link für Tester:innen kopieren — jede:r kommentiert im eigenen Browser und schickt dir den Export zurück">🔗 Feedback-Link kopieren</button>
+        <button class="btn" id="btn-copy-prompt" title="Alle offenen Punkte als fertigen Arbeitsauftrag für dein Coding-Tool kopieren" ${p.open ? "" : "disabled"}>🤖 Prompt kopieren</button>
+        <button class="btn" id="btn-export-proj" title="Nur dieses Projekt als ZIP sichern (JSON, CSV, Screenshots)">⬇ Projekt exportieren</button>
+        <button class="btn danger" id="btn-del">Projekt löschen</button>
+      </div>
 
       <div class="tiles">
         <div class="tile"><div class="label">Kommentare</div><div class="value">${p.comments.length}</div><div class="foot">${shown.length !== p.comments.length ? shown.length + " gefiltert" : "alle sichtbar"}</div></div>
-        <div class="tile"><div class="label">Muss-Fixes</div><div class="value">${p.must}</div><div class="foot ${p.must ? "crit" : ""}">${p.must ? "blockierend" : "nichts blockiert"}</div></div>
-        <div class="tile"><div class="label">Seiten</div><div class="value">${p.pages.length}</div><div class="foot">mit Feedback</div></div>
+        <div class="tile"><div class="label">Offen</div><div class="value">${p.open}</div><div class="foot">${p.doing} in Arbeit</div></div>
+        <div class="tile"><div class="label">Erledigt</div><div class="value">${donePct} %</div><div class="foot">${p.done} von ${p.comments.length}</div></div>
+        <div class="tile"><div class="label">Muss offen</div><div class="value">${p.openMust}</div><div class="foot ${p.openMust ? "crit" : ""}">${p.openMust ? "blockierend" : "nichts blockiert"}</div></div>
         <div class="tile"><div class="label">Mit Screenshot</div><div class="value">${Math.round(p.shots / p.comments.length * 100)} %</div><div class="foot">${p.shots} von ${p.comments.length}</div></div>
         <div class="tile"><div class="label">Zeitraum</div><div class="value" style="font-size:17px;padding-top:7px">${fmtDate(p.firstTs === Infinity ? 0 : p.firstTs)}</div><div class="foot">bis ${fmtDate(p.lastTs)}</div></div>
       </div>
 
+      <section class="card" style="margin-bottom:22px">
+        <div class="card-head"><div class="grow"><h2>Nächste Schritte</h2>
+        <p class="hint">Offene Punkte, dringendste zuerst — die Arbeitsliste für die nächste Iteration.</p></div></div>
+        ${next.length ? `<ol class="next">${next.map(c => {
+          const priC = PRI_MAP[c.priority] || { label:"—", cls:"" };
+          const catC = CAT_MAP[c.category] || { emoji:"•" };
+          return `<li>
+            <span><span class="pri-dot ${priC.cls}"></span><strong>${esc(priC.label)}</strong></span>
+            <span>${catC.emoji}</span>
+            <span class="next-text">${esc(trunc(c.text || "(kein Text)", 110))}</span>
+            ${st(c) === "doing" ? `<span class="chip">◐ in Arbeit</span>` : ""}
+            ${(c.pageUrl && c.pageUrl !== p.src && isHttp(c.pageUrl)) ? `<a class="chip" href="${esc(toolHref(c.pageUrl))}" title="Im Feedback-Tool öffnen">📍 ${esc(pathOf(c.pageUrl))}</a>` : ""}
+            ${c.author ? `<span class="who">von ${esc(c.author)}</span>` : ""}
+          </li>`;
+        }).join("")}</ol>${p.open > next.length ? `<p style="color:var(--muted);font-size:12.5px;margin-top:10px">+ ${p.open - next.length} weitere offene Punkte in der Liste unten.</p>` : ""}`
+        : `<p style="font-size:14px">🎉 Alles erledigt — kein Punkt offen.</p>`}
+      </section>
+
       <div class="grid">
         <section class="card">
           <div class="card-head">
-            <div class="grow"><h2>Kommentare pro Seite</h2><p class="hint">Wo drückt der Schuh?</p></div>
-            ${pages.degenerate ? "" : `<button class="linkish" data-toggle-table="tbl-pages" aria-expanded="false">Als Tabelle</button>`}
+            <div class="grow"><h2>Kommentare nach Kategorie</h2><p class="hint">Worüber wird in diesem Projekt gesprochen?</p></div>
+            ${cat.degenerate ? "" : `<button class="linkish" data-toggle-table="tbl-dcat" aria-expanded="false">Als Tabelle</button>`}
           </div>
-          ${barsOrFallback(pages, { only:"einzige Seite mit Feedback", empty:"Keine Seiten erfasst." })}
-          ${pages.degenerate ? "" : `<div class="table-wrap data-table" id="tbl-pages" hidden>${pages.table}</div>`}
+          ${barsOrFallback(cat, { only:"einzige Kategorie", empty:"Noch keine Kommentare." })}
+          ${cat.degenerate ? "" : `<div class="table-wrap data-table" id="tbl-dcat" hidden>${cat.table}</div>`}
         </section>
 
         <section class="card">
           <div class="card-head">
-            <div class="grow"><h2>${authorRows.length ? "Kommentare pro Autor:in" : "Wiederkehrende Elemente"}</h2>
-            <p class="hint">${authorRows.length ? "Wer hat wie viel beigetragen?" : "Elemente mit mehr als einem Kommentar."}</p></div>
+            <div class="grow"><h2>Kommentare nach Priorität</h2><p class="hint">Der kräftigste Ton ist die dringendste Stufe.</p></div>
+            <button class="linkish" data-toggle-table="tbl-dpri" aria-expanded="false">Als Tabelle</button>
+          </div>
+          <figure><div class="bars">${pri.bars}</div></figure>
+          <div class="table-wrap data-table" id="tbl-dpri" hidden>${pri.table}</div>
+        </section>
+      </div>
+
+      <div class="grid">
+        <section class="card">
+          <div class="card-head"><div class="grow"><h2>Kommentare pro Seite</h2>
+          <p class="hint">Wo drückt der Schuh — mit direktem Absprung an die richtige Stelle.</p></div></div>
+          <div class="table-wrap">
+            <table>
+              <caption class="sr-only">Kommentare pro Seite</caption>
+              <thead><tr><th>Seite</th><th class="num">Kommentare</th><th class="num">Muss</th><th class="num">Offen</th><th></th></tr></thead>
+              <tbody>${pageRows.map(r => `<tr>
+                <td title="${esc(r.url)}">${esc(pathOf(r.url) || r.url)}</td>
+                <td class="num">${r.n}</td>
+                <td class="num">${r.must ? `<span class="pri-dot pri-must"></span>${r.must}` : "0"}</td>
+                <td class="num">${r.open}</td>
+                <td>${isHttp(r.url) ? `<a class="pagelink" href="${esc(toolHref(r.url))}" title="Diese Seite im Feedback-Tool öffnen">öffnen →</a>` : ""}</td>
+              </tr>`).join("")}</tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-head">
+            <div class="grow"><h2>Kommentare pro Autor:in</h2><p class="hint">Wer hat wie viel beigetragen?</p></div>
             ${authorRows.length && !authors.degenerate ? `<button class="linkish" data-toggle-table="tbl-authors" aria-expanded="false">Als Tabelle</button>` : ""}
           </div>
           ${authorRows.length
             ? `${barsOrFallback(authors, { only:"einzige Autor:in", empty:"Keine Namen erfasst." })}
                ${authors.degenerate ? "" : `<div class="table-wrap data-table" id="tbl-authors" hidden>${authors.table}</div>`}`
-            : (hotspots.length
-                ? `<div class="table-wrap"><table><thead><tr><th>Element</th><th class="num">Kommentare</th></tr></thead>
-                   <tbody>${hotspots.map(([sel, n]) => `<tr><td class="sel">${esc(sel)}</td><td class="num">${n}</td></tr>`).join("")}</tbody></table></div>`
-                : `<p style="color:var(--muted);font-size:13.5px">Kein Element wurde mehrfach kommentiert.</p>`)}
+            : `<p style="color:var(--muted);font-size:13.5px">Keine Namen erfasst — Autor:innen erscheinen, sobald Tester:innen beim Kommentieren ihren Namen angeben.</p>`}
         </section>
       </div>
+
+      ${hotspots.length ? `<section class="card" style="margin-bottom:22px">
+        <div class="card-head"><div class="grow"><h2>Brennpunkte</h2>
+        <p class="hint">Elemente mit mehreren Kommentaren — hier lohnt ein genauer Blick.</p></div></div>
+        <div class="table-wrap">
+          <table>
+            <caption class="sr-only">Mehrfach kommentierte Elemente</caption>
+            <thead><tr><th>Element</th><th class="num">Kommentare</th><th class="num">Offen</th></tr></thead>
+            <tbody>${hotspots.map(h => `<tr>
+              <td>${h.label ? `${esc(trunc(h.label, 60))} <span class="sel" style="display:block">${esc(h.sel)}</span>` : `<span class="sel">${esc(h.sel)}</span>`}</td>
+              <td class="num">${h.n}</td>
+              <td class="num">${h.open}</td>
+            </tr>`).join("")}</tbody>
+          </table>
+        </div>
+      </section>` : ""}
 
       <section class="card" style="margin-bottom:22px">
         ${line ? `<div class="card-head"><div class="grow"><h2>Aktivität der letzten 30 Tage</h2><p class="hint">Kommentare pro Tag in diesem Projekt.</p></div></div>
@@ -633,9 +866,7 @@ function renderDetail(idx){
 
       <section class="card">
         <div class="card-head">
-          <div class="grow"><h2>Alle Kommentare</h2><p class="hint">Neueste zuerst.</p></div>
-          <a class="btn sm" href="./?src=${encodeURIComponent(p.src)}&owner=1">Projekt öffnen</a>
-          <button class="btn sm danger" id="btn-del">Projekt löschen</button>
+          <div class="grow"><h2>Alle Kommentare</h2><p class="hint">Neueste zuerst. Status wird gespeichert und wandert in Export und Prompt.</p></div>
         </div>
         <div class="filters" role="group" aria-label="Nach Kategorie filtern">
           <button class="chip ${detailFilter.category==="all"?"on":""}" data-cat="all">Alle</button>
@@ -647,6 +878,11 @@ function renderDetail(idx){
           ${PRIORITIES.filter(pr => p.comments.some(x => x.priority === pr.id))
             .map(pr => `<button class="chip ${detailFilter.priority===pr.id?"on":""}" data-pri="${pr.id}"><span class="pri-dot ${pr.cls}"></span>${pr.label} ${p.comments.filter(x=>x.priority===pr.id).length}</button>`).join("")}
         </div>
+        <div class="filters" role="group" aria-label="Nach Status filtern">
+          <button class="chip ${detailFilter.status==="all"?"on":""}" data-st-filter="all">Jeder Status</button>
+          ${STATUSES.filter(s => p.comments.some(c => st(c) === s.id))
+            .map(s => `<button class="chip ${detailFilter.status===s.id?"on":""}" data-st-filter="${s.id}">${s.chip} ${s.label} ${p.comments.filter(c => st(c) === s.id).length}</button>`).join("")}
+        </div>
         <div style="margin-top:8px">${cmtHtml}</div>
       </section>
     `;
@@ -654,20 +890,37 @@ function renderDetail(idx){
     app.querySelector("#btn-back").addEventListener("click", renderOverview);
     app.querySelectorAll("[data-cat]").forEach(b => b.addEventListener("click", () => { detailFilter.category = b.dataset.cat; draw(); }));
     app.querySelectorAll("[data-pri]").forEach(b => b.addEventListener("click", () => { detailFilter.priority = b.dataset.pri; draw(); }));
+    app.querySelectorAll("[data-st-filter]").forEach(b => b.addEventListener("click", () => { detailFilter.status = b.dataset.stFilter; draw(); }));
+    app.querySelectorAll(".st-btns").forEach(g => g.addEventListener("click", e => {
+      const b = e.target.closest("button[data-st]");
+      if(!b) return;
+      const c = shown[+g.dataset.i];
+      if(c && setStatus(p, c, b.dataset.st)) draw();
+    }));
+    app.querySelector("#btn-copy-link").addEventListener("click", async e => {
+      const link = new URL(toolHref(p.src, false), location.href).href;
+      flashBtn(e.currentTarget, (await copyText(link)) ? "✓ Link kopiert" : "Kopieren fehlgeschlagen");
+    });
+    app.querySelector("#btn-copy-prompt").addEventListener("click", async e => {
+      flashBtn(e.currentTarget, (await copyText(buildPrompt(p))) ? "✓ Prompt kopiert" : "Kopieren fehlgeschlagen");
+    });
+    const exBtn = app.querySelector("#btn-export-proj");
+    exBtn.disabled = !VFZIP;
+    exBtn.addEventListener("click", () => exportProjects([p], exBtn));
     app.querySelector("#btn-del").addEventListener("click", () => {
       if(!confirm(`Alle ${p.comments.length} Kommentare zu diesem Projekt endgültig löschen?\n\n${p.src}`)) return;
       localStorage.removeItem(p.key);
       PROJECTS = loadProjects();
       renderOverview();
     });
-    window.scrollTo({ top:0 });
   };
   draw();
+  window.scrollTo({ top:0 });
 }
 
 
 /* ============================================================================
-   Export: alle Projekte in einem Archiv.
+   Export: Projekte in einem Archiv — alle (Topbar) oder ein einzelnes (Detail).
    Bewusst ein Analyse-Artefakt, kein Prompt-Markdown (das baut das Tool selbst).
    Die feedback.json liegt oben und verweist per screenshotFile in die Projekt-
    ordner — damit versteht der ZIP-Import des Tools das Archiv unverändert.
@@ -690,7 +943,7 @@ function downloadBlob(blob, filename){
 const csvCell = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
 
 function buildCsv(projects){
-  const head = ["Projekt","Seite","Kategorie","Priorität","Autor","Zeitpunkt","Selektor","Screenshot","Kommentar"];
+  const head = ["Projekt","Seite","Kategorie","Priorität","Status","Autor","Zeitpunkt","Selektor","Screenshot","Kommentar"];
   const rows = [head.map(csvCell).join(",")];
   projects.forEach(p => {
     [...p.comments].sort((a,b) => tsMs(a) - tsMs(b)).forEach(c => {
@@ -699,6 +952,7 @@ function buildCsv(projects){
         c.pageUrl || p.src,
         (CAT_MAP[c.category] || {}).label || "Sonstige",
         (PRI_MAP[c.priority] || {}).label || "ohne",
+        ST_MAP[st(c)].label,
         c.author || "",
         tsMs(c) ? new Date(tsMs(c)).toISOString() : "",
         c.selector || "",
@@ -719,71 +973,82 @@ function projectSlug(src, taken){
   return name;
 }
 
-async function exportAll(){
-  const btn = document.getElementById("btn-export-all");
-  if(!VFZIP || !PROJECTS.length){ return; }
+function buildArchiveFiles(projects){
+  const enc = new TextEncoder();
+  const files = [];
+  const taken = new Set();
+  const allItems = [];
+  let shotCount = 0;
+
+  projects.forEach(p => {
+    const slug = projectSlug(p.src, taken);
+    let shotNo = 0;   // fortlaufend über die BILDER, nicht über alle Kommentare
+    [...p.comments].sort((a,b) => tsMs(a) - tsMs(b)).forEach(c => {
+      const item = { ...c };
+      const shot = safeShot(c.screenshot);
+      delete item.screenshot;              // Bild liegt als Datei bei, nicht doppelt als base64
+      item.project = p.src;
+      if(shot){
+        const parsed = VFZIP.dataUrlToBytes(shot);
+        if(parsed){
+          const label = VFZIP.slugify((c.info && c.info.text) || c.text || c.tag || "element", 32);
+          const name = `${slug}/screenshots/${String(++shotNo).padStart(2, "0")}-${label}.${parsed.ext}`;
+          files.push({ name, data: parsed.bytes });
+          item.screenshotFile = name;      // der ZIP-Import des Tools löst das auf
+          shotCount++;
+        }
+      }
+      allItems.push(item);
+    });
+  });
+
+  const readme = [
+    "# VibeFeedback — Export",
+    "",
+    `Exportiert: ${new Date().toLocaleString("de-DE")}`,
+    `${projects.length} Projekt(e) · ${allItems.length} Kommentar(e) · ${shotCount} Screenshot(s)`,
+    "",
+    "## Inhalt",
+    "",
+    "- **feedback.json** — alle Kommentare samt Status. Diese Datei kannst du im Tool importieren; die Screenshots werden aus den Projektordnern dazugeladen.",
+    "- **kommentare.csv** — eine Zeile je Kommentar, für Tabellenkalkulation und Auswertung.",
+    "- **&lt;projekt&gt;/screenshots/** — die Bilder, je Projekt ein Ordner.",
+    "",
+    "## Projekte",
+    "",
+    ...projects.map(p => `- ${p.src} — ${p.comments.length} Kommentar(e), ${p.open} offen, zuletzt ${fmtDateTime(p.lastTs)}`),
+    ""
+  ].join("\n");
+
+  files.unshift(
+    { name:"feedback.json",  data: enc.encode(JSON.stringify({ exportedAt: new Date().toISOString(), projects: projects.length, count: allItems.length, comments: allItems }, null, 2)) },
+    { name:"kommentare.csv", data: enc.encode(buildCsv(projects)) },
+    { name:"README.md",      data: enc.encode(readme) }
+  );
+  return files;
+}
+
+async function exportProjects(projects, btn){
+  if(!VFZIP || !projects.length) return;
+  const old = btn.textContent;
   btn.disabled = true; btn.textContent = "Packe…";
   try{
-    const enc = new TextEncoder();
-    const files = [];
-    const taken = new Set();
-    const allItems = [];
-    let shotCount = 0;
-
-    PROJECTS.forEach(p => {
-      const slug = projectSlug(p.src, taken);
-      let shotNo = 0;   // fortlaufend über die BILDER, nicht über alle Kommentare
-      [...p.comments].sort((a,b) => tsMs(a) - tsMs(b)).forEach(c => {
-        const item = { ...c };
-        const shot = safeShot(c.screenshot);
-        delete item.screenshot;              // Bild liegt als Datei bei, nicht doppelt als base64
-        item.project = p.src;
-        if(shot){
-          const parsed = VFZIP.dataUrlToBytes(shot);
-          if(parsed){
-            const label = VFZIP.slugify((c.info && c.info.text) || c.text || c.tag || "element", 32);
-            const name = `${slug}/screenshots/${String(++shotNo).padStart(2, "0")}-${label}.${parsed.ext}`;
-            files.push({ name, data: parsed.bytes });
-            item.screenshotFile = name;      // der ZIP-Import des Tools löst das auf
-            shotCount++;
-          }
-        }
-        allItems.push(item);
-      });
-    });
-
-    const readme = [
-      "# VibeFeedback — Export aller Projekte",
-      "",
-      `Exportiert: ${new Date().toLocaleString("de-DE")}`,
-      `${PROJECTS.length} Projekt(e) · ${allItems.length} Kommentar(e) · ${shotCount} Screenshot(s)`,
-      "",
-      "## Inhalt",
-      "",
-      "- **feedback.json** — alle Kommentare. Diese Datei kannst du im Tool importieren; die Screenshots werden aus den Projektordnern dazugeladen.",
-      "- **kommentare.csv** — eine Zeile je Kommentar, für Tabellenkalkulation und Auswertung.",
-      "- **&lt;projekt&gt;/screenshots/** — die Bilder, je Projekt ein Ordner.",
-      "",
-      "## Projekte",
-      "",
-      ...PROJECTS.map(p => `- ${p.src} — ${p.comments.length} Kommentar(e), zuletzt ${fmtDateTime(p.lastTs)}`),
-      ""
-    ].join("\n");
-
-    files.unshift(
-      { name:"feedback.json",  data: enc.encode(JSON.stringify({ exportedAt: new Date().toISOString(), projects: PROJECTS.length, count: allItems.length, comments: allItems }, null, 2)) },
-      { name:"kommentare.csv", data: enc.encode(buildCsv(PROJECTS)) },
-      { name:"README.md",      data: enc.encode(readme) }
-    );
-
-    const blob = VFZIP.buildZip(files);
-    downloadBlob(blob, `vibefeedback-alle-${new Date().toISOString().slice(0,10)}.zip`);
+    const files = buildArchiveFiles(projects);
+    const date = new Date().toISOString().slice(0, 10);
+    const name = projects.length === 1
+      ? `vibefeedback-${VFZIP.slugify(hostOf(projects[0].src) + "-" + pathOf(projects[0].src), 48) || "projekt"}-${date}.zip`
+      : `vibefeedback-alle-${date}.zip`;
+    downloadBlob(VFZIP.buildZip(files), name);
   }catch(e){
-    console.warn("[vf] export-all", e);
+    console.warn("[vf] export", e);
     alert("Export fehlgeschlagen: " + e.message);
   }finally{
-    btn.disabled = false; btn.textContent = "⬇ Alles exportieren";
+    btn.disabled = false; btn.textContent = old;
   }
+}
+
+async function exportAll(){
+  await exportProjects(PROJECTS, document.getElementById("btn-export-all"));
 }
 
 function boot(){
@@ -815,7 +1080,7 @@ addEventListener("storage", e => {
 boot();
 
 if(new URLSearchParams(location.search).get("__vftest") === "1"){
-  window.__vftest = { loadProjects, dailySeries, countBy, barChart, lineChart, renderOverview, renderDetail, exportAll, buildCsv, projectSlug, get PROJECTS(){ return PROJECTS; } };
+  window.__vftest = { loadProjects, dailySeries, countBy, barChart, lineChart, renderOverview, renderDetail, exportAll, exportProjects, buildCsv, buildPrompt, projectSlug, setStatus, STATUSES, get PROJECTS(){ return PROJECTS; } };
 }
 </script>
 </body>

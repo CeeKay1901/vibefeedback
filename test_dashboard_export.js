@@ -38,7 +38,7 @@ const NASTY = 'Er sagte "hallo", dann\nZeile zwei; Ende';
 const seed = {
   "vibefeedback:v2:https://alpha.example/shop": [
     { id:"a1", selector:"h1", text:NASTY, author:"Marie", category:"copy", priority:"must", ts: day(1), screenshot: JPEG, pageUrl:"https://alpha.example/shop" },
-    { id:"a2", selector:".cta", text:"ok", author:"Tom", category:"bug", priority:"could", ts: day(2), pageUrl:"https://alpha.example/shop/kasse" }
+    { id:"a2", selector:".cta", text:"ok", author:"Tom", category:"bug", priority:"could", ts: day(2), pageUrl:"https://alpha.example/shop/kasse", status:"done" }
   ],
   "vibefeedback:v2:https://beta.example/app": [
     { id:"b1", selector:"nav", text:"Navigation", author:"Ada", category:"feature", priority:"nice", ts: day(3), screenshot: JPEG }
@@ -113,6 +113,7 @@ const seed = {
   check(withFile.length === 2, `2 Verweise auf Bilddateien (${withFile.length})`);
   check(withFile.every(c => fs.existsSync(path.join(ex, c.screenshotFile))), "alle Verweise zeigen auf existierende Dateien");
   check(js.comments.every(c => c.project), "jeder Kommentar kennt sein Projekt");
+  check(js.comments.find(c => c.id === "a2")?.status === "done", "Bearbeitungsstatus wandert mit in die JSON");
 
   // ── CSV ────────────────────────────────────────────────────────────────
   console.log("\n[4] kommentare.csv");
@@ -123,12 +124,13 @@ const seed = {
 import csv, io, sys, json
 raw = open(sys.argv[1], encoding="utf-8-sig").read()
 rows = list(csv.reader(io.StringIO(raw)))
-print(json.dumps({"rows": len(rows), "head": rows[0], "nasty": [r[8] for r in rows[1:]]}))
+print(json.dumps({"rows": len(rows), "head": rows[0], "status": [r[4] for r in rows[1:]], "nasty": [r[9] for r in rows[1:]]}))
 `, path.join(ex, "kommentare.csv")], { encoding: "utf8" });
   const p = JSON.parse(parsed);
   check(p.rows === 4, `Kopfzeile + 3 Datenzeilen (${p.rows})`);
-  check(p.head[0] === "Projekt" && p.head[8] === "Kommentar", `Spalten korrekt (${p.head.join("|")})`);
+  check(p.head[0] === "Projekt" && p.head[4] === "Status" && p.head[9] === "Kommentar", `Spalten korrekt (${p.head.join("|")})`);
   check(p.nasty.includes(NASTY), "Text mit Komma, Anführungszeichen und Zeilenumbruch bleibt intakt");
+  check(p.status.filter(s => s === "Offen").length === 2 && p.status.includes("Erledigt"), `Status-Spalte gefüllt (${p.status.join("|")})`);
 
   // ── Der Kreis schließt sich: Tool importiert das Dashboard-Archiv ──────
   console.log("\n[5] Re-Import ins Tool");
@@ -149,11 +151,32 @@ print(json.dumps({"rows": len(rows), "head": rows[0], "nasty": [r[8] for r in ro
     await new Promise(r => setTimeout(r, 2000));
     return {
       n: STATE.comments.length,
-      shots: STATE.comments.filter(c => (c.screenshot || "").startsWith("data:image/")).length
+      shots: STATE.comments.filter(c => (c.screenshot || "").startsWith("data:image/")).length,
+      done: STATE.comments.filter(c => c.status === "done").length
     };
   }, fs.readFileSync(zip).toString("base64"));
   check(imported.n === 3, `Tool importiert 3 Kommentare (${imported.n})`);
   check(imported.shots === 2, `Screenshots aus den Projektordnern aufgelöst (${imported.shots})`);
+  check(imported.done === 1, `Bearbeitungsstatus überlebt den Re-Import (${imported.done} erledigt)`);
+
+  // ── Einzelprojekt-Export aus der Detailansicht ─────────────────────────
+  console.log("\n[5b] Einzelprojekt-Export");
+  await page.locator('button[data-open]').first().click();   // alpha ist zuletzt aktiv → erste Karte
+  await page.waitForTimeout(400);
+  const [dlP] = await Promise.all([
+    page.waitForEvent("download", { timeout: 20000 }),
+    page.locator("#btn-export-proj").click()
+  ]);
+  const zipP = path.join(OUT, "einzel.zip");
+  await dlP.saveAs(zipP);
+  check(/^vibefeedback-alpha-example.*\.zip$/.test(dlP.suggestedFilename()), `Dateiname trägt das Projekt (${dlP.suggestedFilename()})`);
+  const exP = path.join(OUT, "einzel_extract");
+  fs.rmSync(exP, { recursive: true, force: true });
+  execFileSync("unzip", ["-q", "-o", zipP, "-d", exP]);
+  const jsP = JSON.parse(fs.readFileSync(path.join(exP, "feedback.json"), "utf8"));
+  check(jsP.count === 2 && jsP.comments.every(c => c.project === "https://alpha.example/shop"), `nur das eine Projekt enthalten (${jsP.count} Kommentare)`);
+  const dirsP = fs.readdirSync(exP, { withFileTypes: true }).filter(d => d.isDirectory()).map(d => d.name);
+  check(dirsP.length === 1, `genau ein Projektordner (${dirsP.join(", ")})`);
 
   // ── Leerer Zustand ─────────────────────────────────────────────────────
   console.log("\n[6] Ohne Daten");

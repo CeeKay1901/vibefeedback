@@ -137,12 +137,14 @@ const seed = {
   check(await page.locator(".cmt").count() === 4, `4 Kommentare gelistet (${await page.locator(".cmt").count()})`);
   check(await page.locator(".cmt .thumb").count() === 3, `3 Screenshot-Vorschauen (${await page.locator(".cmt .thumb").count()})`);
   check(await page.locator(".cmt .thumb-ph").count() === 1, "1 Platzhalter für fehlenden Screenshot");
-  // Seiten-Chart: alpha hat 2 Seiten mit je 2 Kommentaren → gleich lange Balken
-  // wären informationslos, also erscheint stattdessen die Tabelle.
-  check(await page.locator("#tbl-pages").count() === 0, "Gleich lange Balken → kein Balkenchart");
+  // Seiten-Cockpit: Kennzahlen je Seite plus Absprung ins Tool
   const pagesCard = page.locator(".card").filter({ hasText: "Kommentare pro Seite" });
-  check(await pagesCard.locator("table").count() === 1, "Stattdessen Tabelle gezeigt");
-  check(/Alle Werte gleich/.test(await pagesCard.textContent()), "Begründung für die Tabellenform sichtbar");
+  check(await pagesCard.locator("tbody tr").count() === 2, `2 Seiten gelistet (${await pagesCard.locator("tbody tr").count()})`);
+  const preiseRow = pagesCard.locator("tbody tr").filter({ hasText: "/preise" });
+  check((await preiseRow.locator("td").nth(1).textContent()).trim() === "2", "Kommentarzahl pro Seite stimmt");
+  check((await preiseRow.locator("td").nth(2).textContent()).includes("1"), "Muss-Spalte je Seite");
+  const preiseHref = await preiseRow.locator("a.pagelink").getAttribute("href");
+  check((preiseHref || "").includes(encodeURIComponent("https://alpha.example/preise")) && preiseHref.includes("owner=1"), `Seite verlinkt ins Tool (${(preiseHref || "").slice(0, 60)})`);
 
   // Filter nach Kategorie
   await page.locator('[data-cat="bug"]').click();
@@ -182,8 +184,74 @@ const seed = {
   const authorCard = page.locator(".card").filter({ hasText: "Kommentare pro Autor" });
   check(await authorCard.count() === 1, "Autoren-Karte vorhanden");
 
+  // ── Cockpit: Aktionen, Arbeitsliste, Status-Workflow ───────────────────
+  console.log("\n[3c] Aktionen & Status");
+  const openHref = await page.locator("#btn-open-tool").getAttribute("href");
+  check((openHref || "").includes(encodeURIComponent("https://alpha.example/")) && openHref.includes("owner=1"), "Primär-CTA öffnet das Projekt im Feedback-Tool");
+  check(await page.locator("#btn-export-proj").isEnabled(), "Einzelprojekt-Export verfügbar");
+
+  const nextCard = page.locator(".card").filter({ hasText: "Nächste Schritte" });
+  check(await nextCard.locator(".next li").count() === 4, `4 offene Punkte in der Arbeitsliste (${await nextCard.locator(".next li").count()})`);
+  check(/Muss/.test(await nextCard.locator(".next li").first().textContent()), "Muss-Punkte stehen oben");
+
+  // Kopier-Aktionen: Feedback-Link (für Tester) und Prompt (fürs Coding-Tool)
+  await ctx.grantPermissions(["clipboard-read", "clipboard-write"], { origin: `http://127.0.0.1:${PORT}` });
+  await page.locator("#btn-copy-link").click();
+  await page.waitForTimeout(300);
+  const copiedLink = await page.evaluate(() => navigator.clipboard.readText());
+  check(copiedLink === `http://127.0.0.1:${PORT}/?src=${encodeURIComponent("https://alpha.example/")}`, `Feedback-Link kopiert (${copiedLink})`);
+  await page.locator("#btn-copy-prompt").click();
+  await page.waitForTimeout(300);
+  const copiedPrompt = await page.evaluate(() => navigator.clipboard.readText());
+  check(copiedPrompt.startsWith("Du bekommst Nutzer-Feedback"), "Prompt kopiert");
+
+  // Filter zurücksetzen (aus [3] ist noch "Muss" aktiv), dann neuesten Kommentar erledigen
+  await page.locator('[data-pri="all"]').click();
+  await page.waitForTimeout(250);
+  await page.locator(".cmt").first().locator('.st-btns button[data-st="done"]').click();
+  await page.waitForTimeout(300);
+  const stored = await page.evaluate(() => JSON.parse(localStorage.getItem("vibefeedback:v2:https://alpha.example/")));
+  check(stored.find(c => c.id === "a1")?.status === "done", "Status landet im localStorage");
+  check(stored.filter(c => !("status" in c)).length === 3, "übrige Kommentare bleiben ohne Status-Feld");
+
+  const tileVal = async l => page.evaluate(l => {
+    const t = [...document.querySelectorAll(".tile")].find(t => (t.querySelector(".label")?.textContent.trim().toLowerCase() || "").startsWith(l));
+    return t?.querySelector(".value")?.textContent.trim();
+  }, l);
+  check(await tileVal("erledigt") === "25 %", `Erledigt-Kachel 25 % (${await tileVal("erledigt")})`);
+  check(await tileVal("offen") === "3", `Offen-Kachel 3 (${await tileVal("offen")})`);
+  check(await page.locator('.cmt[data-done="true"]').count() === 1, "Erledigter Kommentar gedimmt markiert");
+  await page.locator('[data-st-filter="done"]').click();
+  await page.waitForTimeout(250);
+  check(await page.locator(".cmt").count() === 1, `Status-Filter Erledigt → 1 Kommentar (${await page.locator(".cmt").count()})`);
+  await page.locator('[data-st-filter="all"]').click();
+  await page.waitForTimeout(250);
+  check(await page.locator(".card").filter({ hasText: "Nächste Schritte" }).locator(".next li").count() === 3, "Arbeitsliste ohne den erledigten Punkt");
+
+  // Prompt enthält nur Offenes, gruppiert nach Priorität
+  const prompt = await page.evaluate(() => window.__vftest.buildPrompt(window.__vftest.PROJECTS[0]));
+  check(prompt.includes("## Muss"), "Prompt gruppiert nach Priorität");
+  check(prompt.includes("Nochmal der Button") && prompt.includes(".cta"), "Prompt nennt Text und Selektor");
+  check(!prompt.includes("Titel unklar"), "Erledigtes bleibt aus dem Prompt draußen");
+
+  // Status überlebt den Reload
+  await page.reload({ waitUntil: "networkidle" });
+  await page.waitForTimeout(400);
+  check(await page.evaluate(() => window.__vftest.PROJECTS.find(p => p.src.includes("alpha")).done) === 1, "Status überlebt den Reload");
+
+  // ── Projekt-Karten in der Übersicht ────────────────────────────────────
+  console.log("\n[3d] Projekt-Karten");
+  check(await page.locator(".proj-card").count() === 2, `2 Projekt-Karten (${await page.locator(".proj-card").count()})`);
+  const firstCard = page.locator(".proj-card").first();
+  check(await firstCard.locator(".progress span").evaluate(el => el.style.width) === "25%", "Fortschrittsbalken zeigt 25 %");
+  const cardHref = await firstCard.locator("a.btn").getAttribute("href");
+  check((cardHref || "").includes(encodeURIComponent("https://alpha.example/")) && cardHref.includes("owner=1"), "Karte verlinkt direkt ins Tool");
+  check(/Muss offen/.test(await firstCard.textContent()), "Karte zeigt offene Muss-Fixes");
+
   // ── Löschen ────────────────────────────────────────────────────────────
   console.log("\n[4] Projekt löschen");
+  await page.locator('button[data-open]').first().click();
+  await page.waitForTimeout(300);
   page.once("dialog", d => d.accept());
   await page.locator("#btn-del").click();
   await page.waitForTimeout(400);

@@ -24,9 +24,13 @@ Das Iframe wird über `fetch(src)` + `srcdoc` befüllt (damit wir Klicks auf DOM
 
 ## Dashboard
 
-`dashboard.html` (verlinkt von der Startseite) zeigt alle Projekte, die du in diesem Browser kommentiert hast: Kennzahlen, Verteilung nach Kategorie und Priorität, 30-Tage-Aktivität, und je Projekt eine Detailansicht mit allen Kommentaren, Screenshots und Filtern. Die Daten stammen ausschließlich aus dem `localStorage` — es gibt kein Backend.
+`dashboard.html` (verlinkt von der Startseite) ist das Projekt-Cockpit für alle Projekte, die du in diesem Browser kommentiert hast. Die Daten stammen ausschließlich aus dem `localStorage` — es gibt kein Backend.
 
-**„Alles exportieren"** packt sämtliche Projekte in ein ZIP: `feedback.json` (wieder importierbar, samt Bildern), `kommentare.csv` für die Tabellenkalkulation und die Screenshots als Dateien in Projektordnern.
+- **Übersicht**: Kennzahlen über alles, Kategorie-/Prioritäts-Charts, 30-Tage-Aktivität und je Projekt eine Karte mit Fortschrittsbalken, offenen Muss-Fixes und direktem „▶ Im Tool öffnen".
+- **Projekt-Detail**: Aktionsleiste (im Feedback-Tool öffnen, Feedback-Link für Tester:innen kopieren, offene Punkte als **Prompt** fürs Coding-Tool kopieren, Projekt als ZIP exportieren), „Nächste Schritte"-Arbeitsliste, Kategorie/Priorität/Seiten/Autor:innen/Brennpunkte-Auswertung und alle Kommentare mit Filtern.
+- **Status-Workflow**: Jeder Kommentar lässt sich auf Offen ○ / In Arbeit ◐ / Erledigt ✓ setzen — gespeichert im Browser, sichtbar in Kacheln und Fortschritt, enthalten in Export und Prompt. Grundlage für die kollaborative Nutzung: Wer beim Bauen unterstützt, arbeitet die Liste hier ab.
+
+**„Alles exportieren"** packt sämtliche Projekte in ein ZIP: `feedback.json` (wieder importierbar, samt Bildern und Status), `kommentare.csv` für die Tabellenkalkulation und die Screenshots als Dateien in Projektordnern. In der Detailansicht gibt es dasselbe Archiv je Projekt einzeln.
 
 ## Features auf einen Blick
 
@@ -77,7 +81,7 @@ python3 -m http.server 8080
 
 ```bash
 npm install
-npm test          # Playwright-Regressionssuite (208 Checks)
+npm test          # Playwright-Regressionssuite (243 Checks)
 npm run build     # layer.min.js + eingebettetes Bookmarklet aus layer.js
 npm run audit     # superaudit (Screenshots, a11y, Mobile)
 ```

@@ -3265,6 +3265,7 @@ function buildMarkdown(opts){
     id: c.id,
     priority: c.priority,
     category: c.category,
+    status: c.status || "open",
     selector: c.selector,
     tag: c.tag || null,
     page: c.pageUrl || null,
@@ -3323,6 +3324,8 @@ function importItems(items, existingIds, existingFp){
       ts:         item.ts || Date.now(),
       category:   CAT_MAP[item.category] ? item.category : "feature",
       priority:   PRI_MAP[item.priority] ? item.priority : "could",
+      // Bearbeitungsstatus aus dem Dashboard; fehlend/unbekannt = offen (Feld weglassen)
+      status:     ["doing","done"].includes(item.status) ? item.status : undefined,
       screenshot: safeShot(item.screenshot),
       structured: item.structured || null,
       snippet:    item.snippet || null,
