@@ -46,6 +46,12 @@ button{font:inherit;cursor:pointer}
 /* ===== Topbar ===== */
 .topbar{border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:0;z-index:20}
 .topbar .wrap{display:flex;align-items:center;gap:14px;height:60px}
+/* Schmale Screens: Buttons in die zweite Zeile statt aus dem Viewport laufen */
+@media(max-width:640px){
+  .topbar .wrap{flex-wrap:wrap;height:auto;padding-top:10px;padding-bottom:10px;row-gap:8px;column-gap:8px}
+  .topbar .brand{flex-basis:100%}
+  .topbar .grow{display:none}
+}
 .brand{display:flex;align-items:center;gap:9px;font-weight:700;text-decoration:none}
 .brand img{height:22px;display:block}
 .brand .sep{color:var(--muted);font-weight:400}
@@ -72,6 +78,9 @@ h1{font-size:26px;font-weight:800;letter-spacing:-.3px;margin:28px 0 4px}
 /* ===== Karten & Charts ===== */
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:22px}
 @media(max-width:860px){.grid{grid-template-columns:1fr}}
+/* Grid-Items dürfen unter ihre Content-Breite schrumpfen — sonst drückt eine
+   breite Tabelle die Karte aus dem Viewport, statt intern zu scrollen */
+.grid>*{min-width:0}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px 20px 16px}
 .card h2{font-size:15px;font-weight:700;margin-bottom:2px}
 .card .hint{font-size:12.5px;color:var(--muted);margin-bottom:16px}
@@ -181,8 +190,21 @@ a.chip:hover{border-color:var(--fg);color:var(--fg)}
 #lightbox figure{max-width:min(1100px,94vw);text-align:center}
 #lightbox img{max-width:100%;max-height:82vh;border-radius:10px;box-shadow:0 24px 80px rgba(0,0,0,.6);background:#fff}
 #lightbox figcaption{color:#f3f2ec;font-size:13.5px;margin-top:12px;max-width:70ch;margin-left:auto;margin-right:auto}
+#lightbox-close{position:absolute;top:16px;right:16px;width:44px;height:44px;border-radius:99px;border:1px solid rgba(255,255,255,.35);background:rgba(0,0,0,.45);color:#fff;font-size:17px;cursor:pointer}
+#lightbox-close:hover,#lightbox-close:focus-visible{background:rgba(0,0,0,.75);outline:2px solid #fff;outline-offset:2px}
+.cmt .thumb:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
 
 .next .next-done{margin-left:auto}
+
+/* Touch-Geräte & schmale Screens: Bedienelemente auf greifbare Größe bringen */
+@media(pointer:coarse),(max-width:640px){
+  .st-btns button{padding:8px 12px;font-size:12px}
+  .chip{padding:7px 12px;font-size:12.5px}
+  .pagelink{display:inline-block;padding:8px 4px}
+  .linkish{padding:8px 4px}
+  .cmt{grid-template-columns:72px 1fr}
+  .cmt .thumb,.cmt .thumb-ph{width:72px;height:54px}
+}
 
 .empty{text-align:center;padding:56px 20px;color:var(--muted)}
 .empty h2{font-size:18px;color:var(--fg);margin-bottom:6px}
@@ -224,7 +246,8 @@ footer{color:var(--muted);font-size:12.5px;padding:34px 0;text-align:center}
 
 <div class="tooltip" id="tip" role="status" aria-live="polite"></div>
 
-<div id="lightbox" hidden role="dialog" aria-modal="true" aria-label="Screenshot in Großansicht — klicken oder Esc zum Schließen">
+<div id="lightbox" hidden role="dialog" aria-modal="true" aria-label="Screenshot in Großansicht">
+  <button id="lightbox-close" aria-label="Großansicht schließen (Esc)">✕</button>
   <figure><img alt="Screenshot des kommentierten Elements"><figcaption></figcaption></figure>
 </div>
 
@@ -578,21 +601,36 @@ function buildPrompt(p){
 const app = document.getElementById("app");
 let PROJECTS = [];
 
-/* Screenshot-Lightbox: die 96px-Thumbnails sind sonst eine Sackgasse */
+/* Screenshot-Lightbox: die 96px-Thumbnails sind sonst eine Sackgasse.
+   Tastatur: Thumbnail ist fokussierbar (role=button), beim Öffnen wandert der
+   Fokus auf den Schließen-Button und beim Schließen zurück zum Thumbnail. */
 const lightbox = document.getElementById("lightbox");
-function openLightbox(src, caption){
+let lightboxOpener = null;
+function openLightbox(src, caption, opener){
+  lightboxOpener = opener || document.activeElement;
   lightbox.querySelector("img").src = src;
   lightbox.querySelector("figcaption").textContent = caption;
   lightbox.hidden = false;
   document.body.style.overflow = "hidden";
+  lightbox.querySelector("#lightbox-close").focus();
 }
 function closeLightbox(){
   lightbox.hidden = true;
   lightbox.querySelector("img").src = "";
   document.body.style.overflow = "";
+  if(lightboxOpener && document.contains(lightboxOpener)) lightboxOpener.focus();
+  lightboxOpener = null;
 }
 lightbox.addEventListener("click", closeLightbox);
 addEventListener("keydown", e => { if(e.key === "Escape" && !lightbox.hidden) closeLightbox(); });
+
+/* "/" springt in die Suche (wie bei GitHub & Co.) — außer man tippt gerade */
+addEventListener("keydown", e => {
+  if(e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey) return;
+  if(/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || "")) return;
+  const s = app.querySelector("#cmt-search");
+  if(s){ e.preventDefault(); s.focus(); }
+});
 
 /* Volltextsuche filtert die gerenderte Liste direkt (kein Redraw — der Fokus
    im Eingabefeld bliebe sonst nicht erhalten) */
@@ -607,6 +645,8 @@ function applySearch(){
   });
   const note = app.querySelector("#search-note");
   if(note) note.textContent = q ? `${vis} von ${items.length} passen` : "";
+  const empty = app.querySelector("#search-empty");
+  if(empty) empty.hidden = !(q && items.length && vis === 0);
 }
 
 /* Hash-Routing: #p=<url> hält die Projektansicht über Reloads, macht sie
@@ -800,7 +840,7 @@ function renderDetail(idx){
       const priC = PRI_MAP[c.priority] || { label:"ohne Priorität", cls:"" };
       const shot = safeShot(c.screenshot);
       const thumb = shot
-        ? `<img class="thumb" src="${esc(shot)}" alt="Screenshot des kommentierten Elements" loading="lazy">`
+        ? `<img class="thumb" src="${esc(shot)}" alt="Screenshot des kommentierten Elements — öffnet die Großansicht" loading="lazy" tabindex="0" role="button">`
         : `<div class="thumb-ph">kein Screenshot</div>`;
       const pageChip = (c.pageUrl && c.pageUrl !== p.src)
         ? (isHttp(c.pageUrl)
@@ -973,6 +1013,10 @@ function renderDetail(idx){
             .map(s => `<button class="chip ${detailFilter.status===s.id?"on":""}" data-st-filter="${s.id}">${s.chip} ${s.label} ${p.comments.filter(c => st(c) === s.id).length}</button>`).join("")}
         </div>
         <div style="margin-top:8px">${cmtHtml}</div>
+        <p id="search-empty" hidden style="text-align:center;color:var(--muted);padding:24px 12px">
+          Keine Kommentare passen zu deiner Suche.
+          <button class="linkish" id="search-clear">Suche leeren</button>
+        </p>
       </section>
     `;
     bindChartHovers(app);
@@ -990,9 +1034,17 @@ function renderDetail(idx){
       const c = next[+b.dataset.nextDone];
       if(c && setStatus(p, c, "done")) draw();
     }));
-    app.querySelectorAll(".cmt .thumb").forEach(img => img.addEventListener("click", () => {
-      openLightbox(img.src, img.closest(".cmt")?.querySelector(".txt")?.textContent || "");
-    }));
+    app.querySelectorAll(".cmt .thumb").forEach(img => {
+      const open = () => openLightbox(img.src, img.closest(".cmt")?.querySelector(".txt")?.textContent || "", img);
+      img.addEventListener("click", open);
+      img.addEventListener("keydown", e => { if(e.key === "Enter" || e.key === " "){ e.preventDefault(); open(); } });
+    });
+    app.querySelector("#search-clear").addEventListener("click", () => {
+      detailFilter.q = "";
+      app.querySelector("#cmt-search").value = "";
+      applySearch();
+      app.querySelector("#cmt-search").focus();
+    });
     const sortSel = app.querySelector("#cmt-sort");
     sortSel.value = detailFilter.sort;
     sortSel.addEventListener("change", () => { detailFilter.sort = sortSel.value; draw(); });

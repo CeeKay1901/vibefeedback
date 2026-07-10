@@ -271,6 +271,7 @@ body:has(.mode-toggle button[data-mode=nav].active) .canvas iframe{outline:2px s
 .item .st[data-status=done]{color:var(--success);border-color:var(--success)}
 .item[data-done="true"]{opacity:.62}
 .item[data-done="true"]:hover,.item[data-done="true"].active{opacity:1}
+@media(pointer:coarse){.item .st{padding:7px 12px}}
 .item .cat{padding:1px 8px;border-radius:99px;font-size:10.5px;font-weight:600}
 .item .cat[data-cat=bug]{background:rgba(227,95,95,.15);color:var(--cat-bug)}
 .item .cat[data-cat=feature]{background:var(--accent);color:var(--fg)}

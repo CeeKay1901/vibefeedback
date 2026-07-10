@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.13.1 — 2026-07-10 — Usability-Audit umgesetzt
+
+Fokussierter Usability-Audit (Mobile, Tastatur, Touch, Leere Zustände) mit fünf Findings — alle behoben:
+
+- **Mobile-Topbar lief aus dem Viewport** (573 px Seitenbreite bei 390 px): die ganze Seite scrollte horizontal, zwei von drei Buttons waren abgeschnitten. Jetzt bricht die Topbar auf schmalen Screens in eine zweite Zeile um.
+- **Seiten-Tabelle drückte die Karte aus dem Viewport** statt intern zu scrollen (`min-width:auto`-Falle bei Grid-Items) — `.grid>*{min-width:0}`.
+- **Lightbox war nicht tastaturbedienbar**: Thumbnails sind jetzt fokussierbar (`role=button`, Enter/Leertaste öffnet), es gibt einen sichtbaren ✕-Button, der Fokus wandert beim Öffnen auf den Schließen-Button und beim Schließen zurück zum Thumbnail.
+- **Touch-Targets zu klein** (Status-Schalter 24 px, Seiten-Links 16 px hoch): auf Touch-Geräten und schmalen Screens jetzt ≥ 35 px — auch für den Status-Button in der Tool-Sidebar.
+- **Suche ohne Treffer** zeigte nur eine leere Liste: jetzt klare Meldung mit „Suche leeren"-Aktion. Dazu: **„/" springt in die Suche** (wie bei GitHub), ohne beim normalen Tippen zu stören.
+
+Tests: 291 Checks; neu `test_dashboard_usability.js` (kein horizontales Scrollen auf 390 px, Touch-Größen, komplette Tastatur-Lightbox inkl. Fokus-Rückgabe, Null-Treffer-Zustand, Shortcut).
+
 ## 0.13.0 — 2026-07-10 — Dashboard-Ergonomie: Deep-Links, Suche, Lightbox
 
 ### feat
