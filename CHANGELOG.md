@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.3.1 — 2026-07-11 — Mobile-Fix: Kommentar-Bar fraß den halben Bildschirm
+
+Auf dem Handy (echte Emulation, iPhone 13) belegte die Kommentar-Bar ~63 % des Viewports, Chips waren riesig und die Aktionsleiste überlappte sich. Behoben:
+
+### fix
+- **Kategorie-Sublabels auf Mobil ausgeblendet** („Etwas funktioniert nicht" etc.) — die Chips schrumpfen von ~174 px auf ~67 px Breite (2 Reihen statt 3+). (Der `<span>` trug ein Inline-`display:block`, daher via `!important` überschrieben; `aria-label` behält die volle Beschreibung für Screenreader.)
+- **Aktionsleiste bricht sauber** statt sich zu überlappen: „Speichern" liegt jetzt als volle Breite unter „Abbrechen". Ursache war das `min-width:44px` aus 1.2.0, das die Buttons am Schrumpfen hinderte → auf Mobil `min-width:0; flex:1 1 130px`.
+- **Textarea 16 px auf Mobil** → verhindert den iOS-Zoom-Sprung beim Fokussieren.
+- **Topbar entdichtet**: das nicht-interaktive Rollen-Badge („Owner-Dashboard"/„Feedback-Modus", der längste Text) ist auf Mobil ausgeblendet.
+- Kleinere cbar-Paddings/Gaps auf Mobil.
+
+Alle Änderungen ausschließlich in `@media(max-width:640px)` — Desktop unberührt. Verifiziert mit echter Mobile-Emulation (`test_mobile_shots.js`) und der vollen Suite (13/13 grün, inkl. 390-px-Usability-Test).
+
 ## 1.3.0 — 2026-07-11 — Kernfeature-Optimierung: schneller kommentieren, nichts verlieren, nicht doppeln
 
 Produkt-Review der Kernfeatures (Element-Kommentierung → Export). Drei fokussierte Verbesserungen am Kern-Job „präzises Feedback sammeln":
