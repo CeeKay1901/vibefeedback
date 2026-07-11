@@ -948,17 +948,24 @@ const toast = (msg,ms=2200) => {
 
 // Toast mit Rückgängig-Aktion für destruktive Schritte (Einzel-Löschung): sicherer
 // als sofortiges, endgültiges Entfernen und weniger störend als ein confirm-Dialog.
-function undoToast(msg, onUndo, ms=6000){
+function actionToast(msg, label, fn, ms=6000){
   $$(".toast").forEach(t=>t.remove());
   const t=document.createElement("div");
   t.className="toast"; t.setAttribute("role","status"); t.setAttribute("aria-live","polite");
   const span=document.createElement("span"); span.textContent=msg+"  ";
   const btn=document.createElement("button");
-  btn.type="button"; btn.className="toast-undo"; btn.textContent="Rückgängig";
-  btn.addEventListener("click", ()=>{ t.remove(); onUndo(); });
+  btn.type="button"; btn.className="toast-undo"; btn.textContent=label;
+  btn.addEventListener("click", ()=>{ t.remove(); fn(); });
   t.append(span, btn); document.body.appendChild(t);
   setTimeout(()=>t.remove(), ms);
 }
+const undoToast = (msg, onUndo, ms=6000) => actionToast(msg, "Rückgängig", onUndo, ms);
+
+// Ungespeicherten Kommentar-Entwurf nicht stillschweigend verlieren: warnt beim
+// Schließen/Neuladen/Weg-Navigieren, wenn die offene cbar getippten Inhalt hat.
+window.addEventListener("beforeunload", e=>{
+  if(window.__vf_active_cbar?.isDirty?.()){ e.preventDefault(); e.returnValue = ""; }
+});
 
 function cssPath(el){
   if(!el || el.nodeType!==1) return "";
@@ -1166,6 +1173,12 @@ function saveComments(src, arr){
 const AUTHOR_KEY = "vibefeedback:v2:author";
 const getAuthor = ()=> { try{ return localStorage.getItem(AUTHOR_KEY)||""; }catch(e){ return ""; } };
 const setAuthor = v => { try{ localStorage.setItem(AUTHOR_KEY, v||""); }catch(e){} };
+
+// Letzte Kategorie/Priorität pro Projekt merken → Serien gleichartiger Kommentare
+// (z. B. mehrere Bugs) ohne jedes Mal neu zu klicken.
+const LASTPICK_KEY = "vibefeedback:v2:lastpick";
+const getLastPick = src => { try{ return JSON.parse(localStorage.getItem(LASTPICK_KEY+":"+src)||"{}"); }catch(e){ return {}; } };
+const setLastPick = (src, cat, pri) => { try{ localStorage.setItem(LASTPICK_KEY+":"+src, JSON.stringify({cat, pri})); }catch(e){} };
 
 function toggleReaction(commentId, type, replyId){
   const devId = getDeviceId();
@@ -1653,7 +1666,28 @@ function hookFrame(doc){
     if(STATE.mode === "comment"){
       e.preventDefault(); e.stopPropagation();
       info.style.display = "none";
-      openCommentModal(e.target);
+      // Klick auf einen Badge zielt aufs kommentierte Element, nicht auf den Badge.
+      const badge = e.target.closest && e.target.closest(".__vf_badge");
+      const targetEl = badge ? badge.parentElement : e.target;
+      // Hat das Element schon Kommentare? Dann diese zeigen statt blind einen neuen
+      // zu öffnen (Dedup + Kollaboration). Nur wenn keine cbar offen ist — sonst gilt
+      // das übliche Re-Target-Verhalten.
+      if(targetEl && !window.__vf_active_cbar){
+        // Nur Kommentare DIESER Seite zählen — sonst matcht resolveElement per
+        // Fallback ein gleichnamiges Element einer anderen Subpage (Fehl-Blockade).
+        const here = STATE.comments.filter(c => {
+          if(commentPage(c) !== STATE.currentUrl) return false;
+          try{ return resolveElement(c, doc) === targetEl; }catch(_){ return false; }
+        });
+        if(here.length){
+          const it = document.querySelector(`.item[data-id="${here[0].id}"]`);
+          if(it){ $$(".item").forEach(x=>x.classList.remove("active")); it.classList.add("active"); it.scrollIntoView({block:"center"}); }
+          focusComment(here[0]);
+          actionToast(`Dieses Element hat schon ${here.length} Kommentar${here.length>1?"e":""}.`, "Neuen hinzufügen", ()=> openCommentModal(targetEl));
+          return;
+        }
+      }
+      openCommentModal(targetEl);
       return;
     }
     // Nav-Modus: Link-Klicks abfangen und durch unseren Loader routen,
@@ -2470,8 +2504,11 @@ function openCommentModal(el, existing){
     computeFromEl();
   }
 
-  let currentCat = existing?.category || "feature";
-  let currentPri = existing?.priority || "could";
+  // Neue Kommentare starten mit der zuletzt genutzten Wahl (nicht bei Edits);
+  // gegen kaputte/veraltete Werte gegen CAT_MAP/PRI_MAP geprüft.
+  const lastPick = isEdit ? {} : getLastPick(STATE.src);
+  let currentCat = existing?.category || (lastPick.cat && CAT_MAP[lastPick.cat] ? lastPick.cat : "feature");
+  let currentPri = existing?.priority || (lastPick.pri && PRI_MAP[lastPick.pri] ? lastPick.pri : "could");
   let expanded = !!isEdit; // Edit-Modus startet direkt expanded
 
   const host = document.createElement("div");
@@ -2847,6 +2884,7 @@ function openCommentModal(el, existing){
       });
     }
     if(saveComments(STATE.src, STATE.comments)){
+      setLastPick(STATE.src, currentCat, currentPri);   // Wahl für den nächsten Kommentar merken
       renderAll(); refreshFrameBadges();
       close();
       toast(isEdit?"Aktualisiert.":"Kommentar gespeichert.");
@@ -2896,6 +2934,15 @@ function openCommentModal(el, existing){
       captureIntoAnnotator();
       // Fokus zurück ins Textfeld für schnelles Weiter-Kommentieren
       ta.focus();
+    },
+    // Für die beforeunload-Warnung: hat der laufende (neue) Kommentar getippten,
+    // noch ungespeicherten Inhalt? (Bei Edits konservativ nicht warnen.)
+    isDirty(){
+      if(isEdit) return false;
+      if(ta.value.trim()) return true;
+      const tpl = TEMPLATES[currentCat];
+      if(tpl && tpl.fields.some(f => (structured[f.key]||"").trim())) return true;
+      return false;
     },
     close
   };

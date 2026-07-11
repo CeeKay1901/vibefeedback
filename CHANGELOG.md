@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.3.0 — 2026-07-11 — Kernfeature-Optimierung: schneller kommentieren, nichts verlieren, nicht doppeln
+
+Produkt-Review der Kernfeatures (Element-Kommentierung → Export). Drei fokussierte Verbesserungen am Kern-Job „präzises Feedback sammeln":
+
+### feat / fix
+- **Letzte Kategorie & Priorität werden gemerkt** (pro Projekt, localStorage): Ein neuer Kommentar startet mit der zuletzt genutzten Wahl statt immer `feature/could`. Serien gleichartiger Rückmeldungen (z. B. mehrere Bugs) ohne Wiederholklicks. Edits bleiben unberührt; Werte werden gegen gültige Kategorien/Prioritäten geprüft.
+- **Ungespeicherter Entwurf geht nicht mehr still verloren**: `beforeunload`-Warnung, wenn die offene Kommentar-Bar getippten, noch nicht gespeicherten Inhalt hat (Freitext oder Templatefeld). Bei Edits bewusst keine Warnung.
+- **„Element schon kommentiert"**: Klick auf ein Element (oder seinen Badge), das bereits Kommentare hat, springt zum bestehenden Kommentar (Sidebar-Highlight + Element-Puls im iframe) und bietet per Toast „Neuen hinzufügen" an — statt blind einen zweiten Kommentar zu öffnen. Dedup + Kollaboration; behebt zugleich, dass ein Badge-Klick vorher einen Kommentar auf dem Badge selbst startete. Zählt nur Kommentare der **aktuellen** Seite (kein Fehl-Match über Subpages).
+
+### intern
+- `undoToast` verallgemeinert zu `actionToast(msg, label, fn)` (Basis für den „Neuen hinzufügen"-Hinweis).
+
+Neu: `test_phase4.js` (10 Checks: isDirty-Guard, Merken der Wahl, Bereits-kommentiert-Fluss). Alle 13 Test-Dateien grün (`npm test`, Exit 0).
+
 ## 1.2.0 — 2026-07-11 — UI-Review-Sweep über alle drei Oberflächen (a11y & Bedienung)
 
 Systematischer UX/UI-Review von Landing, Tool-Flow und Dashboard (Code-Analyse je Oberfläche + reale Screenshots Desktop/Mobile via `ui_review_shots.js`). Die Kritisch- und Hoch-Befunde sind umgesetzt:
