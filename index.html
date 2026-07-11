@@ -1075,6 +1075,10 @@ function elementInfo(el){
     },
     style: {
       color: cs.color, backgroundColor: cs.backgroundColor,
+      // Eigener Hintergrund ist oft transparent (rgba(…,0)); für Kontrast-/Design-
+      // Findings zählt der EFFEKTIVE Hintergrund aus der Elternkette — sonst sieht
+      // der LLM „rgba(0,0,0,0)" und kann die Kontrast-Aussage nicht prüfen.
+      effectiveBg: (/rgba\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*0\s*\)/.test(cs.backgroundColor) || cs.backgroundColor==="transparent") ? effectiveBackground(el) : cs.backgroundColor,
       fontSize: cs.fontSize, fontWeight: cs.fontWeight, fontFamily: cs.fontFamily.split(",")[0].replace(/["']/g,""),
       display: cs.display, position: cs.position,
       borderRadius: cs.borderRadius
@@ -3278,7 +3282,12 @@ function buildMarkdown(opts){
     const verb = actionVerb[c.category] || "Adressiere";
     const info = c.info || {};
     const attrs = info.attrs || {};
-    const title = (info.text && info.text.length<70 ? info.text : null) || attrs.ariaLabel || attrs.alt || attrs.title || attrs.placeholder || (`<${c.tag}>`);
+    const shortText = (info.text && info.text.length<70) ? info.text : null;
+    const truncText = info.text ? info.text.slice(0,56).trim()+"…" : null;
+    // Reihenfolge: kurzer sichtbarer Text > semantische Attribute > gekürzter Text > roher Tag.
+    // Ein blankes „<div>" als Überschrift ist für den LLM-Empfänger wertlos, gekürzter
+    // Text (z.B. der Hero-Inhalt) verankert das Item dagegen sofort.
+    const title = shortText || attrs.ariaLabel || attrs.alt || attrs.title || attrs.placeholder || truncText || (`<${c.tag}>`);
 
     md += `## ${idx+1}. [${pri.label}]${stOf(c)!=="open" ? " " + ST_MAP[stOf(c)].chip : ""} ${cat.emoji} ${verb}: ${title}\n\n`;
 
@@ -3337,14 +3346,23 @@ function buildMarkdown(opts){
     if(info.role) ctx.push(`role=\`${info.role}\``);
     if(info.classes?.length) ctx.push(`classes=\`${info.classes.map(x=>"."+x).join("")}\``);
     if(info.ancestors?.length) ctx.push(`ancestors=\`${info.ancestors.join(" > ")}\``);
-    if(info.style) ctx.push(`style=\`${info.style.fontSize} ${info.style.fontWeight}, ${info.style.color} / ${info.style.backgroundColor}\``);
+    if(info.style) ctx.push(`style=\`${info.style.fontSize} ${info.style.fontWeight}, ${info.style.color} / ${info.style.effectiveBg || info.style.backgroundColor}\``);
     if(ctx.length || c.snippet || c.screenshot){
       md += `<details><summary>Element-Kontext, HTML & Screenshot</summary>\n\n`;
       if(ctx.length) md += ctx.map(x=>`- ${x}`).join("\n") + `\n\n`;
       if(c.snippet) md += `\`\`\`html\n${c.snippet}\n\`\`\`\n\n`;
       if(c.screenshot){
-        const shotRef = opts.screenshotPath ? opts.screenshotPath(c, idx) : c.screenshot;
-        if(shotRef) md += `![Screenshot](${shotRef})\n\n`;
+        if(opts.screenshotPath){
+          // ZIP-Export: Screenshot als verlinkte Bilddatei.
+          const shotRef = opts.screenshotPath(c, idx);
+          if(shotRef) md += `![Screenshot](${shotRef})\n\n`;
+        } else {
+          // Reiner Markdown-Export (Zwischenablage/Download) bleibt schlank und
+          // LLM-tauglich: KEINE base64-Data-URL im Text (die blähte den Export auf
+          // ~88% Ballast auf und wird von Chat-LLMs nicht als Bild gerendert).
+          // Das Bild liegt als Datei im ZIP-Export (feedback.json + screenshots/).
+          md += `_📎 Screenshot vorhanden — als Bilddatei im ZIP-Export enthalten._\n\n`;
+        }
       }
       md += `</details>\n\n`;
     }

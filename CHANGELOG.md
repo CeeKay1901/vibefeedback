@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.1.0 — 2026-07-11 — Export ist LLM-tauglicher (Kernfeature-Realitätscheck)
+
+Das Kernfeature — der Feedback-Export als Prompt-Grundlage — wurde end-to-end gegen die echte Live-Seite kippflix.com durchgespielt: je ein **Bug**, ein **Feature** und eine **Design**-Verbesserung, mit ausgefüllten Template-Feldern, Priorität und echten Auto-Screenshots (`test_export_quality.js`). Der erzeugte Markdown wurde als LLM-Input bewertet. Inhaltlich stark (KI-Preamble, strukturierte Templates, Fallback-Identifier, Grounding, pixeltreue Screenshots) — drei Schwachstellen wurden gefunden und behoben:
+
+### fix
+- **Reiner Markdown-Export war zu 88 % base64-Ballast.** Zwischenablage- und Download-Export betteten die Screenshots als data-URLs ein (62 KB, davon 55 KB base64) — für einen Chat-LLM unbrauchbares Rauschen, das zudem nicht als Bild gerendert wird. Der reine Text ist jetzt **~7,6 KB** und prompt-fertig; jeder Screenshot erscheint als Hinweis „_als Bilddatei im ZIP-Export enthalten_". Bilder gibt es weiterhin verlustfrei im **ZIP** (`feedback.json` + `screenshots/`), das auch re-importierbar bleibt.
+- **Design-/Kontrast-Findings waren nicht überprüfbar:** Der Element-Kontext zeigte den *eigenen* (meist transparenten) Hintergrund `rgba(0,0,0,0)` statt des gerenderten. Jetzt liefert `elementInfo` bei transparentem Hintergrund den **effektiven** Hintergrund aus der Elternkette (`effectiveBackground`) — z. B. `rgb(255,255,255) / rgb(20,20,20)` statt `/ rgba(0,0,0,0)`. Das LLM kann eine Kontrast-Aussage jetzt tatsächlich prüfen (oder widerlegen).
+- **Nichtssagende Überschriften:** Bei Elementen mit langem Text (> 70 Zeichen, z. B. ein Hero-`<div>`) fiel der Item-Titel auf den rohen Tag `<div>` zurück („Implementiere: <div>"). Jetzt: gekürzter sichtbarer Text als Fallback vor dem rohen Tag.
+
+Kein `layer.js`/Bookmarklet-Eingriff nötig (eigener, schlanker Export). Tests: alle 13 Dateien grün (`npm test`, Exit 0); der ZIP-Export-Test deckt „keine data-URLs im reinen Markdown" mit ab. Neu: `test_export_quality.js` (Live-Realitätscheck, netzabhängig).
+
 ## 0.14.0 — 2026-07-10 — Screenshots schneiden die letzte Zeile nicht mehr ab
 
 Der Kernfeature-Test gegen fünf echte Seiten (`npm run test:sites`) förderte einen systematischen Screenshot-Defekt zutage — jetzt behoben.
