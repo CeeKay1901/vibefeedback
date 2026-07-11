@@ -2540,6 +2540,18 @@ function openCommentModal(el, existing){
         <div class="bar"></div>
       </div>
       <div class="cbar-expanded" data-role="expanded" ${expanded?"":"hidden"}>
+        <div class="field">
+          <label>Kategorie <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--dim)">(optional)</span></label>
+          <div class="chips" data-role="cats" role="radiogroup" aria-label="Kategorie">
+            ${CATEGORIES.map(c=>`<span class="pick" data-cat="${c.id}" data-active="${c.id===currentCat}" role="radio" aria-checked="${c.id===currentCat}" tabindex="${c.id===currentCat?0:-1}" aria-label="${c.label}: ${c.sub||''}" title="${c.sub||''}">${c.emoji} ${c.label}<span aria-hidden="true" style="display:block;font-size:10px;color:inherit;opacity:.65;font-weight:400;margin-top:1px">${c.sub||''}</span></span>`).join("")}
+          </div>
+        </div>
+        <div class="field">
+          <label>Priorität <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--dim)">(optional)</span></label>
+          <div class="chips" data-role="prios" role="radiogroup" aria-label="Priorität">
+            ${PRIORITIES.map(p=>`<span class="pick" data-p="${p.id}" data-active="${p.id===currentPri}" role="radio" aria-checked="${p.id===currentPri}" tabindex="${p.id===currentPri?0:-1}" aria-label="Priorität ${p.label}">${p.label}</span>`).join("")}
+          </div>
+        </div>
         <div class="target-card" data-role="target" id="vf-modal-target">
           <div class="target-head">
             <span class="target-label">🎯 Auswahl</span>
@@ -2559,16 +2571,10 @@ function openCommentModal(el, existing){
       </div>
       <div class="cbar-compact">
         <div class="cbar-row">
-          <span class="cbar-target" data-act="toggle-expand" title="Details ein-/ausblenden">
+          <span class="cbar-target" data-act="toggle-expand" title="Kategorie, Priorität & Details ein-/ausblenden">
             <span data-target-tag>&lt;${esc(tag)}&gt;</span>
             <span class="dims" data-target-dims></span>
           </span>
-          <div class="chips" data-role="cats" role="radiogroup" aria-label="Kategorie">
-            ${CATEGORIES.map(c=>`<span class="pick" data-cat="${c.id}" data-active="${c.id===currentCat}" role="radio" aria-checked="${c.id===currentCat}" tabindex="${c.id===currentCat?0:-1}" aria-label="${c.label}: ${c.sub||''}" title="${c.sub||''}">${c.emoji} ${c.label}<span aria-hidden="true" style="display:block;font-size:10px;color:inherit;opacity:.65;font-weight:400;margin-top:1px">${c.sub||''}</span></span>`).join("")}
-          </div>
-          <div class="chips" data-role="prios" role="radiogroup" aria-label="Priorität">
-            ${PRIORITIES.map(p=>`<span class="pick" data-p="${p.id}" data-active="${p.id===currentPri}" role="radio" aria-checked="${p.id===currentPri}" tabindex="${p.id===currentPri?0:-1}" aria-label="Priorität ${p.label}">${p.label}</span>`).join("")}
-          </div>
         </div>
         <label class="sr-only" for="vf-cbar-text" id="vf-modal-title">${isEdit?"Kommentar bearbeiten":"Kommentar schreiben"}</label>
         ${!localStorage.getItem(AUTHOR_KEY) && !existing ? `<div class="field" id="author-field" style="margin-bottom:6px">
@@ -2612,12 +2618,9 @@ function openCommentModal(el, existing){
     $$("[data-tpl]", tplWrap).forEach(inp => {
       inp.addEventListener("input", ()=> { structured[inp.dataset.tpl] = inp.value; });
     });
-    // Freitext bleibt sichtbar in Compact-Bar (Kern-UX), Template-Felder liegen im Expand
-    if(has){
-      ta.placeholder = "Zusätzliche Notiz (optional) — Templatefelder im Expand ↓";
-    } else {
-      ta.placeholder = "Was ist dir aufgefallen? Was sollte anders sein?";
-    }
+    // Der Kommentar (dieses Feld) ist das Hauptfeld — immer klar als solches lesbar.
+    // Kategorie/Priorität/Template-Felder liegen optional im Expand (mehr Detail fürs LLM).
+    ta.placeholder = "Dein Kommentar – was ist dir aufgefallen? Was sollte anders sein?";
   }
   renderTemplate();
 

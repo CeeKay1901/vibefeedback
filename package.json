@@ -1,6 +1,6 @@
 {
   "name": "vibefeedback",
-  "version": "1.4.1",
+  "version": "1.5.0",
   "description": "Ein winziges, backend-freies Feedback-Tool für Vibecoding-Projekte. Du teilst einen Link → deine Tester klicken direkt auf die Elemente, die sie kommentieren wollen → am Ende bekommst du ein sauberes Markdown, das du 1:1 als Prompt-Grundlage nutzen kannst.",
   "main": "layer.js",
   "scripts": {

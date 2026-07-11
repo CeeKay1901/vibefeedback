@@ -92,14 +92,14 @@ async function addComment(page, c, idx) {
   r.cbar = !!cbar;
   if (!cbar) return r;
 
-  // 2. Kategorie wählen (löst renderTemplate aus)
-  await page.locator(`.cbar [data-role=cats] .pick[data-cat="${c.cat}"]`).click().catch(() => {});
+  // 2. Expand aufklappen — Kategorie/Priorität/Template-Felder liegen jetzt dort
+  await page.locator(`.cbar [data-act=toggle-expand]`).first().click().catch(() => {});
   await sleep(200);
-  // 3. Priorität
-  await page.locator(`.cbar [data-role=prios] .pick[data-p="${c.pri}"]`).click().catch(() => {});
-  // 4. Expand aufklappen (Template-Felder liegen im Expand)
-  await page.locator(`.cbar [data-act=toggle-expand]`).click().catch(() => {});
+  // 3. Kategorie wählen (löst renderTemplate aus)
+  await page.locator(`.cbar-expanded [data-role=cats] .pick[data-cat="${c.cat}"]`).click().catch(() => {});
   await sleep(200);
+  // 4. Priorität
+  await page.locator(`.cbar-expanded [data-role=prios] .pick[data-p="${c.pri}"]`).click().catch(() => {});
 
   // 5. Template-Felder + Freitext füllen
   await page.evaluate(({ tpl, text }) => {

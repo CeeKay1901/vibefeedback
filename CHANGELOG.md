@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.5.0 — 2026-07-11 — Kommentar-Bar radikal vereinfacht: nur Name + Kommentar
+
+Die Kommentar-Eingabe war dreiteilig (Kategorie-Chips + Prioritäts-Chips + Text) — zu viel zum Ausfüllen. Jetzt zeigt die Kompakt-Ansicht **nur das Kommentarfeld** (und beim ersten Mal das Namensfeld). Schnell ausgefüllt, während der Export dem LLM trotzdem die wichtigsten Infos liefert.
+
+### changed
+- **Kategorie- und Prioritäts-Chips ins Expand (⌄) verschoben**, als „Kategorie (optional)" / „Priorität (optional)" mit Gruppen-Labels. Standard-Ansicht = Ziel + Kommentar + Speichern.
+- Textfeld ist jetzt klar das Hauptfeld („Dein Kommentar – was ist dir aufgefallen? …"), nicht mehr als „Zusätzliche Notiz" degradiert.
+- Der Export bleibt reichhaltig: Selektor, Fallback-Identifier, Screenshot, HTML-Snippet, Element-Kontext (Rolle/Klassen/Styles/Position) und Seite werden **automatisch** erfasst — plus der Kommentar. Kategorie/Priorität fließen ein, wenn gesetzt (sonst sinnvoller Default, gemerkt über [[letzte Wahl]]).
+
+Die strukturierten Template-Felder (Erwartet/Tatsächlich/Schritte …) bleiben als optionales Detail im Expand — für alle, die dem LLM mehr geben wollen.
+
+Kein Kern-Test klickt die cbar-Chips (die Suite speichert mit Default) → alle 13 Test-Dateien grün; Hilfsskripte (`test_phase4` u.a.) auf „erst aufklappen" angepasst; funktional + visuell (Desktop/Mobile) abgenommen.
+
 ## 1.4.1 — 2026-07-11 — Mobile: Bedienelemente kompakter
 
 Rückmeldung: Buttons auf dem Handy noch etwas zu groß. Touch-Ziele bleiben gut tippbar, aber enger:
