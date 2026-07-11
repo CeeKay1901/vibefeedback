@@ -376,6 +376,12 @@ body:has(.mode-toggle button[data-mode=nav].active) .canvas iframe{outline:2px s
 .cbar .field label{display:block;font-size:11px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.6px;font-weight:600}
 .cbar .chips{display:flex;gap:5px;flex-wrap:wrap}
 .cbar .chips .pick{background:var(--panel-2);border:1px solid var(--line);color:var(--fg-2);padding:5px 9px;border-radius:99px;font-size:12px;cursor:pointer;transition:all .12s;display:inline-flex;align-items:center;gap:5px;user-select:none;font-weight:500}
+/* Kompakter Meta-Strip: Kategorie + Priorität immer sichtbar. Kategorie zeigt nur
+   das Emoji; erst das aktive Chip blendet sein Label ein (smart & platzsparend). */
+.cbar-meta{display:flex;flex-wrap:wrap;gap:7px 14px;align-items:center;margin-top:1px}
+.cbar .chips-cat .pick .lbl{display:none}
+.cbar .chips-cat .pick[data-active=true] .lbl{display:inline;margin-left:1px;font-weight:600}
+.cbar .chips-cat .pick .emo{font-size:14px;line-height:1}
 .cbar .chips .pick:hover{border-color:var(--line-2)}
 .cbar .chips .pick[data-active=true]{transform:translateY(-1px)}
 .cbar .chips .pick[data-active=true][data-cat=bug]{background:rgba(227,95,95,.15);border-color:var(--cat-bug);color:var(--cat-bug)}
@@ -520,7 +526,7 @@ body:has(.mode-toggle button[data-mode=nav].active) .canvas iframe{outline:2px s
   .cbar .chips{gap:6px}
   /* Kompaktere, aber noch gut tippbare Chips/Buttons (~34–38px statt 40–44px) */
   .cbar .chips .pick{padding:6px 10px;font-size:12.5px;gap:4px;min-height:34px}
-  .cbar .chips .pick span{display:none!important}  /* schlägt das Inline display:block des Sublabels */
+  .cbar .chips-cat .pick{padding:6px 9px}   /* emoji-only leicht enger auf Touch */
   .cbar textarea[data-role=text]{font-size:16px}
   .cbar .icon-btn{width:38px;height:38px;min-width:38px;min-height:38px;font-size:14px}
   .cbar-thumb{width:38px;height:38px}
@@ -2546,18 +2552,6 @@ function openCommentModal(el, existing){
         <div class="bar"></div>
       </div>
       <div class="cbar-expanded" data-role="expanded" ${expanded?"":"hidden"}>
-        <div class="field">
-          <label>Kategorie <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--dim)">(optional)</span></label>
-          <div class="chips" data-role="cats" role="radiogroup" aria-label="Kategorie">
-            ${CATEGORIES.map(c=>`<span class="pick" data-cat="${c.id}" data-active="${c.id===currentCat}" role="radio" aria-checked="${c.id===currentCat}" tabindex="${c.id===currentCat?0:-1}" aria-label="${c.label}: ${c.sub||''}" title="${c.sub||''}">${c.emoji} ${c.label}<span aria-hidden="true" style="display:block;font-size:10px;color:inherit;opacity:.65;font-weight:400;margin-top:1px">${c.sub||''}</span></span>`).join("")}
-          </div>
-        </div>
-        <div class="field">
-          <label>Priorität <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--dim)">(optional)</span></label>
-          <div class="chips" data-role="prios" role="radiogroup" aria-label="Priorität">
-            ${PRIORITIES.map(p=>`<span class="pick" data-p="${p.id}" data-active="${p.id===currentPri}" role="radio" aria-checked="${p.id===currentPri}" tabindex="${p.id===currentPri?0:-1}" aria-label="Priorität ${p.label}">${p.label}</span>`).join("")}
-          </div>
-        </div>
         <div class="target-card" data-role="target" id="vf-modal-target">
           <div class="target-head">
             <span class="target-label">🎯 Auswahl</span>
@@ -2577,10 +2571,20 @@ function openCommentModal(el, existing){
       </div>
       <div class="cbar-compact">
         <div class="cbar-row">
-          <span class="cbar-target" data-act="toggle-expand" title="Kategorie, Priorität & Details ein-/ausblenden">
+          <span class="cbar-target" data-act="toggle-expand" title="Element-Details, Templatefelder & Screenshot ein-/ausblenden">
             <span data-target-tag>&lt;${esc(tag)}&gt;</span>
             <span class="dims" data-target-dims></span>
           </span>
+        </div>
+        <!-- Kategorie + Priorität immer sichtbar, aber kompakt: Kategorie emoji-only
+             (aktives Chip zeigt zusätzlich sein Label), Priorität als kurze Chips. -->
+        <div class="cbar-meta">
+          <div class="chips chips-cat" data-role="cats" role="radiogroup" aria-label="Kategorie">
+            ${CATEGORIES.map(c=>`<span class="pick" data-cat="${c.id}" data-active="${c.id===currentCat}" role="radio" aria-checked="${c.id===currentCat}" tabindex="${c.id===currentCat?0:-1}" aria-label="${c.label}: ${c.sub||''}" title="${c.label} — ${c.sub||''}"><span class="emo">${c.emoji}</span><span class="lbl">${c.label}</span></span>`).join("")}
+          </div>
+          <div class="chips chips-pri" data-role="prios" role="radiogroup" aria-label="Priorität">
+            ${PRIORITIES.map(p=>`<span class="pick" data-p="${p.id}" data-active="${p.id===currentPri}" role="radio" aria-checked="${p.id===currentPri}" tabindex="${p.id===currentPri?0:-1}" aria-label="Priorität ${p.label}">${p.label}</span>`).join("")}
+          </div>
         </div>
         <label class="sr-only" for="vf-cbar-text" id="vf-modal-title">${isEdit?"Kommentar bearbeiten":"Kommentar schreiben"}</label>
         ${!localStorage.getItem(AUTHOR_KEY) && !existing ? `<div class="field" id="author-field" style="margin-bottom:6px">

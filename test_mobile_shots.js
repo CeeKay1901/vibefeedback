@@ -36,8 +36,8 @@ async function waitFor(fn,t,step=300){const t0=Date.now();while(Date.now()-t0<t)
   await tp.evaluate(()=>{ const d=document.querySelector("#frame").contentDocument; const el=d.querySelector("button,.btn,h1,h2,a"); el.scrollIntoView({block:"center"}); const r=el.getBoundingClientRect(); el.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true,view:d.defaultView,clientX:r.left+r.width/2,clientY:r.top+r.height/2})); }).catch(()=>{});
   await waitFor(()=>tp.locator(".cbar").isVisible().catch(()=>false),8000); await sleep(500);
   await shot(tp,"m_tool_cbar_compact",false);
-  await tp.locator(".cbar [data-act=toggle-expand]").first().click().catch(()=>{}); await sleep(300);
-  await tp.locator(".cbar-expanded [data-cat=bug]").click().catch(()=>{}); await sleep(400);
+  await tp.locator(".cbar [data-cat=bug]").click().catch(()=>{}); await sleep(300);
+  await tp.locator(".cbar [data-act=toggle-expand]").first().click().catch(()=>{}); await sleep(400);
   await shot(tp,"m_tool_cbar_expanded",false);
   // messen: wie viel Höhe frisst die cbar + topbar?
   const metrics = await tp.evaluate(()=>{

@@ -19,10 +19,9 @@ async function clickSel(page, sel){
   return page.evaluate(s=>{ const doc=document.querySelector("#frame").contentDocument; const el=doc.querySelector(s); if(!el)return false; el.scrollIntoView({block:"center"}); const r=el.getBoundingClientRect(); el.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true,view:doc.defaultView,clientX:r.left+r.width/2,clientY:r.top+r.height/2})); return true; }, sel);
 }
 async function fillAndSave(page, cat, pri, text){
-  // Kategorie/Priorität liegen jetzt im Expand → erst aufklappen
-  await page.locator(`.cbar [data-act=toggle-expand]`).first().click();
-  await page.locator(`.cbar-expanded [data-role=cats] .pick[data-cat="${cat}"]`).click();
-  await page.locator(`.cbar-expanded [data-role=prios] .pick[data-p="${pri}"]`).click();
+  // Kategorie/Priorität sind kompakt immer sichtbar
+  await page.locator(`.cbar [data-role=cats] .pick[data-cat="${cat}"]`).click();
+  await page.locator(`.cbar [data-role=prios] .pick[data-p="${pri}"]`).click();
   await page.evaluate(t=>{ const ta=document.querySelector(".cbar [data-role=text]"); ta.value=t; ta.dispatchEvent(new Event("input",{bubbles:true})); }, text);
   await waitFor(()=>page.evaluate(()=>!!(document.querySelector(".cbar-thumb:not([hidden])")||document.querySelector(".cbar .annot .stage canvas"))).catch(()=>false),15000,600);
   const before=await page.evaluate(()=>STATE.comments.length);

@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.7.0 — 2026-07-11 — Kategorie & Priorität immer sichtbar — smart & kompakt
+
+Rückmeldung zu 1.5.0: Kategorie und Priorität sollen nicht im Expand versteckt, sondern **immer sichtbar** sein — aber platzsparend. Umgesetzt als kompakter Meta-Strip direkt über dem Kommentarfeld:
+
+### changed
+- **Kategorie als Emoji-Strip**: alle sechs Kategorien als kleine Emoji-Chips; nur das **aktive** Chip blendet zusätzlich sein Label ein (+ Kategorie-Farbe). Voller Name & Sub bleiben als `title`/`aria-label` erhalten. Eine Reihe statt drei.
+- **Priorität** als kurze Chips (Muss/Sollte/Könnte/Nice) daneben.
+- Beide sind jetzt Teil der Kompakt-Ansicht (aus dem Expand zurückgeholt); das Expand behält Element-Details, Templatefelder und Autor.
+
+So sieht man Kategorie + Priorität auf einen Blick und kann sie mit einem Tap ändern, ohne dass die Bar wieder überladen wirkt. Hilfsskripte auf „Chips im Compact" zurückgestellt. Alle 13 Test-Dateien grün.
+
 ## 1.6.0 — 2026-07-11 — Design-Politur mit den pilot-Design-Skills
 
 Kuratierte Qualitäts-Politur innerhalb der bestehenden pilot-Identität (warmes Papier, Signal-Gelb, Ink, Inter/JetBrains Mono) — kein Redesign, sondern die Ausführung gehoben (design-assets + frontend-design). Bewusst ohne Scroll-Animationen (wirken schnell „AI-generiert").
