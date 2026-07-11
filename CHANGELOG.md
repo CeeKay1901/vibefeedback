@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.4.0 — 2026-07-11 — Typografie: selbstgehostete pilot-Fonts (Inter + JetBrains Mono)
+
+Die App war für die pilot-Brandfont „Centra No1" (kommerziell) gebaut, rendete aber mangels Font in System-Schrift (auf Android/Linux inkonsistent). Jetzt der dokumentierte pilot-Fallback **Inter** (UI) + **JetBrains Mono** (Selektoren/Snippets/Tags), selbstgehostet.
+
+### feat
+- `fonts/inter-variable.woff2` (48 KB) + `fonts/jetbrains-mono-variable.woff2` (40 KB), variabel, latin (deckt Deutsch). `@font-face` mit `font-display:swap`, keine Google-Fonts-CDN (offline/DSGVO). In `index.html` **und** `dashboard.html`.
+- Font-Stacks: `"Centra No1","Inter",…` primär, `"JetBrains Mono",ui-monospace,…` für alle Mono-Stellen; `text-rendering:optimizeLegibility`; `::selection` in Brand-Gelb.
+- Bookmarklet (`layer.js`) bewusst **nicht** angefasst — es wird in fremde Seiten injiziert und lädt keine App-Fonts.
+
+### fix
+- Dashboard-Detail lief auf 390 px um 6 px über (Inters breitere Metrik trieb die Status-Segmentbuttons über die Kommentar-Spalte): Buttons auf Mobil schmaler (`padding:9px 8px`, Höhe/Touch bleibt ≥35 px) + `min-width:0` auf die flexible Kartenspalte.
+
+Verifiziert: alle 13 Test-Dateien grün (`npm test`), Font-Ladung + 390-px-Overflow separat gemessen, Landing/Tool/Dashboard visuell abgenommen.
+
+Hinweis: Beim Umstellen der Mono-Stacks hatte ein globales Replace versehentlich die generierte Bookmarklet-Zeile getroffen — via `npm run build` aus dem unveränderten `layer.js` sauber neu erzeugt.
+
 ## 1.3.1 — 2026-07-11 — Mobile-Fix: Kommentar-Bar fraß den halben Bildschirm
 
 Auf dem Handy (echte Emulation, iPhone 13) belegte die Kommentar-Bar ~63 % des Viewports, Chips waren riesig und die Aktionsleiste überlappte sich. Behoben:

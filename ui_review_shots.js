@@ -18,7 +18,7 @@ function startServer(port) {
       if (fp.endsWith("/")) fp += "index.html";
       try {
         const body = fs.readFileSync(fp);
-        const mime = { ".html": "text/html", ".js": "application/javascript", ".css": "text/css", ".svg": "image/svg+xml" }[path.extname(fp)] || "text/plain";
+        const mime = { ".html": "text/html", ".js": "application/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".woff2": "font/woff2" }[path.extname(fp)] || "text/plain";
         res.writeHead(200, { "Content-Type": mime, "Access-Control-Allow-Origin": "*" });
         res.end(body);
       } catch (e) { res.writeHead(404); res.end(); }

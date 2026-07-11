@@ -7,7 +7,7 @@ const VF = __dirname;
 const OUT = path.join(VF, "test_artifacts", "mobile");
 const PORT = 18155;
 const demoSrc = `http://127.0.0.1:${PORT}/demo.html`;
-function startServer(port){ return new Promise(res=>{ const s=http.createServer((req,rs)=>{ let fp=req.url.split("?")[0]; fp = fp==="/modern-screenshot.js"?path.join(VF,"node_modules/modern-screenshot/dist/index.js"):path.join(VF,fp); if(fp.endsWith("/"))fp+="index.html"; try{ const b=fs.readFileSync(fp); const m={".html":"text/html",".js":"application/javascript",".css":"text/css",".svg":"image/svg+xml"}[path.extname(fp)]||"text/plain"; rs.writeHead(200,{"Content-Type":m,"Access-Control-Allow-Origin":"*"}); rs.end(b);}catch(e){rs.writeHead(404);rs.end();}}); s.listen(port,"127.0.0.1",()=>res(s)); }); }
+function startServer(port){ return new Promise(res=>{ const s=http.createServer((req,rs)=>{ let fp=req.url.split("?")[0]; fp = fp==="/modern-screenshot.js"?path.join(VF,"node_modules/modern-screenshot/dist/index.js"):path.join(VF,fp); if(fp.endsWith("/"))fp+="index.html"; try{ const b=fs.readFileSync(fp); const m={".html":"text/html",".js":"application/javascript",".css":"text/css",".svg":"image/svg+xml",".woff2":"font/woff2"}[path.extname(fp)]||"text/plain"; rs.writeHead(200,{"Content-Type":m,"Access-Control-Allow-Origin":"*"}); rs.end(b);}catch(e){rs.writeHead(404);rs.end();}}); s.listen(port,"127.0.0.1",()=>res(s)); }); }
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 async function waitFor(fn,t,step=300){const t0=Date.now();while(Date.now()-t0<t){const v=await fn();if(v)return v;await sleep(step);}return null;}
 (async()=>{
