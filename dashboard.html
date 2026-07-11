@@ -15,7 +15,7 @@
   --bg:#fcfcfc; --panel:#fff; --panel-2:#f6f6f3; --line:#e3e1d6;
   --fg:#262626; --muted:#6a695f; --accent:#ffe05e; --accent-ink:#262626;
   --danger:#e35f5f; --radius:10px; --radius-lg:16px;
-  --shadow:0 1px 3px rgba(38,38,38,.06); --shadow-lg:0 12px 32px rgba(38,38,38,.12);
+  --shadow:0 1px 2px rgba(38,38,38,.04), 0 3px 8px rgba(38,38,38,.05), 0 8px 20px rgba(38,38,38,.05); --shadow-lg:0 2px 4px rgba(38,38,38,.05), 0 10px 24px rgba(38,38,38,.08), 0 22px 46px rgba(38,38,38,.11);
 
   /* Chart-Rollen. Validiert gegen die Surface, auf der die Marks WIRKLICH liegen:
      Balken auf dem Track (--panel-2 #f6f6f3), Linie/Punkte auf --panel. */
@@ -30,7 +30,7 @@
   :root{
     --bg:#0d0d0d; --panel:#1a1a19; --panel-2:#232322; --line:#2c2c2a;
     --fg:#fff; --muted:#9a988e; --accent:#ffe05e;
-    --shadow:0 1px 3px rgba(0,0,0,.4); --shadow-lg:0 12px 32px rgba(0,0,0,.5);
+    --shadow:0 1px 2px rgba(0,0,0,.35), 0 3px 8px rgba(0,0,0,.38), 0 8px 20px rgba(0,0,0,.4); --shadow-lg:0 2px 4px rgba(0,0,0,.4), 0 10px 24px rgba(0,0,0,.45), 0 22px 46px rgba(0,0,0,.55);
     --surface-1:#1a1a19;
     --series-1:#3987e5;
     --ord-1:#cde2fb; --ord-2:#9ec5f4; --ord-3:#6da7ec; --ord-4:#3987e5;
@@ -43,6 +43,9 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{font-family:"Centra No1","Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--fg);line-height:1.55;font-size:15px;text-rendering:optimizeLegibility}
 ::selection{background:var(--accent);color:var(--fg)}
+html{scroll-behavior:smooth}
+:where(button,a,summary,[role=button],[tabindex]):focus-visible,.chip:focus-visible{outline:2px solid var(--fg);outline-offset:2px;border-radius:8px;box-shadow:0 0 0 5px rgba(255,224,94,.4)}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
 a{color:inherit}
 button{font:inherit;cursor:pointer}
 .wrap{max-width:1140px;margin:0 auto;padding:0 20px}

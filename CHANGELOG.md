@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.6.0 — 2026-07-11 — Design-Politur mit den pilot-Design-Skills
+
+Kuratierte Qualitäts-Politur innerhalb der bestehenden pilot-Identität (warmes Papier, Signal-Gelb, Ink, Inter/JetBrains Mono) — kein Redesign, sondern die Ausführung gehoben (design-assets + frontend-design). Bewusst ohne Scroll-Animationen (wirken schnell „AI-generiert").
+
+### changed
+- **Mehrstufige, zum Ink getönte Schatten** statt einlagiger: cbar, Sidebar-Karten, Modals, Landing-Feature-Cards, Mock-Frame und Dashboard-Kacheln bekommen weiche, glaubwürdige Tiefe (`--shadow-sm/--shadow/--shadow-lg`, hell + dunkel, `index.html` + `dashboard.html`).
+- **Fokus-Ring** neu: Ink-Kontur (hoher Kontrast, WCAG) + gelber Halo (Marke) statt gelber Kontur auf Weiß — sichtbar auf hell und dunkel; in beiden Dateien vereinheitlicht.
+- **Feine Papier-Körnung** (`noise.svg`, feTurbulence) nur auf der Landing (nicht über der Ziel-iframe im Tool) — Textur statt flacher Fläche, Opazität ~0.035.
+- `scroll-behavior:smooth` (mit `prefers-reduced-motion`-Ausnahme), `text-wrap:balance` am Hero-Titel, `::selection` in Brand-Gelb (bereits in 1.4.0).
+
+Rein additive/visuelle Änderungen — kein Layout-, Logik- oder Bookmarklet-Eingriff. Alle 13 Test-Dateien grün; Landing/Tool/Dashboard visuell abgenommen.
+
 ## 1.5.0 — 2026-07-11 — Kommentar-Bar radikal vereinfacht: nur Name + Kommentar
 
 Die Kommentar-Eingabe war dreiteilig (Kategorie-Chips + Prioritäts-Chips + Text) — zu viel zum Ausfüllen. Jetzt zeigt die Kompakt-Ansicht **nur das Kommentarfeld** (und beim ersten Mal das Namensfeld). Schnell ausgefüllt, während der Export dem LLM trotzdem die wichtigsten Infos liefert.

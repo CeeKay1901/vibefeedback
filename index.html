@@ -54,16 +54,22 @@
   --cat-question:#5c8fbf;
   --cat-praise:#c67ba0;
 
-  --shadow-sm:0 1px 3px rgba(38,38,38,.06);
-  --shadow:0 6px 20px rgba(38,38,38,.08);
-  --shadow-lg:0 20px 48px rgba(38,38,38,.14);
+  /* Mehrstufige, zum Ink getönte Schatten (weicher/wertiger als einlagig) */
+  --shadow-sm:0 1px 2px rgba(38,38,38,.05), 0 2px 4px rgba(38,38,38,.04);
+  --shadow:0 1px 2px rgba(38,38,38,.04), 0 4px 10px rgba(38,38,38,.05), 0 12px 26px rgba(38,38,38,.07);
+  --shadow-lg:0 2px 4px rgba(38,38,38,.05), 0 10px 24px rgba(38,38,38,.08), 0 26px 54px rgba(38,38,38,.13);
   --radius:12px;
   --radius-lg:18px;
 }
 
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font-family:"Centra No1","Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+html{scroll-behavior:smooth}
 ::selection{background:var(--accent);color:var(--fg)}
+/* Feine Papier-Körnung — nur auf der Landing (nicht über der Ziel-iframe im Tool),
+   damit die warme Fläche Tiefe bekommt statt flach zu wirken. */
+#view-landing::after{content:"";position:fixed;inset:0;pointer-events:none;background:url("noise.svg");background-size:180px;opacity:.035;z-index:9998}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
 a{color:var(--accent-2);text-decoration:none}
 a:hover{text-decoration:underline}
 h1,h2,h3,h4{margin:0 0 8px;font-weight:700;letter-spacing:-.2px}
@@ -90,11 +96,11 @@ button.icon:hover{background:var(--panel-3);border-color:var(--line)}
 
 input[type=text],input[type=url],input[type=email],textarea{font-family:inherit;font-size:14px;width:100%;background:var(--panel);border:1px solid var(--line);color:var(--fg);padding:11px 13px;border-radius:9px;outline:none;transition:border-color .15s}
 input:focus,textarea:focus{border-color:var(--fg);box-shadow:0 0 0 3px rgba(255,224,94,.35)}
-/* Global focus ring — Accessibility (F1) */
+/* Global focus ring — Ink für Kontrast (a11y) + gelber Halo für die Marke */
 :where(button,a,summary,[role="button"],[tabindex]):focus-visible,
 .chip:focus-visible,.pick:focus-visible,.precision-toggle:focus-within{
-  outline:3px solid var(--accent);outline-offset:2px;border-radius:8px;
-  box-shadow:0 0 0 1px var(--fg)
+  outline:2px solid var(--fg);outline-offset:2px;border-radius:8px;
+  box-shadow:0 0 0 5px rgba(255,224,94,.4)
 }
 a:focus-visible{text-decoration:underline}
 textarea{resize:vertical;min-height:110px;line-height:1.5}
@@ -113,7 +119,7 @@ textarea{resize:vertical;min-height:110px;line-height:1.5}
 
 .hero{text-align:center;padding:40px 0 60px}
 .hero .kicker{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;background:var(--accent);border:1px solid var(--accent-ink);border-radius:99px;font-size:12px;color:var(--accent-ink);font-weight:700;margin-bottom:24px}
-.hero h1{font-size:56px;line-height:1.05;letter-spacing:-1.2px;margin-bottom:22px;color:var(--fg);font-weight:800}
+.hero h1{font-size:56px;line-height:1.05;letter-spacing:-1.2px;margin-bottom:22px;color:var(--fg);font-weight:800;text-wrap:balance}
 .hero h1 .accent{background:var(--accent);color:var(--accent-ink);padding:0 12px;border-radius:6px;display:inline-block}
 .hero p.lead{font-size:19px;color:var(--fg-2);max-width:640px;margin:0 auto 36px;line-height:1.5}
 .hero .cta-row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
@@ -584,9 +590,9 @@ body:has(.mode-toggle button[data-mode=nav].active) .canvas iframe{outline:2px s
     --danger:#d45f5f;
     --success:#52a81d;
     --praise:#b06090;
-    --shadow-sm:0 1px 3px rgba(0,0,0,.25);
-    --shadow:0 6px 20px rgba(0,0,0,.35);
-    --shadow-lg:0 20px 48px rgba(0,0,0,.5);
+    --shadow-sm:0 1px 2px rgba(0,0,0,.3), 0 2px 4px rgba(0,0,0,.25);
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 4px 10px rgba(0,0,0,.32), 0 12px 26px rgba(0,0,0,.4);
+    --shadow-lg:0 2px 4px rgba(0,0,0,.35), 0 10px 24px rgba(0,0,0,.42), 0 26px 54px rgba(0,0,0,.55);
   }
   .landing{background:radial-gradient(1200px 700px at 50% -100px,rgba(255,224,94,.12),transparent 60%),radial-gradient(900px 500px at 90% 300px,rgba(255,255,255,.03),transparent 60%),var(--bg)}
   .bm-card{background:var(--panel)}
