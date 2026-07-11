@@ -40,13 +40,30 @@
     setTimeout(function () { t.remove(); }, ms || 2200);
   }
 
+  // Lucide-Icons fürs UI (Emojis bleiben nur im Markdown-Export als LLM-Marker)
+  var ICON_PATHS = {
+    "bug": '<path d="M12 20v-9"/><path d="M14 7a4 4 0 0 1 4 4v3a6 6 0 0 1-12 0v-3a4 4 0 0 1 4-4z"/><path d="M14.12 3.88 16 2"/><path d="M21 21a4 4 0 0 0-3.81-4"/><path d="M21 5a4 4 0 0 1-3.55 3.97"/><path d="M22 13h-4"/><path d="M3 21a4 4 0 0 1 3.81-4"/><path d="M3 5a4 4 0 0 0 3.55 3.97"/><path d="M6 13H2"/><path d="m8 2 1.88 1.88"/><path d="M9 7.13V6a3 3 0 1 1 6 0v1.13"/>',
+    "sparkles": '<path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"/><path d="M20 2v4"/><path d="M22 4h-4"/><circle cx="4" cy="20" r="2"/>',
+    "palette": '<path d="M12 22a1 1 0 0 1 0-20 10 9 0 0 1 10 9 5 5 0 0 1-5 5h-2.25a1.75 1.75 0 0 0-1.4 2.8l.3.4a1.75 1.75 0 0 1-1.4 2.8z"/><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/>',
+    "type": '<path d="M12 4v16"/><path d="M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2"/><path d="M9 20h6"/>',
+    "circle-help": '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>',
+    "heart": '<path d="M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5"/>',
+    "message-square": '<path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"/>',
+    "clipboard": '<rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>'
+  };
+  function icon(name, size) {
+    var p = ICON_PATHS[name]; if (!p) return "";
+    size = size || 13;
+    return '<svg class="__vfl_ic" width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + p + '</svg>';
+  }
+
   var CATEGORIES = [
-    { id: "bug",      label: "Bug",     emoji: "🐛", color: "#e35f5f", sub: "Etwas funktioniert nicht" },
-    { id: "feature",  label: "Feature", emoji: "✨", color: "#ffe05e", sub: "Idee / Wunsch" },
-    { id: "design",   label: "Design",  emoji: "🎨", color: "#62c12d", sub: "Sieht nicht richtig aus" },
-    { id: "copy",     label: "Copy",    emoji: "📝", color: "#e6ca55", sub: "Text / Formulierung" },
-    { id: "question", label: "Frage",   emoji: "❓", color: "#5c8fbf", sub: "Ich verstehe nicht..." },
-    { id: "praise",   label: "Lob",     emoji: "❤️", color: "#c67ba0", sub: "Das gefällt mir" },
+    { id: "bug",      label: "Bug",     emoji: "🐛", icon: "bug", color: "#e35f5f", sub: "Etwas funktioniert nicht" },
+    { id: "feature",  label: "Feature", emoji: "✨", icon: "sparkles", color: "#ffe05e", sub: "Idee / Wunsch" },
+    { id: "design",   label: "Design",  emoji: "🎨", icon: "palette", color: "#62c12d", sub: "Sieht nicht richtig aus" },
+    { id: "copy",     label: "Copy",    emoji: "📝", icon: "type", color: "#e6ca55", sub: "Text / Formulierung" },
+    { id: "question", label: "Frage",   emoji: "❓", icon: "circle-help", color: "#5c8fbf", sub: "Ich verstehe nicht..." },
+    { id: "praise",   label: "Lob",     emoji: "❤️", icon: "heart", color: "#c67ba0", sub: "Das gefällt mir" },
   ];
   var CAT_MAP = {}; CATEGORIES.forEach(function (c) { CAT_MAP[c.id] = c; });
   var PRIORITIES = [
@@ -439,6 +456,7 @@
     ".__vfl_modal input:focus, .__vfl_modal textarea:focus { border-color:#262626; box-shadow:0 0 0 3px rgba(255,224,94,.35); }",
     ".__vfl_modal textarea { min-height:44px; resize:vertical; line-height:1.5; }",
     ".__vfl_modal .__vfl_chips { display:flex; gap:6px; flex-wrap:wrap; }",
+    ".__vfl_ic { display:inline-block; vertical-align:-.15em; flex:none; }",
     ".__vfl_modal .__vfl_chips .__vfl_pick { background:#f1f1ec; border:1px solid #e3e1d6; color:#3b3b3b; padding:6px 11px; border-radius:99px; font-size:12.5px; cursor:pointer; font-weight:500; }",
     ".__vfl_modal .__vfl_chips .__vfl_pick[data-a='1'] { background:#ffe05e; border-color:#262626; color:#262626; font-weight:700; }",
     ".__vfl_modal .__vfl_actions { display:flex; gap:8px; justify-content:flex-end; margin-top:12px; }",
@@ -473,7 +491,7 @@
     bar.className = "__vfl_export-bar";
     var n = comments.length;
     bar.innerHTML =
-      '<span style="flex:1;min-width:160px">💬 Du hast <strong>' + n + ' Kommentar' + (n === 1 ? "" : "e") + '</strong>. Fertig? Exportiere dein Feedback!</span>' +
+      '<span style="flex:1;min-width:160px">' + icon("message-square", 13) + ' Du hast <strong>' + n + ' Kommentar' + (n === 1 ? "" : "e") + '</strong>. Fertig? Exportiere dein Feedback!</span>' +
       '<button data-act="er-md">⬇ Als Markdown</button>' +
       '<button data-act="er-dismiss" class="__vfl_eb-dismiss" aria-label="Schließen">✕</button>';
     document.body.appendChild(bar);
@@ -496,7 +514,7 @@
   fab.className = "__vfl_fab";
   fab.innerHTML =
     '<button data-act="mode" title="Kommentiermodus umschalten">🎯 Kommentieren</button>' +
-    '<button data-act="side">💬 Liste <span class="__vfl_count">' + comments.length + "</span></button>";
+    '<button data-act="side">' + icon("message-square", 12) + ' Liste <span class="__vfl_count">' + comments.length + "</span></button>";
   document.body.appendChild(fab);
 
   function setMode(m) {
@@ -523,7 +541,7 @@
   side.className = "__vfl_side";
   side.innerHTML =
     '<header>' +
-      '<div class="__vfl_brand"><span>💬</span>VibeFeedback</div>' +
+      '<div class="__vfl_brand"><span>' + icon("message-square", 14) + '</span>VibeFeedback</div>' +
       '<button data-act="close" title="Schließen">✕</button>' +
     '</header>' +
     '<div class="__vfl_tools">' +
@@ -573,7 +591,7 @@
       return '<div class="__vfl_item" data-id="' + esc(c.id) + '" style="border-left-color:' + cat.color + '">' +
         '<div class="__vfl_row">' +
           '<div class="__vfl_num">' + (i + 1) + '</div>' +
-          '<span class="__vfl_cat" style="background:' + cat.color + '22;color:#262626">' + cat.emoji + " " + esc(cat.label) + '</span>' +
+          '<span class="__vfl_cat" style="background:' + cat.color + '22;color:#262626">' + icon(cat.icon, 11) + " " + esc(cat.label) + '</span>' +
           '<button class="__vfl_del" data-del="' + esc(c.id) + '" title="Löschen">✕</button>' +
         '</div>' +
         '<div class="__vfl_txt">' + esc(truncate(summary, 200)) + '</div>' +
@@ -655,7 +673,7 @@
       var b = document.createElement("span");
       b.className = "__vfl_badge";
       b.style.setProperty("--vfl-c", cat.color);
-      b.textContent = cat.emoji + " " + (i + 1);
+      b.innerHTML = icon(cat.icon, 11) + " " + (i + 1);
       host.appendChild(b);
     });
   }
@@ -718,7 +736,7 @@
       '<div class="__vfl_modal" role="dialog">' +
         '<h3>' + (isEdit ? "Kommentar bearbeiten" : "Kommentar") + ' <span class="__vfl_tag">&lt;' + esc(tag) + '&gt;</span></h3>' +
         '<div class="__vfl_field"><label>Kategorie</label><div class="__vfl_chips" data-r="cats">' +
-          CATEGORIES.map(function (c) { return '<span class="__vfl_pick" data-cat="' + c.id + '" data-a="' + (c.id === currentCat ? 1 : 0) + '" title="' + esc(c.sub || "") + '">' + c.emoji + " " + esc(c.label) + (c.sub ? '<span class="__vfl_sub">' + esc(c.sub) + '</span>' : '') + '</span>'; }).join("") +
+          CATEGORIES.map(function (c) { return '<span class="__vfl_pick" data-cat="' + c.id + '" data-a="' + (c.id === currentCat ? 1 : 0) + '" title="' + esc(c.sub || "") + '">' + icon(c.icon, 12) + " " + esc(c.label) + (c.sub ? '<span class="__vfl_sub">' + esc(c.sub) + '</span>' : '') + '</span>'; }).join("") +
         '</div></div>' +
         '<div class="__vfl_field"><label>Priorität</label><div class="__vfl_chips" data-r="prios">' +
           PRIORITIES.map(function (p) { return '<span class="__vfl_pick" data-p="' + p.id + '" data-a="' + (p.id === currentPri ? 1 : 0) + '">' + esc(p.label) + '</span>'; }).join("") +
@@ -727,7 +745,7 @@
         '<div data-r="tpl"></div>' +
         '<div class="__vfl_field"><label data-r="text-label">Kommentar</label><textarea data-r="text" placeholder="Was ist dir aufgefallen?"></textarea></div>' +
         '<div class="__vfl_field"><label>Screenshot</label><div class="__vfl_shotrow">' +
-          '<button type="button" data-act="paste-shot" title="Eigenen Screenshot aus der Zwischenablage einfügen (oder Strg+V)">📋 Aus Zwischenablage</button>' +
+          '<button type="button" data-act="paste-shot" title="Eigenen Screenshot aus der Zwischenablage einfügen (oder Strg+V)">' + icon("clipboard", 12) + ' Aus Zwischenablage</button>' +
           '<span class="__vfl_shothint" data-r="shot-hint">' + (isEdit ? "leer = vorhandener bleibt" : "leer = automatisch") + '</span>' +
           '<img data-r="shot-preview" alt="Screenshot-Vorschau" hidden>' +
         '</div></div>' +
@@ -766,7 +784,7 @@
           for (var j = 0; j < items[i].types.length; j++) if (items[i].types[j].indexOf("image/") === 0) type = items[i].types[j];
           if (type) return items[i].getType(type).then(applyPastedShot);
         }
-        toast("Kein Bild in der Zwischenablage — erst Screenshot kopieren, dann 📋.", 3500);
+        toast("Kein Bild in der Zwischenablage — erst Screenshot kopieren, dann den Einfügen-Knopf nutzen.", 3500);
       }).catch(function () { toast("Zugriff auf Zwischenablage nicht erlaubt — nutze Strg+V.", 3500); });
     });
     bg.addEventListener("paste", function (e) {

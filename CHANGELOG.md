@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.8.0 — 2026-07-11 — Eigene Icons statt Emojis (Lucide) im gesamten UI
+
+Alle Emojis im UI durch selbstgehostete Inline-**Lucide**-Icons (stroke, `currentColor`) ersetzt — einheitliches, professionelles Bild statt bunter System-Emojis, konsistent mit der pilot-Ästhetik.
+
+### changed
+- **Kategorien** → Lucide: Bug=`bug`, Feature=`sparkles`, Design=`palette`, Copy=`type`, Frage=`circle-help`, Lob=`heart`. Überall: Kommentar-Bar, Sidebar, Badges im iframe, Dashboard-Charts/Tabellen/Karten, Landing-Mock.
+- **Status** → `circle`/`loader-circle`/`circle-check`; **Toolbar/Aktionen** → `camera`, `clipboard`, `crosshair`, `corner-left-up`, `chevron-down`, `message-square`, `mouse-pointer`, `monitor`, `presentation`, `map-pin`, `pencil`, `trash-2`, `thumbs-up/down`, `download`, `refresh-cw`, `play`, `bot` u. a.
+- **Landing-Feature-Cards** und **Coach-Overlay** auf Icons umgestellt; Topbar-Mobile-Icons (`::before`-Emoji) durch Inline-SVG ersetzt.
+- **Bookmarklet** (`layer.js`) ebenfalls umgestellt + neu gebaut.
+- Icon-System: `ICON_PATHS` + `icon(name,size)`-Helfer in `index.html`, `dashboard.html` und `layer.js`; CSS-Klasse `.ic`.
+
+### unverändert
+- **Markdown-Export** behält die Emojis (🐛 etc.) bewusst als kompakte LLM-Marker — dort lässt sich kein SVG einbetten.
+
+Tests: `test_badge_numbers` auf Icon-Badges angepasst; alle 13 Test-Dateien grün. Landing/Tool/Dashboard visuell abgenommen.
+
 ## 1.7.0 — 2026-07-11 — Kategorie & Priorität immer sichtbar — smart & kompakt
 
 Rückmeldung zu 1.5.0: Kategorie und Priorität sollen nicht im Expand versteckt, sondern **immer sichtbar** sein — aber platzsparend. Umgesetzt als kompakter Meta-Strip direkt über dem Kommentarfeld:

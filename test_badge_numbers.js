@@ -45,7 +45,8 @@ srv.listen(18092,"127.0.0.1", async ()=>{
 
   const res = await page.evaluate(()=>{
     const doc = document.querySelector("#frame").contentDocument;
-    const badges = [...doc.querySelectorAll(".__vf_badge")].map(b=>b.textContent.trim().replace(/^\S+\s*/,""));
+    // Badge = SVG-Icon + Nummer; textContent enthält nur noch die Nummer
+    const badges = [...doc.querySelectorAll(".__vf_badge")].map(b=>b.textContent.trim());
     const sidebarNums = [...document.querySelectorAll(".sidebar .item .num")].map(n=>n.textContent.trim());
     const total = STATE.comments.length;
     return { badges, sidebarNums, total, cur: STATE.currentUrl };

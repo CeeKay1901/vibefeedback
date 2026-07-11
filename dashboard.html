@@ -43,6 +43,7 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{font-family:"Centra No1","Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--fg);line-height:1.55;font-size:15px;text-rendering:optimizeLegibility}
 ::selection{background:var(--accent);color:var(--fg)}
+.ic{display:inline-block;vertical-align:-.15em;flex:none}
 html{scroll-behavior:smooth}
 :where(button,a,summary,[role=button],[tabindex]):focus-visible,.chip:focus-visible{outline:2px solid var(--fg);outline-offset:2px;border-radius:8px;box-shadow:0 0 0 5px rgba(255,224,94,.4)}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
@@ -244,8 +245,8 @@ footer{color:var(--muted);font-size:12.5px;padding:34px 0;text-align:center}
       <span>VibeFeedback</span><span class="sep">/</span><span>Dashboard</span>
     </a>
     <span class="grow"></span>
-    <button class="btn sm" id="btn-export-all" title="Alle Projekte samt Screenshots als ZIP sichern">⬇ Alles exportieren</button>
-    <button class="btn sm" id="btn-refresh" title="Daten neu aus dem Browser-Speicher lesen">↻ Aktualisieren</button>
+    <button class="btn sm" id="btn-export-all" title="Alle Projekte samt Screenshots als ZIP sichern"><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg> Alles exportieren</button>
+    <button class="btn sm" id="btn-refresh" title="Daten neu aus dem Browser-Speicher lesen"><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg> Aktualisieren</button>
     <a class="btn sm" href="./">← Startseite</a>
   </div>
 </header>
@@ -275,14 +276,36 @@ footer{color:var(--muted);font-size:12.5px;padding:34px 0;text-align:center}
    ========================================================================== */
 const STORE_PREFIX = "vibefeedback:v2:";
 
+// emoji bleibt für Export/CSV-Kompatibilität; icon = Lucide fürs UI.
 const CATEGORIES = [
-  { id:"bug",      label:"Bug",     emoji:"🐛" },
-  { id:"feature",  label:"Feature", emoji:"✨" },
-  { id:"design",   label:"Design",  emoji:"🎨" },
-  { id:"copy",     label:"Copy",    emoji:"📝" },
-  { id:"question", label:"Frage",   emoji:"❓" },
-  { id:"praise",   label:"Lob",     emoji:"❤️" },
+  { id:"bug",      label:"Bug",     emoji:"🐛", icon:"bug" },
+  { id:"feature",  label:"Feature", emoji:"✨", icon:"sparkles" },
+  { id:"design",   label:"Design",  emoji:"🎨", icon:"palette" },
+  { id:"copy",     label:"Copy",    emoji:"📝", icon:"type" },
+  { id:"question", label:"Frage",   emoji:"❓", icon:"circle-help" },
+  { id:"praise",   label:"Lob",     emoji:"❤️", icon:"heart" },
 ];
+/* Inline-Lucide-Icons (stroke, currentColor) — Emojis nur noch in Export/CSV. */
+const ICON_PATHS = {
+  "bug":`<path d="M12 20v-9"/><path d="M14 7a4 4 0 0 1 4 4v3a6 6 0 0 1-12 0v-3a4 4 0 0 1 4-4z"/><path d="M14.12 3.88 16 2"/><path d="M21 21a4 4 0 0 0-3.81-4"/><path d="M21 5a4 4 0 0 1-3.55 3.97"/><path d="M22 13h-4"/><path d="M3 21a4 4 0 0 1 3.81-4"/><path d="M3 5a4 4 0 0 0 3.55 3.97"/><path d="M6 13H2"/><path d="m8 2 1.88 1.88"/><path d="M9 7.13V6a3 3 0 1 1 6 0v1.13"/>`,
+  "sparkles":`<path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"/><path d="M20 2v4"/><path d="M22 4h-4"/><circle cx="4" cy="20" r="2"/>`,
+  "palette":`<path d="M12 22a1 1 0 0 1 0-20 10 9 0 0 1 10 9 5 5 0 0 1-5 5h-2.25a1.75 1.75 0 0 0-1.4 2.8l.3.4a1.75 1.75 0 0 1-1.4 2.8z"/><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/>`,
+  "type":`<path d="M12 4v16"/><path d="M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2"/><path d="M9 20h6"/>`,
+  "circle-help":`<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>`,
+  "heart":`<path d="M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5"/>`,
+  "circle":`<circle cx="12" cy="12" r="10"/>`,
+  "loader-circle":`<path d="M21 12a9 9 0 1 1-6.219-8.56"/>`,
+  "circle-check":`<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>`,
+  "check":`<path d="M20 6 9 17l-5-5"/>`,
+  "message-square":`<path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"/>`,
+  "map-pin":`<path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/>`,
+  "bot":`<path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/>`,
+  "download":`<path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/>`,
+  "refresh-cw":`<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>`,
+  "play":`<path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/>`,
+  "camera":`<path d="M13.997 4a2 2 0 0 1 1.76 1.05l.486.9A2 2 0 0 0 18.003 7H20a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1.997a2 2 0 0 0 1.759-1.048l.489-.904A2 2 0 0 1 10.004 4z"/><circle cx="12" cy="13" r="3"/>`
+};
+function icon(name, size){ const p=ICON_PATHS[name]; if(!p) return ""; size=size||14; return `<svg class="ic" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`; }
 const CAT_MAP = Object.fromEntries(CATEGORIES.map(c => [c.id, c]));
 const PRIORITIES = [
   { id:"must",   label:"Muss",   cls:"pri-must" },
@@ -297,9 +320,9 @@ const PRI_ORDER = { must:0, should:1, could:2, nice:3 };
    unterstützt, arbeitet die Punkte hier ab. Fehlendes Feld = offen, damit
    alle Bestandsdaten und Importe ohne Migration funktionieren. */
 const STATUSES = [
-  { id:"open",  label:"Offen",     chip:"○" },
-  { id:"doing", label:"In Arbeit", chip:"◐" },
-  { id:"done",  label:"Erledigt",  chip:"✓" },
+  { id:"open",  label:"Offen",     chip:"○", icon:"circle" },
+  { id:"doing", label:"In Arbeit", chip:"◐", icon:"loader-circle" },
+  { id:"done",  label:"Erledigt",  chip:"✓", icon:"circle-check" },
 ];
 const ST_MAP = Object.fromEntries(STATUSES.map(s => [s.id, s]));
 const st = c => ST_MAP[c.status] ? c.status : "open";
@@ -559,7 +582,7 @@ function dailySeries(comments, days = 30){
 
 /* Kategorie-/Prioritäts-Charts, in Übersicht wie Projekt-Detail identisch gebaut */
 function categoryChart(comments){
-  const rows = CATEGORIES.map(c => ({ label:c.label, icon:c.emoji, value: comments.filter(x => x.category === c.id).length }))
+  const rows = CATEGORIES.map(c => ({ label:c.label, icon:icon(c.icon,13), value: comments.filter(x => x.category === c.id).length }))
                          .sort((a, b) => b.value - a.value);
   const other = comments.filter(x => !CAT_MAP[x.category]).length;
   if(other) rows.push({ label:"Sonstige", icon:"•", value: other });
@@ -765,16 +788,16 @@ function renderOverview(){
           </button>
           <div class="progress" role="img" aria-label="${p.done} von ${p.comments.length} Kommentaren erledigt" title="${p.done} von ${p.comments.length} erledigt (${donePct} %)"><span style="width:${donePct}%"></span></div>
           <div class="proj-stats">
-            <span>💬 <b>${p.comments.length}</b></span>
+            <span>${icon("message-square",12)} <b>${p.comments.length}</b></span>
             <span><span class="pri-dot pri-must"></span><b>${p.openMust}</b> Muss offen</span>
             <span>📸 <b>${p.shots}</b></span>
             <span><b>${p.pages.length}</b> Seite${p.pages.length===1?"":"n"}</span>
           </div>
-          ${catTop.length ? `<div class="proj-chips">${catTop.map(x => `<span class="chip">${x.c.emoji} ${x.c.label} ${x.n}</span>`).join("")}</div>` : ""}
+          ${catTop.length ? `<div class="proj-chips">${catTop.map(x => `<span class="chip">${icon(x.c.icon,12)} ${x.c.label} ${x.n}</span>`).join("")}</div>` : ""}
           <div class="proj-foot">${p.authors.length ? esc(p.authors.slice(0,2).join(", ")) + (p.authors.length > 2 ? ` +${p.authors.length-2}` : "") + " · " : ""}${relTime(p.lastTs)}</div>
           <div class="proj-actions">
             <button class="btn sm" data-open="${i}">Details</button>
-            <a class="btn sm" href="${toolHref(p.src)}" title="Projekt im Feedback-Modus öffnen">▶ Im Tool öffnen</a>
+            <a class="btn sm" href="${toolHref(p.src)}" title="Projekt im Feedback-Modus öffnen">${icon("play",11)} Im Tool öffnen</a>
           </div>
         </article>`;
       }).join("")}
@@ -854,21 +877,21 @@ function renderDetail(idx){
         : `<div class="thumb-ph">kein Screenshot</div>`;
       const pageChip = (c.pageUrl && c.pageUrl !== p.src)
         ? (isHttp(c.pageUrl)
-            ? `<a class="chip" href="${esc(toolHref(c.pageUrl))}" title="Diese Seite im Feedback-Tool öffnen">📍 ${esc(pathOf(c.pageUrl))}</a>`
-            : `<span class="chip">📍 ${esc(pathOf(c.pageUrl) || c.pageUrl)}</span>`)
+            ? `<a class="chip" href="${esc(toolHref(c.pageUrl))}" title="Diese Seite im Feedback-Tool öffnen">${icon("map-pin",11)} ${esc(pathOf(c.pageUrl))}</a>`
+            : `<span class="chip">${icon("map-pin",11)} ${esc(pathOf(c.pageUrl) || c.pageUrl)}</span>`)
         : "";
       const searchBlob = [c.text, c.selector, c.author, pathOf(c.pageUrl || "")].join(" ").toLowerCase();
       return `<article class="cmt" data-done="${st(c) === "done"}" data-search="${esc(searchBlob)}">
         ${thumb}
         <div>
           <div class="meta">
-            <span>${catC.emoji} ${esc(catC.label)}</span>
+            <span>${icon(catC.icon,12)} ${esc(catC.label)}</span>
             <span><span class="pri-dot ${priC.cls}"></span>${esc(priC.label)}</span>
             ${c.author ? `<span>von ${esc(c.author)}</span>` : ""}
             <span title="${esc(fmtDateTime(tsMs(c)))}">${relTime(tsMs(c))}</span>
             ${pageChip}
             <span class="st-btns" data-i="${i}" role="group" aria-label="Status dieses Kommentars">
-              ${STATUSES.map(s => `<button type="button" data-st="${s.id}" class="${st(c)===s.id?"on":""}" aria-pressed="${st(c)===s.id}">${s.chip} ${s.label}</button>`).join("")}
+              ${STATUSES.map(s => `<button type="button" data-st="${s.id}" class="${st(c)===s.id?"on":""}" aria-pressed="${st(c)===s.id}">${icon(s.icon,12)} ${s.label}</button>`).join("")}
             </span>
           </div>
           <p class="txt">${esc(c.text || "(kein Text)")}</p>
@@ -883,10 +906,10 @@ function renderDetail(idx){
       <p class="sub"><a href="${esc(p.src)}" target="_blank" rel="noopener noreferrer">${esc(p.src)}</a></p>
 
       <div class="actions">
-        <a class="btn primary" id="btn-open-tool" href="${toolHref(p.src)}">▶ Im Feedback-Tool öffnen</a>
+        <a class="btn primary" id="btn-open-tool" href="${toolHref(p.src)}">${icon("play",12)} Im Feedback-Tool öffnen</a>
         <button class="btn" id="btn-copy-link" title="Link für Tester:innen kopieren — jede:r kommentiert im eigenen Browser und schickt dir den Export zurück">🔗 Feedback-Link kopieren</button>
-        <button class="btn" id="btn-copy-prompt" title="Alle offenen Punkte als fertigen Arbeitsauftrag für dein Coding-Tool kopieren" ${p.open ? "" : "disabled"}>🤖 Prompt kopieren</button>
-        <button class="btn" id="btn-export-proj" title="Nur dieses Projekt als ZIP sichern (JSON, CSV, Screenshots)">⬇ Projekt exportieren</button>
+        <button class="btn" id="btn-copy-prompt" title="Alle offenen Punkte als fertigen Arbeitsauftrag für dein Coding-Tool kopieren" ${p.open ? "" : "disabled"}>${icon("bot",13)} Prompt kopieren</button>
+        <button class="btn" id="btn-export-proj" title="Nur dieses Projekt als ZIP sichern (JSON, CSV, Screenshots)">${icon("download",13)} Projekt exportieren</button>
         <button class="btn danger" id="btn-del">Projekt löschen</button>
       </div>
 
@@ -907,15 +930,15 @@ function renderDetail(idx){
           const catC = CAT_MAP[c.category] || { emoji:"•" };
           return `<li>
             <span><span class="pri-dot ${priC.cls}"></span><strong>${esc(priC.label)}</strong></span>
-            <span>${catC.emoji}</span>
+            <span>${icon(catC.icon,12)}</span>
             <span class="next-text">${esc(trunc(c.text || "(kein Text)", 110))}</span>
-            ${st(c) === "doing" ? `<span class="chip">◐ in Arbeit</span>` : ""}
-            ${(c.pageUrl && c.pageUrl !== p.src && isHttp(c.pageUrl)) ? `<a class="chip" href="${esc(toolHref(c.pageUrl))}" title="Im Feedback-Tool öffnen">📍 ${esc(pathOf(c.pageUrl))}</a>` : ""}
+            ${st(c) === "doing" ? `<span class="chip">${icon("loader-circle",11)} in Arbeit</span>` : ""}
+            ${(c.pageUrl && c.pageUrl !== p.src && isHttp(c.pageUrl)) ? `<a class="chip" href="${esc(toolHref(c.pageUrl))}" title="Im Feedback-Tool öffnen">${icon("map-pin",11)} ${esc(pathOf(c.pageUrl))}</a>` : ""}
             ${c.author ? `<span class="who">von ${esc(c.author)}</span>` : ""}
-            <button class="chip next-done" data-next-done="${i}" title="Diesen Punkt als erledigt markieren">✓ erledigen</button>
+            <button class="chip next-done" data-next-done="${i}" title="Diesen Punkt als erledigt markieren">${icon("check",11)} erledigen</button>
           </li>`;
         }).join("")}</ol>${p.open > next.length ? `<p style="color:var(--muted);font-size:12.5px;margin-top:10px">+ ${p.open - next.length} weitere offene Punkte in der Liste unten.</p>` : ""}`
-        : `<p style="font-size:14px">🎉 Alles erledigt — kein Punkt offen.</p>`}
+        : `<p style="font-size:14px">${icon("circle-check",14)} Alles erledigt — kein Punkt offen.</p>`}
       </section>
 
       <div class="grid">
@@ -1010,7 +1033,7 @@ function renderDetail(idx){
         <div class="filters" role="group" aria-label="Nach Kategorie filtern">
           <button class="chip ${detailFilter.category==="all"?"on":""}" data-cat="all" aria-pressed="${detailFilter.category==="all"}">Alle</button>
           ${CATEGORIES.filter(c => p.comments.some(x => x.category === c.id))
-            .map(c => `<button class="chip ${detailFilter.category===c.id?"on":""}" data-cat="${c.id}" aria-pressed="${detailFilter.category===c.id}">${c.emoji} ${c.label} ${p.comments.filter(x=>x.category===c.id).length}</button>`).join("")}
+            .map(c => `<button class="chip ${detailFilter.category===c.id?"on":""}" data-cat="${c.id}" aria-pressed="${detailFilter.category===c.id}">${icon(c.icon,12)} ${c.label} ${p.comments.filter(x=>x.category===c.id).length}</button>`).join("")}
         </div>
         <div class="filters" role="group" aria-label="Nach Priorität filtern">
           <button class="chip ${detailFilter.priority==="all"?"on":""}" data-pri="all" aria-pressed="${detailFilter.priority==="all"}">Jede Priorität</button>
@@ -1020,7 +1043,7 @@ function renderDetail(idx){
         <div class="filters" role="group" aria-label="Nach Status filtern">
           <button class="chip ${detailFilter.status==="all"?"on":""}" data-st-filter="all" aria-pressed="${detailFilter.status==="all"}">Jeder Status</button>
           ${STATUSES.filter(s => p.comments.some(c => st(c) === s.id))
-            .map(s => `<button class="chip ${detailFilter.status===s.id?"on":""}" data-st-filter="${s.id}" aria-pressed="${detailFilter.status===s.id}">${s.chip} ${s.label} ${p.comments.filter(c => st(c) === s.id).length}</button>`).join("")}
+            .map(s => `<button class="chip ${detailFilter.status===s.id?"on":""}" data-st-filter="${s.id}" aria-pressed="${detailFilter.status===s.id}">${icon(s.icon,12)} ${s.label} ${p.comments.filter(c => st(c) === s.id).length}</button>`).join("")}
         </div>
         <div style="margin-top:8px">${cmtHtml}</div>
         <p id="search-empty" hidden style="text-align:center;color:var(--muted);padding:24px 12px">
