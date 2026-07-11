@@ -10,7 +10,7 @@
 /* ===== Tokens: pilot-CI für Chrome, validierte Data-Viz-Palette für Charts ===== */
 :root{
   --bg:#fcfcfc; --panel:#fff; --panel-2:#f6f6f3; --line:#e3e1d6;
-  --fg:#262626; --muted:#7b7a71; --accent:#ffe05e; --accent-ink:#262626;
+  --fg:#262626; --muted:#6a695f; --accent:#ffe05e; --accent-ink:#262626;
   --danger:#e35f5f; --radius:10px; --radius-lg:16px;
   --shadow:0 1px 3px rgba(38,38,38,.06); --shadow-lg:0 12px 32px rgba(38,38,38,.12);
 
@@ -26,7 +26,7 @@
 @media (prefers-color-scheme: dark){
   :root{
     --bg:#0d0d0d; --panel:#1a1a19; --panel-2:#232322; --line:#2c2c2a;
-    --fg:#fff; --muted:#898781; --accent:#ffe05e;
+    --fg:#fff; --muted:#9a988e; --accent:#ffe05e;
     --shadow:0 1px 3px rgba(0,0,0,.4); --shadow-lg:0 12px 32px rgba(0,0,0,.5);
     --surface-1:#1a1a19;
     --series-1:#3987e5;
@@ -865,7 +865,7 @@ function renderDetail(idx){
           <div class="sel">${esc(c.selector || "")}</div>
         </div>
       </article>`;
-    }).join("") || `<p class="empty" style="padding:28px">Keine Kommentare für diesen Filter.</p>`;
+    }).join("") || `<p class="empty" style="padding:28px">Keine Kommentare für diesen Filter. <button class="linkish" id="filter-reset">Filter zurücksetzen</button></p>`;
 
     app.innerHTML = `
       <div class="back"><button class="btn sm" id="btn-back">← Alle Projekte</button></div>
@@ -998,19 +998,19 @@ function renderDetail(idx){
           <span id="search-note" aria-live="polite"></span>
         </div>
         <div class="filters" role="group" aria-label="Nach Kategorie filtern">
-          <button class="chip ${detailFilter.category==="all"?"on":""}" data-cat="all">Alle</button>
+          <button class="chip ${detailFilter.category==="all"?"on":""}" data-cat="all" aria-pressed="${detailFilter.category==="all"}">Alle</button>
           ${CATEGORIES.filter(c => p.comments.some(x => x.category === c.id))
-            .map(c => `<button class="chip ${detailFilter.category===c.id?"on":""}" data-cat="${c.id}">${c.emoji} ${c.label} ${p.comments.filter(x=>x.category===c.id).length}</button>`).join("")}
+            .map(c => `<button class="chip ${detailFilter.category===c.id?"on":""}" data-cat="${c.id}" aria-pressed="${detailFilter.category===c.id}">${c.emoji} ${c.label} ${p.comments.filter(x=>x.category===c.id).length}</button>`).join("")}
         </div>
         <div class="filters" role="group" aria-label="Nach Priorität filtern">
-          <button class="chip ${detailFilter.priority==="all"?"on":""}" data-pri="all">Jede Priorität</button>
+          <button class="chip ${detailFilter.priority==="all"?"on":""}" data-pri="all" aria-pressed="${detailFilter.priority==="all"}">Jede Priorität</button>
           ${PRIORITIES.filter(pr => p.comments.some(x => x.priority === pr.id))
-            .map(pr => `<button class="chip ${detailFilter.priority===pr.id?"on":""}" data-pri="${pr.id}"><span class="pri-dot ${pr.cls}"></span>${pr.label} ${p.comments.filter(x=>x.priority===pr.id).length}</button>`).join("")}
+            .map(pr => `<button class="chip ${detailFilter.priority===pr.id?"on":""}" data-pri="${pr.id}" aria-pressed="${detailFilter.priority===pr.id}"><span class="pri-dot ${pr.cls}"></span>${pr.label} ${p.comments.filter(x=>x.priority===pr.id).length}</button>`).join("")}
         </div>
         <div class="filters" role="group" aria-label="Nach Status filtern">
-          <button class="chip ${detailFilter.status==="all"?"on":""}" data-st-filter="all">Jeder Status</button>
+          <button class="chip ${detailFilter.status==="all"?"on":""}" data-st-filter="all" aria-pressed="${detailFilter.status==="all"}">Jeder Status</button>
           ${STATUSES.filter(s => p.comments.some(c => st(c) === s.id))
-            .map(s => `<button class="chip ${detailFilter.status===s.id?"on":""}" data-st-filter="${s.id}">${s.chip} ${s.label} ${p.comments.filter(c => st(c) === s.id).length}</button>`).join("")}
+            .map(s => `<button class="chip ${detailFilter.status===s.id?"on":""}" data-st-filter="${s.id}" aria-pressed="${detailFilter.status===s.id}">${s.chip} ${s.label} ${p.comments.filter(c => st(c) === s.id).length}</button>`).join("")}
         </div>
         <div style="margin-top:8px">${cmtHtml}</div>
         <p id="search-empty" hidden style="text-align:center;color:var(--muted);padding:24px 12px">
@@ -1021,14 +1021,19 @@ function renderDetail(idx){
     `;
     bindChartHovers(app);
     app.querySelector("#btn-back").addEventListener("click", gotoOverview);
-    app.querySelectorAll("[data-cat]").forEach(b => b.addEventListener("click", () => { detailFilter.category = b.dataset.cat; draw(); }));
-    app.querySelectorAll("[data-pri]").forEach(b => b.addEventListener("click", () => { detailFilter.priority = b.dataset.pri; draw(); }));
-    app.querySelectorAll("[data-st-filter]").forEach(b => b.addEventListener("click", () => { detailFilter.status = b.dataset.stFilter; draw(); }));
+    // draw() ersetzt das komplette innerHTML → das bediente Control würde zerstört
+    // und der Fokus fiele auf den Seitenanfang. Nach dem Redraw denselben Button
+    // (gleiches data-Attribut) wieder fokussieren, damit Tastatur-Filtern bedienbar bleibt.
+    const focusAfterDraw = sel => { const el = app.querySelector(sel); if(el) el.focus(); };
+    app.querySelectorAll("[data-cat]").forEach(b => b.addEventListener("click", () => { detailFilter.category = b.dataset.cat; draw(); focusAfterDraw(`[data-cat="${b.dataset.cat}"]`); }));
+    app.querySelectorAll("[data-pri]").forEach(b => b.addEventListener("click", () => { detailFilter.priority = b.dataset.pri; draw(); focusAfterDraw(`[data-pri="${b.dataset.pri}"]`); }));
+    app.querySelectorAll("[data-st-filter]").forEach(b => b.addEventListener("click", () => { detailFilter.status = b.dataset.stFilter; draw(); focusAfterDraw(`[data-st-filter="${b.dataset.stFilter}"]`); }));
+    app.querySelector("#filter-reset")?.addEventListener("click", () => { detailFilter.category = "all"; detailFilter.priority = "all"; detailFilter.status = "all"; draw(); focusAfterDraw(`[data-cat="all"]`); });
     app.querySelectorAll(".st-btns").forEach(g => g.addEventListener("click", e => {
       const b = e.target.closest("button[data-st]");
       if(!b) return;
       const c = shown[+g.dataset.i];
-      if(c && setStatus(p, c, b.dataset.st)) draw();
+      if(c && setStatus(p, c, b.dataset.st)){ const gi = g.dataset.i, st = b.dataset.st; draw(); focusAfterDraw(`.st-btns[data-i="${gi}"] button[data-st="${st}"]`); }
     }));
     app.querySelectorAll("[data-next-done]").forEach(b => b.addEventListener("click", () => {
       const c = next[+b.dataset.nextDone];

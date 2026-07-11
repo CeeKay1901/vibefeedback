@@ -1,5 +1,34 @@
 # Changelog
 
+## 1.2.0 — 2026-07-11 — UI-Review-Sweep über alle drei Oberflächen (a11y & Bedienung)
+
+Systematischer UX/UI-Review von Landing, Tool-Flow und Dashboard (Code-Analyse je Oberfläche + reale Screenshots Desktop/Mobile via `ui_review_shots.js`). Die Kritisch- und Hoch-Befunde sind umgesetzt:
+
+### fix (Tastatur & Screenreader)
+- **Kategorie-/Prioritäts-Chips waren per Tastatur nicht auslösbar** (`role=button` ohne keydown): jetzt echte `role=radiogroup`/`radio` mit Enter/Space + Pfeiltasten (Roving-tabindex) und `aria-checked` statt reiner Farbmarkierung.
+- **Toasts ohne `aria-live`**: jetzt `role=status` + `aria-live` — Speichern-Erfolg und die Leer-Validierung werden angesagt.
+- **Dashboard-Filter-Chips** tragen jetzt `aria-pressed`; nach dem Redraw (`draw()`) wird der **Fokus auf den bedienten Filter/Status zurückgesetzt** (vorher fiel er auf den Seitenanfang → Tastatur-Filtern unbrauchbar).
+
+### fix (Datensicherheit)
+- **Einzelnen Kommentar löschen** war sofort & endgültig (nur „Alle löschen" hatte confirm): jetzt **Undo-Toast** („Kommentar gelöscht — Rückgängig", 6 s).
+
+### fix (Kontrast & Touch, WCAG AA)
+- Globale Tokens `--muted`/`--dim` abgedunkelt (hell) bzw. aufgehellt (dunkel) auf ≥4.5:1 — betraf fast allen Hilfs-/Kleintext in Tool **und** Dashboard.
+- Landing: **CORS-Statustext** war als hellgrüner/gelber Text kaum lesbar (~2.3:1) → dunkler Text auf getöntem Chip, Semantik weiter über ✅/⚠️.
+- Touch-Targets auf `pointer:coarse`: Kategorie-/Prio-Chips, cbar-Icon-Buttons und die Bearbeiten/Löschen-Icons (vorher hover-only + winzig) auf ≥40–44 px; ✕ vom ✎ abgesetzt.
+
+### fix (Landing-Feinschliff)
+- URL-Feld: `inputmode=url`, `autocomplete=url`, `autocapitalize=off`, `spellcheck=false`.
+- Workflow-Schritt-Überschriften `h4`→`h3` (lückenlose Heading-Hierarchie unter dem `h2`).
+- Dashboard: Filter-Leerzustand bekommt einen „Filter zurücksetzen"-Button (kein Dead-End mehr).
+
+### bewusst offen (nächste Runde)
+- Sidebar-Kommentare & Breadcrumb-Chips (`div`/`span`+onclick) noch nicht tastaturbedienbar.
+- Landing: Kern-Eingabe („Link erzeugen") liegt unter dem Fold — Umbau in den Hero ist eine Design-Entscheidung.
+- Lightbox-Focus-Trap, Nav-Buttons→Links, doppeltes Autor-Feld, Chart-Re-Animation beim Filtern.
+
+Tests: alle 13 Dateien grün (`npm test`, Exit 0); zusätzlich visuell über den Screenshot-Sweep abgenommen.
+
 ## 1.1.0 — 2026-07-11 — Export ist LLM-tauglicher (Kernfeature-Realitätscheck)
 
 Das Kernfeature — der Feedback-Export als Prompt-Grundlage — wurde end-to-end gegen die echte Live-Seite kippflix.com durchgespielt: je ein **Bug**, ein **Feature** und eine **Design**-Verbesserung, mit ausgefüllten Template-Feldern, Priorität und echten Auto-Screenshots (`test_export_quality.js`). Der erzeugte Markdown wurde als LLM-Input bewertet. Inhaltlich stark (KI-Preamble, strukturierte Templates, Fallback-Identifier, Grounding, pixeltreue Screenshots) — drei Schwachstellen wurden gefunden und behoben:

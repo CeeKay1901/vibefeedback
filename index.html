@@ -31,8 +31,8 @@
   --line-2:#d0ceb8;
   --fg:#262626;
   --fg-2:#3b3b3b;
-  --muted:#7b7a71;
-  --dim:#98978e;
+  --muted:#6a695f;
+  --dim:#6e6d64;
   --accent:#ffe05e;        /* pilot yellow */
   --accent-ink:#262626;    /* text on yellow */
   --accent-2:#262626;      /* secondary accent = pilot dark */
@@ -152,7 +152,7 @@ textarea{resize:vertical;min-height:110px;line-height:1.5}
 .flow{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:44px}
 .flow-step{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden}
 .flow-step .n{position:absolute;top:14px;right:16px;font-size:56px;font-weight:800;color:var(--panel-3);line-height:1;letter-spacing:-2px}
-.flow-step h4{margin-bottom:6px;font-size:15px;position:relative;z-index:1}
+.flow-step h3{margin-bottom:6px;font-size:15px;position:relative;z-index:1}
 .flow-step p{color:var(--muted);font-size:13px;margin:0;position:relative;z-index:1}
 
 .setup-card{background:linear-gradient(135deg,var(--panel),var(--panel-2));border:1px solid var(--line);border-radius:var(--radius-lg);padding:30px;margin-top:44px;box-shadow:var(--shadow)}
@@ -404,7 +404,9 @@ body:has(.mode-toggle button[data-mode=nav].active) .canvas iframe{outline:2px s
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 
 /* ============ Toast ============ */
-.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--panel-2);border:1px solid var(--line);color:var(--fg);padding:10px 18px;border-radius:10px;box-shadow:var(--shadow);z-index:10000;font-size:13px;animation:slideUp .2s ease}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--panel-2);border:1px solid var(--line);color:var(--fg);padding:10px 18px;border-radius:10px;box-shadow:var(--shadow);z-index:10000;font-size:13px;animation:slideUp .2s ease;display:inline-flex;align-items:center}
+.toast-undo{background:transparent;border:0;color:var(--accent-3);font-weight:700;font-size:13px;cursor:pointer;padding:6px 8px;text-decoration:underline}
+.toast-undo:hover{color:var(--fg)}
 
 /* ============ Coach Mark ============ */
 .coach{position:fixed;inset:0;background:rgba(38,38,38,.35);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);z-index:9998;display:grid;place-items:center;padding:20px}
@@ -460,6 +462,16 @@ body:has(.mode-toggle button[data-mode=nav].active) .canvas iframe{outline:2px s
 @media(pointer:coarse){
   .mode-toggle button,.topbar #btn-present,.topbar #btn-back,.topbar #btn-new{min-height:44px;min-width:44px}
   .tools button{min-height:44px}
+  /* Kern-Klassifizierung: Kategorie-/Prio-Chips auf Touch groß genug (WCAG 2.5.5) */
+  .cbar .chips{gap:8px}
+  .cbar .chips .pick{min-height:40px;padding:9px 12px}
+  /* cbar-Sekundäraktionen + Target-Aktionen auf 44px */
+  .cbar .icon-btn,.cbar .primary,.cbar .ghost{min-height:44px;min-width:44px}
+  .cbar [data-act]{min-height:40px}
+  /* Ohne Hover müssen Bearbeiten/Löschen sichtbar & greifbar sein; ✕ abgesetzt */
+  .item .actions{opacity:1}
+  .item .actions button{padding:9px 11px;min-width:40px;min-height:40px}
+  .item .actions .del{margin-left:6px}
 }
 
 @media(max-width:640px){
@@ -541,8 +553,8 @@ body:has(.mode-toggle button[data-mode=nav].active) .canvas iframe{outline:2px s
     --line-2:#4a4843;
     --fg:#eeede8;
     --fg-2:#c8c7c0;
-    --muted:#7a7970;
-    --dim:#5a5950;
+    --muted:#9a988e;
+    --dim:#86847a;
     --accent:#ffe05e;
     --accent-ink:#1c1c1a;
     --accent-2:#eeede8;
@@ -731,17 +743,17 @@ a.bm-drag:active{transform:scale(.97)}
       <div class="flow">
         <div class="flow-step">
           <div class="n">1</div>
-          <h4>Link erzeugen</h4>
+          <h3>Link erzeugen</h3>
           <p>Deine Projekt-URL einfügen, Sharing-Link kopieren. Fertig.</p>
         </div>
         <div class="flow-step">
           <div class="n">2</div>
-          <h4>Tester klicken</h4>
+          <h3>Tester klicken</h3>
           <p>Tester öffnen den Link, klicken auf Elemente, hinterlassen Kommentare. Ohne Signup.</p>
         </div>
         <div class="flow-step">
           <div class="n">3</div>
-          <h4>Markdown exportieren</h4>
+          <h3>Markdown exportieren</h3>
           <p>Aggregiertes Feedback als Markdown herunterladen. Ab damit in deinen nächsten KI-Prompt.</p>
         </div>
       </div>
@@ -778,7 +790,7 @@ a.bm-drag:active{transform:scale(.97)}
         <h3><label for="src-input" style="cursor:pointer">Deine Projekt-URL</label></h3>
         <div class="muted" id="src-input-hint">Öffentlich erreichbare HTML-Seite. GitHub Pages, Netlify, Vercel, alles was CORS erlaubt.</div>
         <div class="row">
-          <input type="url" id="src-input" placeholder="https://username.github.io/projekt/index.html" aria-describedby="src-input-hint src-error cors-hint">
+          <input type="url" id="src-input" inputmode="url" autocomplete="url" autocapitalize="off" spellcheck="false" placeholder="https://username.github.io/projekt/index.html" aria-describedby="src-input-hint src-error cors-hint">
           <button class="primary" id="btn-generate">Link erzeugen</button>
         </div>
         <div id="src-error" class="err-inline" role="alert" aria-live="polite"></div>
@@ -927,9 +939,26 @@ const truncate = (s,n=200) => (s??"").length<=n?s:s.slice(0,n)+"…";
 const toast = (msg,ms=2200) => {
   $$(".toast").forEach(t=>t.remove());
   const t = document.createElement("div");
-  t.className="toast"; t.textContent=msg; document.body.appendChild(t);
+  // role=status + aria-live: Screenreader kündigen Erfolg/Fehler/Validierung an
+  // (der Toast ist auch der einzige Kanal für „Kommentar darf nicht leer sein").
+  t.className="toast"; t.setAttribute("role","status"); t.setAttribute("aria-live","polite");
+  t.textContent=msg; document.body.appendChild(t);
   setTimeout(()=>t.remove(), ms);
 };
+
+// Toast mit Rückgängig-Aktion für destruktive Schritte (Einzel-Löschung): sicherer
+// als sofortiges, endgültiges Entfernen und weniger störend als ein confirm-Dialog.
+function undoToast(msg, onUndo, ms=6000){
+  $$(".toast").forEach(t=>t.remove());
+  const t=document.createElement("div");
+  t.className="toast"; t.setAttribute("role","status"); t.setAttribute("aria-live","polite");
+  const span=document.createElement("span"); span.textContent=msg+"  ";
+  const btn=document.createElement("button");
+  btn.type="button"; btn.className="toast-undo"; btn.textContent="Rückgängig";
+  btn.addEventListener("click", ()=>{ t.remove(); onUndo(); });
+  t.append(span, btn); document.body.appendChild(t);
+  setTimeout(()=>t.remove(), ms);
+}
 
 function cssPath(el){
   if(!el || el.nodeType!==1) return "";
@@ -1207,21 +1236,25 @@ function initLanding(){
     link.textContent = feedbackUrl;
     result.classList.remove("hidden");
 
-    corsHint.textContent = "⏳ CORS-Check läuft…"; corsHint.style.color = "var(--muted)";
+    // Statustext IMMER in dunkler Vordergrundfarbe (WCAG AA); Semantik über Emoji
+    // + getönten Hintergrund/Rahmen, nicht über hellen, kaum lesbaren Farbtext.
+    const okStyle   = "color:var(--fg);background:rgba(98,193,45,.14);border-left:3px solid var(--success);padding:7px 10px;border-radius:6px";
+    const warnStyle = "color:var(--fg);background:rgba(230,202,85,.20);border-left:3px solid var(--warn);padding:7px 10px;border-radius:6px";
+    corsHint.style.cssText = "color:var(--muted)"; corsHint.textContent = "⏳ CORS-Check läuft…";
     try{
       const r = await fetch(val, { method:"GET", redirect:"follow" });
       if(!r.ok) throw new Error("HTTP "+r.status);
       const ct = r.headers.get("content-type")||"";
       if(!/text\/html|application\/xhtml/i.test(ct)){
         corsHint.innerHTML = `⚠️ Response-Content-Type ist <code>${esc(ct||"unbekannt")}</code> — evtl. keine HTML-Seite.`;
-        corsHint.style.color = "var(--warn)";
+        corsHint.style.cssText = warnStyle;
       }else{
         corsHint.textContent = "✅ CORS OK — Tester können die Seite laden.";
-        corsHint.style.color = "var(--success)";
+        corsHint.style.cssText = okStyle;
       }
     }catch(e){
       corsHint.innerHTML = `⚠️ CORS blockiert oder Ziel nicht erreichbar (${esc(String(e.message||e))}). Tester bekommen im Fehlerfall einen Fallback zum HTML-Einfügen.`;
-      corsHint.style.color = "var(--warn)";
+      corsHint.style.cssText = warnStyle;
     }
 
     $("#btn-preview").onclick = ()=> location.href = feedbackUrl + "&owner=1";
@@ -2472,11 +2505,11 @@ function openCommentModal(el, existing){
             <span data-target-tag>&lt;${esc(tag)}&gt;</span>
             <span class="dims" data-target-dims></span>
           </span>
-          <div class="chips" data-role="cats">
-            ${CATEGORIES.map(c=>`<span class="pick" data-cat="${c.id}" data-active="${c.id===currentCat}" role="button" tabindex="0" aria-label="${c.label}" title="${c.sub||''}">${c.emoji} ${c.label}<span style="display:block;font-size:10px;color:inherit;opacity:.65;font-weight:400;margin-top:1px">${c.sub||''}</span></span>`).join("")}
+          <div class="chips" data-role="cats" role="radiogroup" aria-label="Kategorie">
+            ${CATEGORIES.map(c=>`<span class="pick" data-cat="${c.id}" data-active="${c.id===currentCat}" role="radio" aria-checked="${c.id===currentCat}" tabindex="${c.id===currentCat?0:-1}" aria-label="${c.label}: ${c.sub||''}" title="${c.sub||''}">${c.emoji} ${c.label}<span aria-hidden="true" style="display:block;font-size:10px;color:inherit;opacity:.65;font-weight:400;margin-top:1px">${c.sub||''}</span></span>`).join("")}
           </div>
-          <div class="chips" data-role="prios">
-            ${PRIORITIES.map(p=>`<span class="pick" data-p="${p.id}" data-active="${p.id===currentPri}" role="button" tabindex="0" aria-label="Priorität ${p.label}">${p.label}</span>`).join("")}
+          <div class="chips" data-role="prios" role="radiogroup" aria-label="Priorität">
+            ${PRIORITIES.map(p=>`<span class="pick" data-p="${p.id}" data-active="${p.id===currentPri}" role="radio" aria-checked="${p.id===currentPri}" tabindex="${p.id===currentPri?0:-1}" aria-label="Priorität ${p.label}">${p.label}</span>`).join("")}
           </div>
         </div>
         <label class="sr-only" for="vf-cbar-text" id="vf-modal-title">${isEdit?"Kommentar bearbeiten":"Kommentar schreiben"}</label>
@@ -2718,19 +2751,31 @@ function openCommentModal(el, existing){
   $("[data-act=paste-shot]", host).addEventListener("click", pasteShotFromClipboard);
   thumb.addEventListener("click", ()=> setExpanded(true, true));
 
-  $$("[data-role=cats] .pick", host).forEach(chip => {
-    chip.addEventListener("click", ()=>{
-      currentCat = chip.dataset.cat;
-      $$("[data-role=cats] .pick", host).forEach(c=> c.dataset.active = (c===chip));
-      renderTemplate();
+  // Chip-Gruppen als echte Radiogruppen: Auswahl per Maus UND Tastatur (Enter/Space,
+  // Pfeiltasten mit Roving-tabindex), Zustand über aria-checked statt nur Farbe.
+  function wireRadioGroup(role, onPick){
+    const chips = $$(`[data-role=${role}] .pick`, host);
+    const select = (chip, focus)=>{
+      chips.forEach(c=>{
+        const on = c===chip;
+        c.dataset.active = on;
+        c.setAttribute("aria-checked", on);
+        c.tabIndex = on ? 0 : -1;
+      });
+      if(focus) chip.focus();
+      onPick(chip);
+    };
+    chips.forEach((chip, i)=>{
+      chip.addEventListener("click", ()=> select(chip, false));
+      chip.addEventListener("keydown", e=>{
+        if(e.key===" " || e.key==="Enter"){ e.preventDefault(); select(chip, false); }
+        else if(e.key==="ArrowRight" || e.key==="ArrowDown"){ e.preventDefault(); select(chips[(i+1)%chips.length], true); }
+        else if(e.key==="ArrowLeft" || e.key==="ArrowUp"){ e.preventDefault(); select(chips[(i-1+chips.length)%chips.length], true); }
+      });
     });
-  });
-  $$("[data-role=prios] .pick", host).forEach(chip => {
-    chip.addEventListener("click", ()=>{
-      currentPri = chip.dataset.p;
-      $$("[data-role=prios] .pick", host).forEach(c=> c.dataset.active = (c===chip));
-    });
-  });
+  }
+  wireRadioGroup("cats", chip=>{ currentCat = chip.dataset.cat; renderTemplate(); });
+  wireRadioGroup("prios", chip=>{ currentPri = chip.dataset.p; });
 
   const close = ()=>{
     unhighlight();
@@ -2978,9 +3023,17 @@ function renderAll(){
   $$("[data-del]", list).forEach(b=>b.addEventListener("click", e=>{
     e.stopPropagation();
     const id = b.dataset.del;
+    const idx = STATE.comments.findIndex(x=>x.id===id);
+    if(idx<0) return;
+    const removed = STATE.comments[idx];
     STATE.comments = STATE.comments.filter(x=>x.id!==id);
     saveComments(STATE.src, STATE.comments);
     renderAll(); refreshFrameBadges();
+    undoToast("Kommentar gelöscht", ()=>{
+      STATE.comments.splice(Math.min(idx, STATE.comments.length), 0, removed);
+      saveComments(STATE.src, STATE.comments);
+      renderAll(); refreshFrameBadges();
+    });
   }));
   $$("[data-edit]", list).forEach(b=>b.addEventListener("click", e=>{
     e.stopPropagation();
