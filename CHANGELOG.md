@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.4.1 — 2026-07-11 — Mobile: Bedienelemente kompakter
+
+Rückmeldung: Buttons auf dem Handy noch etwas zu groß. Touch-Ziele bleiben gut tippbar, aber enger:
+- Kommentar-Bar: Kategorie-/Prio-Chips 40→34 px, Icon-Buttons 44→38 px, Abbrechen/Speichern 44→38 px → die cbar ist ~31 px niedriger, mehr Seite bleibt sichtbar.
+- Topbar-Aktionen 44→40 px, Sidebar-Export-Buttons kompakter (kleinere Schrift/Padding, weniger Umbruch).
+
+Nur `@media(pointer:coarse)`/`max-width:640px` in `index.html` — Desktop und Dashboard unberührt. Alle 13 Test-Dateien grün.
+
 ## 1.4.0 — 2026-07-11 — Typografie: selbstgehostete pilot-Fonts (Inter + JetBrains Mono)
 
 Die App war für die pilot-Brandfont „Centra No1" (kommerziell) gebaut, rendete aber mangels Font in System-Schrift (auf Android/Linux inkonsistent). Jetzt der dokumentierte pilot-Fallback **Inter** (UI) + **JetBrains Mono** (Selektoren/Snippets/Tags), selbstgehostet.
