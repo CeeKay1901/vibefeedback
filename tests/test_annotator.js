@@ -4,8 +4,9 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 
-const VF = __dirname;
+const VF = path.join(__dirname, "..");
 const OUT = path.join(__dirname, "test_artifacts");
+fs.mkdirSync(OUT, { recursive: true });
 
 function startServer(dir, port) {
   return new Promise(resolve => {

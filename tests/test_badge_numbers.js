@@ -1,7 +1,7 @@
 // Fund #4: Badge-Nummer muss der Sidebar-Nummer entsprechen (Multi-Page)
 const { chromium } = require("playwright");
 const http = require("http"); const fs = require("fs"); const path = require("path");
-const VF = __dirname;
+const VF = path.join(__dirname, "..");
 const ok=[],bad=[]; const check=(c,l,e)=>{(c?ok:bad).push(l);console.log(`  ${c?"✓":"✗"} ${l}${e&&!c?" — "+e:""}`);};
 
 const srv = http.createServer((req,res)=>{ let fp=req.url.split("?")[0];
@@ -18,7 +18,7 @@ srv.listen(18092,"127.0.0.1", async ()=>{
   const page = await (await browser.newContext({viewport:{width:1360,height:900}})).newPage();
   page.on("pageerror",e=>{console.log("ERR:",e.message.slice(0,120)); bad.push("pageerror");});
   await page.addInitScript(`window.__VF_MS_OVERRIDE="http://127.0.0.1:${P}/modern-screenshot.js";`);
-  await page.goto(`http://127.0.0.1:${P}/index.html?src=${encodeURIComponent(`http://127.0.0.1:${P}/demo.html`)}&__vftest=1`,{waitUntil:"networkidle"});
+  await page.goto(`http://127.0.0.1:${P}/index.html?src=${encodeURIComponent(`http://127.0.0.1:${P}/demos/demo.html`)}&__vftest=1`,{waitUntil:"networkidle"});
   await page.waitForTimeout(2000);
   await page.locator(".coach button").click().catch(()=>{});
 

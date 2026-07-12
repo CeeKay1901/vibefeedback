@@ -5,8 +5,9 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 
-const VF = __dirname;
+const VF = path.join(__dirname, "..");
 const OUT = path.join(__dirname, "test_artifacts");
+fs.mkdirSync(OUT, { recursive: true });
 
 function startServer(dir, port) {
   return new Promise(resolve => {
@@ -46,7 +47,7 @@ const check = (cond, label) => { (cond ? ok : bad).push(label); console.log(`  $
     await page.screenshot({ path: path.join(OUT, name) });
   };
 
-  await page.goto(`http://127.0.0.1:${PORT}/index.html?src=${encodeURIComponent(`http://127.0.0.1:${PORT}/demo.html`)}`, { waitUntil: "networkidle" });
+  await page.goto(`http://127.0.0.1:${PORT}/index.html?src=${encodeURIComponent(`http://127.0.0.1:${PORT}/demos/demo.html`)}`, { waitUntil: "networkidle" });
   await page.waitForTimeout(2000);
   await page.locator(".coach button").click().catch(() => {});
   check((await curUrl()).includes("demo.html"), "Landing im iframe geladen");

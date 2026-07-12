@@ -4,7 +4,7 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 
-const VF = __dirname;
+const VF = path.join(__dirname, "..");
 
 function startServer(dir, port) {
   return new Promise(resolve => {

@@ -2,12 +2,12 @@
  * Screenshot capture test — VibeFeedback
  * Verifies: Canvas 2D capture works, toDataURL succeeds, result stored in STATE
  */
-const { chromium } = require("/data/data/com.termux/files/home/vibefeedback/node_modules/playwright");
+const { chromium } = require("playwright");
 const http = require("http");
 const fs   = require("fs");
 const path = require("path");
 
-const VF_DIR = "/data/data/com.termux/files/home/vibefeedback";
+const VF_DIR = path.join(__dirname, "..");
 
 const H2C_LOCAL = path.join(VF_DIR, "node_modules/html2canvas/dist/html2canvas.min.js");
 const MS_LOCAL  = path.join(VF_DIR, "node_modules/modern-screenshot/dist/index.js");

@@ -3,7 +3,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-const DIR = '/data/data/com.termux/files/home/vibefeedback';
+const DIR = path.join(__dirname, '..');
 const OUT = DIR + '/superaudit_shots';
 const PORT = 7799;
 
@@ -26,7 +26,7 @@ function serve() {
 }
 
 const BASE = `http://127.0.0.1:${PORT}/index.html`;
-const DEMO = `http://127.0.0.1:${PORT}/demo.html`;
+const DEMO = `http://127.0.0.1:${PORT}/demos/demo.html`;
 const APP  = `${BASE}?src=${encodeURIComponent(DEMO)}`;
 const APP_OWNER = `${APP}&owner=1`;
 
@@ -269,10 +269,10 @@ async function run() {
     await p.goto(APP_OWNER, { waitUntil:'domcontentloaded', timeout:20000 });
     await p.evaluate(() => {
       localStorage.setItem('vibefeedback:coach:v2','1');
-      localStorage.setItem(`vibefeedback:v2:http://127.0.0.1:7799/demo.html`, JSON.stringify([
-        { id:'aaa1', selector:'h1', snippet:'<h1>Demo</h1>', tag:'h1', info:{role:'h1',text:'Demo'}, pageUrl:'http://127.0.0.1:7799/demo.html', text:'Überschrift zu groß auf Mobile', category:'design', priority:'should', ts:new Date().toISOString() },
-        { id:'aaa2', selector:'button', snippet:'<button>Jetzt starten</button>', tag:'button', info:{role:'button',text:'Jetzt starten'}, pageUrl:'http://127.0.0.1:7799/demo.html', text:'Button reagiert nicht auf Enter-Key', category:'bug', priority:'must', ts:new Date().toISOString() },
-        { id:'aaa3', selector:'p', snippet:'<p>Demo</p>', tag:'p', info:{role:'p',text:'Demo'}, pageUrl:'http://127.0.0.1:7799/demo.html', text:'Preis prominenter zeigen', category:'feature', priority:'could', ts:new Date().toISOString() },
+      localStorage.setItem(`vibefeedback:v2:http://127.0.0.1:7799/demos/demo.html`, JSON.stringify([
+        { id:'aaa1', selector:'h1', snippet:'<h1>Demo</h1>', tag:'h1', info:{role:'h1',text:'Demo'}, pageUrl:'http://127.0.0.1:7799/demos/demo.html', text:'Überschrift zu groß auf Mobile', category:'design', priority:'should', ts:new Date().toISOString() },
+        { id:'aaa2', selector:'button', snippet:'<button>Jetzt starten</button>', tag:'button', info:{role:'button',text:'Jetzt starten'}, pageUrl:'http://127.0.0.1:7799/demos/demo.html', text:'Button reagiert nicht auf Enter-Key', category:'bug', priority:'must', ts:new Date().toISOString() },
+        { id:'aaa3', selector:'p', snippet:'<p>Demo</p>', tag:'p', info:{role:'p',text:'Demo'}, pageUrl:'http://127.0.0.1:7799/demos/demo.html', text:'Preis prominenter zeigen', category:'feature', priority:'could', ts:new Date().toISOString() },
       ]));
     });
     await p.reload({ waitUntil:'networkidle', timeout:20000 });

@@ -6,7 +6,7 @@ const fs = require("fs");
 const path = require("path");
 const { execFileSync } = require("child_process");
 
-const VF = __dirname;
+const VF = path.join(__dirname, "..");
 const OUT = path.join(__dirname, "test_artifacts");
 
 function startServer(dir, port) {

@@ -7,7 +7,7 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 
-const VF = __dirname;
+const VF = path.join(__dirname, "..");
 const OUT = path.join(VF, "test_artifacts", "export_quality");
 const TARGET = "https://www.kippflix.com/";
 

@@ -67,9 +67,36 @@ Das Iframe wird über `fetch(src)` + `srcdoc` befüllt (damit wir Klicks auf DOM
 
 `status` ist optional (`doing` | `done`) — ein fehlendes Feld bedeutet „offen". Beim Import wird ein mitgelieferter Status auf bereits vorhandene Kommentare übernommen.
 
-## Loop-Prompt zur Selbst-Iteration
+## Projektstruktur
 
-Siehe [`LOOP_PROMPT.md`](./LOOP_PROMPT.md). Enthält die Qualitätskriterien, gegen die VibeFeedback iterativ verbessert wird.
+Die Seite läuft **ohne Build-Schritt** auf GitHub Pages: Ein `git push` auf `main`
+geht direkt live — alle Dateien werden 1:1 so ausgeliefert, wie sie im Repo liegen.
+(Der einzige Node-Schritt ist `npm run build`, der lokal das Bookmarklet neu erzeugt.)
+
+```
+vibefeedback/
+├── index.html          # Landing-Page + das eigentliche Feedback-Tool (?src=…)
+├── styles.css          # alle Styles der Landing/App (aus index.html ausgelagert)
+├── app.js              # das komplette Feedback-Tool als Skript (aus index.html ausgelagert)
+├── dashboard.html      # Projekt-Cockpit über alle im Browser kommentierten Projekte
+├── layer.js            # Quelle des Bookmarklets (läuft injiziert auf fremden Seiten)
+├── layer.min.js        # daraus gebautes Bookmarklet — via `npm run build`, nicht von Hand
+├── vf-zip.js           # gemeinsamer ZIP-Writer für index.html + dashboard.html
+├── test_screenshot.html# Test-Fixture (bleibt im Root, wird per URL geladen)
+├── noise.svg, og-image.svg, pilot-logo*.svg, fonts/   # Assets
+│
+├── demos/              # Beispiel-Website zum Ausprobieren des Tools (die „Live-Demo")
+├── tests/              # Playwright-Tests — `npm test` läuft alle aus diesem Ordner
+├── scripts/            # Node-Helfer: build-bookmarklet.js (Build) + superaudit.js (Audit)
+│
+├── package.json        # npm-Skripte: test / test:live / test:sites / build / audit
+├── CHANGELOG.md        # Verlauf aller Versionen (+ „Bekannt / Offen" ganz oben)
+└── README.md           # dieses Dokument
+```
+
+**Merkhilfe:** `index.html` + `styles.css` + `app.js` gehören zusammen (eine Seite,
+in drei Dateien getrennt für die Übersicht). Was im Browser läuft, liegt im Root;
+was nur zur Entwicklung dient, liegt in `tests/` und `scripts/`.
 
 ## Lokal ausprobieren
 
@@ -84,14 +111,14 @@ python3 -m http.server 8080
 
 ```bash
 npm install
-npm test          # Playwright-Regressionssuite (267 Checks)
+npm test          # Playwright-Regressionssuite (13 Test-Dateien in tests/)
 npm run test:sites # Kernfeature-Matrix gegen echte Live-Seiten (netzabhängig)
 npm run build     # layer.min.js + eingebettetes Bookmarklet aus layer.js
 npm run audit     # superaudit (Screenshots, a11y, Mobile)
 ```
 
-Nach jeder Änderung an `layer.js` muss `npm run build` laufen — sonst bleibt das Bookmarklet in `index.html` veraltet.
+Nach jeder Änderung an `layer.js` muss `npm run build` laufen — sonst bleibt das Bookmarklet in `app.js` veraltet.
 
 ### ZIP-Code liegt zweimal — mit Absicht
 
-`vf-zip.js` ist die gemeinsame Quelle für `index.html` und `dashboard.html`. Das Bookmarklet (`layer.js`) trägt eine eigene Kopie, weil es in fremde Seiten injiziert wird und dort nichts nachladen darf. `test_zip_parity.js` stellt sicher, dass beide bei gleicher Eingabe byte-identische Archive erzeugen — wer eine ändert, muss die andere nachziehen.
+`vf-zip.js` ist die gemeinsame Quelle für `index.html` und `dashboard.html`. Das Bookmarklet (`layer.js`) trägt eine eigene Kopie, weil es in fremde Seiten injiziert wird und dort nichts nachladen darf. `tests/test_zip_parity.js` stellt sicher, dass beide bei gleicher Eingabe byte-identische Archive erzeugen — wer eine ändert, muss die andere nachziehen.

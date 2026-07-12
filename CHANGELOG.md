@@ -1,5 +1,24 @@
 # Changelog
 
+## Bekannt / Offen
+
+- **Kontext-Capture bei Mini-Elementen**: Klick auf ein sehr kleines Element (einzeilige `<p>`, 24-px-Überschrift) erzeugt einen schmalen Screenshot-Streifen ohne Kontext — der Empfänger erkennt nicht, wo auf der Seite das Element liegt. Idee: bei Rect-Höhe < ~48 px bzw. Fläche < ~10 000 px² stattdessen den nächsten passenden Vorfahren capturen (max. 3 Ebenen hoch) und das Ziel-Element im Bild markieren. (Übernommen aus dem gelöschten `FIXPLAN.md`, Finding 2 vom 2026-07-10; Findings 1 und 3 sind erledigt.)
+
+## Struktur-Aufräumen — 2026-07-12
+
+Reine Umstrukturierung, **kein** Verhaltens- oder Feature-Change. Ziel: verständlicherer, aufgeräumter Root — leichter zu warten. Deploy bleibt buildlos (GitHub Pages, Push = live). Alle Tests (`npm test`), der Build (`npm run build`) und der Audit (`npm run audit`) laufen unverändert grün.
+
+### changed
+- **`index.html` entflochten**: Das riesige Inline-`<style>` liegt jetzt in `styles.css`, das komplette Inline-`<script>` in `app.js`. `index.html` schrumpft von ~3888 auf ~270 Zeilen und lädt beide als Geschwister-Dateien. Verhalten identisch. `npm run build` schreibt die Bookmarklet-Zeile jetzt in `app.js` (vorher `index.html`).
+- **Ordner statt Root-Wildwuchs**: Die 7 Demo-Dateien liegen in `demos/`, alle Playwright-Tests in `tests/`, `superaudit.js` neben dem Build-Skript in `scripts/`. Alle Aufrufer (Produktions-Links, Test-URLs, Audit-Seeds) wurden mitgezogen.
+- **README** um einen kommentierten Projektstruktur-Baum ergänzt; veraltete Angaben korrigiert (Testanzahl, Bookmarklet-Zielort).
+
+### removed
+- Veraltete/erledigte Doku (`AUDIT_REPORT.md`, `FIXPLAN.md`, `LOOP_PROMPT.md`) und sechs verwaiste, an kein npm-Skript gebundene Audit-/Test-Skripte. Der einzige noch offene Punkt aus `FIXPLAN.md` wurde nach „Bekannt / Offen" (oben) gerettet.
+
+### fixed
+- Vier Tests legen ihren `test_artifacts`-Ausgabeordner jetzt selbst an (`mkdirSync`), statt sich auf einen zufällig vorhandenen Ordner zu verlassen — `npm test` läuft damit auch auf einem frischen Clone.
+
 ## 1.9.0 — 2026-07-12 — Screenshot ist opt-in (kein Auto-Capture)
 
 Bisher wurde bei jedem Kommentar automatisch ein Element-Screenshot aufgenommen und mitgespeichert. Jetzt speichert VibeFeedback **standardmäßig ohne Screenshot** — erst ein Klick auf die 📷-Schaltfläche lädt die Capture-Engine und nimmt auf.

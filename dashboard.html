@@ -703,7 +703,7 @@ function renderOverview(){
     app.innerHTML = `<div class="empty">
       <h2>Noch keine Kommentare</h2>
       <p>Sobald du ein Projekt kommentierst, erscheint es hier. Das Dashboard liest ausschließlich den lokalen Speicher dieses Browsers.</p>
-      <a class="btn primary" href="./?src=${encodeURIComponent(location.origin + location.pathname.replace(/dashboard\.html$/, "") + "demo.html")}&owner=1">Demo kommentieren →</a>
+      <a class="btn primary" href="./?src=${encodeURIComponent(location.origin + location.pathname.replace(/dashboard\.html$/, "") + "demos/demo.html")}&owner=1">Demo kommentieren →</a>
     </div>`;
     return;
   }
