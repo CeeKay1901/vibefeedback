@@ -65,16 +65,16 @@ const check = (cond, label) => { (cond ? ok : bad).push(label); console.log(`  $
     const doc = document.querySelector("#frame").contentDocument;
     doc.querySelector("#card-simple").dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: doc.defaultView }));
   });
-  await page.waitForTimeout(2500); // Auto-Capture fertig
+  await page.waitForTimeout(600);
   check(await page.locator(".cbar").isVisible(), "Kommentar-Bar offen");
-  const autoThumb = await page.locator(".cbar-thumb").getAttribute("src");
-  check(!!autoThumb, "Auto-Screenshot im Thumb");
+  // Screenshot ist opt-in: standardmäßig KEIN Auto-Screenshot im Thumb
+  check(await page.locator(".cbar-thumb").getAttribute("hidden") !== null, "Standard: kein Auto-Screenshot (Thumb verborgen)");
 
   check(await page.evaluate(WRITE_CLIPBOARD).catch(e => { console.log("  clipboard write:", e.message); return false; }), "Testbild in Zwischenablage geschrieben");
   await page.locator(".cbar [data-act='paste-shot']").click();
   await page.waitForTimeout(1200);
   const pastedThumb = await page.locator(".cbar-thumb").getAttribute("src");
-  check(pastedThumb && pastedThumb !== autoThumb, "Thumb durch eigenen Screenshot ersetzt");
+  check(!!pastedThumb, "Thumb zeigt eigenen Screenshot nach Einfügen");
 
   await page.locator(".cbar textarea[data-role='text']").fill("Paste-Test");
   page.once("dialog", d => d.accept("Tester"));

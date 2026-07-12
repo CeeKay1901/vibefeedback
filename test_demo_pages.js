@@ -109,12 +109,15 @@ const check = (cond, label) => { (cond ? ok : bad).push(label); console.log(`  $
   await page.waitForTimeout(2500);
   if (await page.locator(".cbar").isVisible()) {
     await page.locator(".cbar textarea[data-role='text']").fill("Subpage-Kommentar");
+    // Screenshot ist opt-in → auf Subpage aufnehmen, damit er im Export landet
+    await page.locator(".cbar [data-act='screenshot']").click();
+    await page.waitForFunction(() => !!(document.querySelector(".cbar-thumb:not([hidden])") || document.querySelector(".cbar canvas")), { timeout: 15000 }).catch(() => {});
     page.once("dialog", d => d.accept("Tester"));
     await page.locator(".cbar [data-act='save']").click();
     await page.waitForTimeout(1200);
     const c = await page.evaluate(() => STATE.comments[STATE.comments.length - 1]);
     check(c && (c.pageUrl || "").includes("demo-blog.html"), "Kommentar trägt Subpage-URL");
-    check(c && !!c.screenshot, "Screenshot auf Subpage captured");
+    check(c && !!c.screenshot, "Screenshot auf Subpage captured (nach Kamera-Klick)");
   } else {
     check(false, "Kommentar-Bar auf Subpage öffnet nicht");
   }

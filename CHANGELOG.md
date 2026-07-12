@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.9.0 — 2026-07-12 — Screenshot ist opt-in (kein Auto-Capture)
+
+Bisher wurde bei jedem Kommentar automatisch ein Element-Screenshot aufgenommen und mitgespeichert. Jetzt speichert VibeFeedback **standardmäßig ohne Screenshot** — erst ein Klick auf die 📷-Schaltfläche lädt die Capture-Engine und nimmt auf.
+
+### changed
+- **Kein Auto-Capture mehr beim Öffnen der Kommentar-Bar.** Der Annotator wird erst bei 📷-Klick erzeugt (lazy) — die Screenshot-Engine (modern-screenshot) lädt also nur, wenn wirklich ein Screenshot gewünscht ist.
+- Beim Wechsel auf ein anderes Element wird ein bereits aufgenommener Screenshot verworfen (kein automatisches Neu-Aufnehmen).
+- **Bookmarklet** analog: neuer „Aufnehmen"-Button im Modal; ohne Klick kein Screenshot. Neu gebaut.
+- Eigener Screenshot per Zwischenablage (📋 / Strg+V) funktioniert unverändert und ohne 📷.
+- Button-Titel/Hints angepasst („optional — leer = kein Screenshot").
+
+### tests
+- `test_bugfixes` [5] auf Opt-in umgeschrieben (Standard ohne / nach 📷 mit); `test_annotator`, `test_paste_shot`, `test_demo_pages`, `test_zip_export` nehmen den Screenshot jetzt explizit per 📷 auf. Alle 13 Dateien grün.
+
 ## 1.8.0 — 2026-07-11 — Eigene Icons statt Emojis (Lucide) im gesamten UI
 
 Alle Emojis im UI durch selbstgehostete Inline-**Lucide**-Icons (stroke, `currentColor`) ersetzt — einheitliches, professionelles Bild statt bunter System-Emojis, konsistent mit der pilot-Ästhetik.

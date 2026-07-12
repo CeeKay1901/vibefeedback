@@ -160,22 +160,39 @@ const check = (cond, label, extra) => { (cond ? ok : bad).push(label); console.l
   check(retry.before === false, "Fehlversuch liefert false");
   check(retry.attempts === 1, `Zweiter Aufruf versucht erneut (script-Tags: ${retry.attempts})`);
 
-  // ── 5. Save während laufendem Capture ────────────────────────────────────
-  console.log("\n[5] Speichern während Auto-Capture läuft");
-  await page.evaluate(() => { STATE.comments.length = 0; });
-  await page.evaluate(() => {
-    const doc = document.querySelector("#frame").contentDocument;
-    doc.querySelector("#card-simple").dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: doc.defaultView }));
-  });
-  await page.waitForTimeout(120);   // absichtlich SEHR früh speichern
-  await page.locator(".cbar textarea[data-role='text']").fill("Sofort gespeichert");
+  // ── 5. Screenshot ist opt-in (kein Auto-Capture) ─────────────────────────
+  console.log("\n[5] Screenshot opt-in: Standard ohne, per Kamera-Klick mit");
+  const clickCardSimple = async () => {
+    await page.evaluate(() => {
+      const doc = document.querySelector("#frame").contentDocument;
+      doc.querySelector("#card-simple").dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: doc.defaultView }));
+    });
+    await page.locator(".cbar").waitFor({ state: "visible", timeout: 6000 });
+  };
+  // (a) Standard: ohne Kamera-Klick → kein Screenshot
+  await page.evaluate(() => { STATE.comments.length = 0; renderAll(); refreshFrameBadges(); });
+  await clickCardSimple();
+  await page.locator(".cbar textarea[data-role='text']").fill("Ohne Screenshot");
   await page.locator(".cbar [data-act='save']").click();
-  await page.waitForTimeout(6000);
-  const early = await page.evaluate(() => {
+  await page.waitForTimeout(1500);
+  const noShot = await page.evaluate(() => {
     const c = STATE.comments[STATE.comments.length - 1];
-    return c ? { text: c.text, hasShot: !!c.screenshot, len: (c.screenshot || "").length } : null;
+    return c ? { hasShot: !!c.screenshot } : null;
   });
-  check(early && early.hasShot && early.len > 500, `Screenshot trotz frühem Speichern vorhanden (${early && early.len} bytes)`);
+  check(noShot && !noShot.hasShot, "Standard: Kommentar ohne Screenshot gespeichert");
+  // (b) Nach Kamera-Klick → Screenshot vorhanden
+  await page.evaluate(() => { STATE.comments.length = 0; renderAll(); refreshFrameBadges(); });
+  await clickCardSimple();
+  await page.locator(".cbar textarea[data-role='text']").fill("Mit Screenshot");
+  await page.locator(".cbar [data-act='screenshot']").click();
+  await page.waitForFunction(() => !!(document.querySelector(".cbar-thumb:not([hidden])") || document.querySelector(".cbar canvas")), { timeout: 15000 });
+  await page.locator(".cbar [data-act='save']").click();
+  await page.waitForTimeout(1500);
+  const withShot = await page.evaluate(() => {
+    const c = STATE.comments[STATE.comments.length - 1];
+    return c ? { hasShot: !!c.screenshot, len: (c.screenshot || "").length } : null;
+  });
+  check(withShot && withShot.hasShot && withShot.len > 500, `Nach Kamera-Klick: Screenshot vorhanden (${withShot && withShot.len} bytes)`);
 
   console.log(`\n${ok.length}/${ok.length + bad.length} bestanden`);
   await browser.close();

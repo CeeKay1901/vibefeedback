@@ -49,7 +49,8 @@
     "circle-help": '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>',
     "heart": '<path d="M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5"/>',
     "message-square": '<path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"/>',
-    "clipboard": '<rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>'
+    "clipboard": '<rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>',
+    "camera": '<path d="M13.997 4a2 2 0 0 1 1.76 1.05l.486.9A2 2 0 0 0 18.003 7H20a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1.997a2 2 0 0 0 1.759-1.048l.489-.904A2 2 0 0 1 10.004 4z"/><circle cx="12" cy="13" r="3"/>'
   };
   function icon(name, size) {
     var p = ICON_PATHS[name]; if (!p) return "";
@@ -745,8 +746,9 @@
         '<div data-r="tpl"></div>' +
         '<div class="__vfl_field"><label data-r="text-label">Kommentar</label><textarea data-r="text" placeholder="Was ist dir aufgefallen?"></textarea></div>' +
         '<div class="__vfl_field"><label>Screenshot</label><div class="__vfl_shotrow">' +
+          (isEdit ? "" : '<button type="button" data-act="capture-shot" title="Screenshot dieses Elements aufnehmen">' + icon("camera", 12) + ' Aufnehmen</button>') +
           '<button type="button" data-act="paste-shot" title="Eigenen Screenshot aus der Zwischenablage einfügen (oder Strg+V)">' + icon("clipboard", 12) + ' Aus Zwischenablage</button>' +
-          '<span class="__vfl_shothint" data-r="shot-hint">' + (isEdit ? "leer = vorhandener bleibt" : "leer = automatisch") + '</span>' +
+          '<span class="__vfl_shothint" data-r="shot-hint">' + (isEdit ? "leer = vorhandener bleibt" : "optional — leer = kein Screenshot") + '</span>' +
           '<img data-r="shot-preview" alt="Screenshot-Vorschau" hidden>' +
         '</div></div>' +
         '<div class="__vfl_actions">' +
@@ -766,6 +768,19 @@
     // Eigener Screenshot aus der Zwischenablage — für Edge-Cases, in denen der
     // Auto-Screenshot nicht stimmt (Canvas/WebGL, CORS-gesperrte Bilder, Video-Frames).
     var pastedShot = null;
+    var capturedShot = null;   // Screenshot ist opt-in: erst auf Klick aufnehmen
+    var capBtn = bg.querySelector('[data-act="capture-shot"]');
+    if (capBtn) capBtn.addEventListener("click", function () {
+      if (!currentEl) { toast("Kein Element ausgewählt."); return; }
+      capBtn.disabled = true; capBtn.textContent = "Screenshot…";
+      captureElement(currentEl).then(function (shot) {
+        capturedShot = shot || null; pastedShot = null;
+        var prev = bg.querySelector('[data-r="shot-preview"]');
+        if (shot) { prev.src = shot; prev.hidden = false; bg.querySelector('[data-r="shot-hint"]').textContent = "Screenshot aufgenommen"; }
+        else toast("Screenshot nicht verfügbar.");
+        capBtn.disabled = false; capBtn.innerHTML = icon("camera", 12) + " Aufnehmen";
+      }).catch(function () { capBtn.disabled = false; capBtn.innerHTML = icon("camera", 12) + " Aufnehmen"; toast("Screenshot fehlgeschlagen."); });
+    });
     function applyPastedShot(blob) {
       normalizePastedImage(blob).then(function (dataUrl) {
         if (!dataUrl) { toast("Bild konnte nicht gelesen werden."); return; }
@@ -845,9 +860,8 @@
       var btn = bg.querySelector('[data-act="save"]');
       saving = true;
       btn.disabled = true; btn.textContent = "Speichere…";
-      var shotP = pastedShot ? Promise.resolve(pastedShot)
-        : (!isEdit && currentEl) ? captureElement(currentEl)
-        : Promise.resolve(existing ? existing.screenshot : null);
+      // Screenshot opt-in: kein Auto-Capture mehr — nur eigener/aufgenommener Shot.
+      var shotP = Promise.resolve(pastedShot || capturedShot || (existing ? existing.screenshot : null));
       shotP.then(function (shot) {
         if (aborted) return;   // Nutzer hat mit Esc abgebrochen, während der Screenshot lief
         if (isEdit) {

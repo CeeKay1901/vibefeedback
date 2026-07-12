@@ -65,8 +65,11 @@ const check = (c, l, e) => { (c ? ok : bad).push(l); console.log(`  ${c ? "✓" 
       const d = document.querySelector("#frame").contentDocument;
       d.querySelector(s).dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: d.defaultView }));
     }, sel);
-    await page.waitForTimeout(2500);
+    await page.locator(".cbar").waitFor({ state: "visible", timeout: 6000 });
     await page.locator(".cbar textarea[data-role='text']").fill(text);
+    // Screenshot ist opt-in → aufnehmen, damit die ZIP-Screenshots geprüft werden können
+    await page.locator(".cbar [data-act='screenshot']").click();
+    await page.waitForFunction(() => !!(document.querySelector(".cbar-thumb:not([hidden])") || document.querySelector(".cbar canvas")), { timeout: 15000 });
     page.once("dialog", d => d.accept("Tester"));
     await page.locator(".cbar [data-act='save']").click();
     await page.waitForTimeout(1600);
@@ -167,6 +170,9 @@ const check = (c, l, e) => { (c ? ok : bad).push(l); console.log(`  ${c ? "✓" 
     await p3.evaluate(() => document.querySelector('.__vfl_fab [data-act="mode"]').click());
     await p3.click(sel);
     await p3.waitForTimeout(400);
+    // Screenshot opt-in → im Bookmarklet-Modal aufnehmen
+    await p3.evaluate(() => { const b = document.querySelector('.__vfl_modal [data-act="capture-shot"]'); if (b) b.click(); });
+    await p3.waitForFunction(() => { const p = document.querySelector('.__vfl_modal [data-r="shot-preview"]'); return p && !p.hidden; }, { timeout: 15000 }).catch(() => {});
     await p3.evaluate(() => {
       const m = document.querySelector(".__vfl_modal");
       m.querySelectorAll("input, textarea").forEach(i => { i.value = "Layer-ZIP"; i.dispatchEvent(new Event("input", { bubbles: true })); });

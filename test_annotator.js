@@ -48,8 +48,9 @@ const check = (cond, label) => { (cond ? ok : bad).push(label); console.log(`  $
   await page.waitForTimeout(2500);
   check(await page.locator(".cbar").isVisible(), "Kommentar-Bar offen");
 
-  // Expand → Annotator sichtbar
-  await page.locator("button.icon-btn[data-act='toggle-expand']").click();
+  // Screenshot ist opt-in → aufnehmen; captureShot öffnet das Expand automatisch
+  await page.locator(".cbar [data-act='screenshot']").click();
+  await page.waitForFunction(() => !!document.querySelector(".cbar .annot .stage canvas"), { timeout: 15000 });
   await page.waitForTimeout(600);
   const canvas = page.locator(".cbar .annot .stage canvas");
   check(await canvas.isVisible(), "Annotator-Canvas sichtbar");
