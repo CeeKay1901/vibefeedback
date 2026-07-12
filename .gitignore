@@ -12,3 +12,4 @@ test_artifacts/
 debug_vf.js
 audit_test.js
 reaudit.sh
+export_lab/

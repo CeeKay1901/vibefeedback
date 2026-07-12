@@ -128,6 +128,32 @@ const check = (c, l, e) => { (c ? ok : bad).push(l); console.log(`  ${c ? "✓" 
   });
   check(evil === "done", `ungültiger Status wird ignoriert (${evil})`);
 
+  // ── Kollaboration: neue Replies + Reaktionen eines Helfers werden übernommen ──
+  console.log("\n[4] Import übernimmt Replies & Reaktionen (kein Datenverlust)");
+  const collab = await page.evaluate(async () => {
+    const payload = { comments: [ {
+      id:"s1", selector:"h1", ts: 0,
+      reactions: { likes: ["u1","u2"], dislikes: [] },
+      replies: [ { id:"rp1", author:"Helfer", text:"Umformuliert, bitte prüfen.", ts: 111, reactions: { likes:["u3"], dislikes:[] } } ]
+    } ] };
+    const imp = async () => {
+      const file = new File([JSON.stringify(payload)], "collab.json", { type:"application/json" });
+      const dt = new DataTransfer(); dt.items.add(file);
+      const input = document.getElementById("btn-import-file");
+      Object.defineProperty(input, "files", { value: dt.files, configurable: true });
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+      await new Promise(r => setTimeout(r, 900));
+    };
+    await imp(); await imp();   // zweimal → Reply darf sich nicht duplizieren
+    const s1 = STATE.comments.find(c => c.id === "s1");
+    return { n: STATE.comments.length, replies: (s1.replies||[]).length, replyText: (s1.replies||[])[0]?.text || "", replyRxn: (s1.replies||[])[0]?.reactions?.likes?.length || 0, likes: (s1.reactions?.likes||[]).length };
+  });
+  check(collab.n === 2, `keine neuen Items durch Kollaborations-Import (${collab.n})`);
+  check(collab.replies === 1, `neue Reply übernommen & nicht dupliziert (${collab.replies})`);
+  check(collab.replyText === "Umformuliert, bitte prüfen.", "Reply-Text erhalten");
+  check(collab.replyRxn === 1, `Reply-Reaktion erhalten (${collab.replyRxn})`);
+  check(collab.likes === 2, `Kommentar-Reaktionen (likes) übernommen (${collab.likes})`);
+
   console.log(`\n${ok.length}/${ok.length + bad.length} bestanden`);
   await browser.close();
   srv.close();

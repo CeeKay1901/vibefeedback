@@ -4,6 +4,31 @@
 
 - **Kontext-Capture bei Mini-Elementen**: Klick auf ein sehr kleines Element (einzeilige `<p>`, 24-px-Überschrift) erzeugt einen schmalen Screenshot-Streifen ohne Kontext — der Empfänger erkennt nicht, wo auf der Seite das Element liegt. Idee: bei Rect-Höhe < ~48 px bzw. Fläche < ~10 000 px² stattdessen den nächsten passenden Vorfahren capturen (max. 3 Ebenen hoch) und das Ziel-Element im Bild markieren. (Übernommen aus dem gelöschten `FIXPLAN.md`, Finding 2 vom 2026-07-10; Findings 1 und 3 sind erledigt.)
 
+## Export-Härtung — 2026-07-12 — geprüft in echter Arbeitsumgebung
+
+Alle Export-Wege (Markdown, ZIP, JSON, CSV, Dashboard-„Alles exportieren", Re-Import) wurden gegen **echte Live-Websites** erzeugt und geprüft — neues Labor `npm run export:lab` (echte Screenshots, echte Selektoren). Daraus 13 verifizierte Fixes/Optimierungen.
+
+### fixed (Datenverlust im Kollaborations-Roundtrip)
+- **Reaktionen (👍/👎) gingen bei jedem Re-Import verloren** — `importItems` setzte sie hart auf leer. Jetzt werden sie übernommen (dedupliziert, gedeckelt).
+- **Bekannter Kommentar beim Re-Import: neue Antworten & Reaktionen eines Helfers wurden verworfen** — der Merge-Zweig übernahm nur den Status. Jetzt werden neue Replies angehängt (dedupliziert nach id) und Reaktionen vereinigt. Neue Regressionstests in `tests/test_status_tool.js`.
+- **Reply-Reaktionen** werden beim Import ebenfalls übernommen statt zurückgesetzt.
+
+### changed (Markdown-Export prompt-tauglicher)
+- Strukturierte Template-Felder (z. B. Ist/Soll nach Kategorie-Wechsel) erscheinen jetzt auch im **lesbaren Fließtext**, nicht nur im JSON-Block.
+- Titel-Fallback nutzt den **CSS-Selektor** statt eines wertlosen `<svg>`/`<div>` — bleibt ein eindeutiger Anker fürs Coding-LLM.
+- „Aufwand nach Priorität" → „Items nach Priorität" (es war immer eine Anzahl, kein Aufwandsmaß).
+- Platzhaltertext beim reinen Markdown-Export verweist nicht mehr auf ein nicht erzeugtes ZIP.
+- Robuster Sort-Tiebreak (ISO-String- **und** Epoch-Zeitstempel) statt `NaN`.
+
+### changed (CSV / Dashboard für deutsches Excel)
+- **Semikolon** als Feldtrenner (deutsches Excel legte bei Komma alles in Spalte A).
+- **CSV-/Formel-Injection** entschärft: Werte mit führendem `=`,`+`,`-`,`@` bekommen ein Schutz-Apostroph.
+- Zeitpunkt-Spalte **de-DE-lesbar** (`9.7.2026, 19:18:08`) statt ISO-UTC.
+- Screenshot-Spalte zeigt den **Dateipfad** zur beiliegenden Bilddatei statt nur „ja/nein".
+
+### changed (ZIP-Robustheit)
+- feedback.json im ZIP trägt jetzt zusätzlich `screenshotFile` (Ordner-Fallback beim Re-Import), **ohne** das eingebettete base64 zu entfernen — der Standalone-Import der feedback.json bleibt intakt (weiter durch `tests/test_zip_export.js` abgesichert).
+
 ## Struktur-Aufräumen — 2026-07-12
 
 Reine Umstrukturierung, **kein** Verhaltens- oder Feature-Change. Ziel: verständlicherer, aufgeräumter Root — leichter zu warten. Deploy bleibt buildlos (GitHub Pages, Push = live). Alle Tests (`npm test`), der Build (`npm run build`) und der Audit (`npm run audit`) laufen unverändert grün.

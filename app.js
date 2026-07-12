@@ -2525,10 +2525,13 @@ function buildMarkdown(opts){
   const now = new Date().toISOString();
   const priOrder = { must:0, should:1, could:2, nice:3 };
   const actionVerb = { bug:"Fix", feature:"Implementiere", design:"Passe an", copy:"Formuliere um", question:"Beantworte", praise:"Notiere positiv" };
+  // ts ist je nach Erzeugungspfad ISO-String oder Epoch-Zahl — robust auf ms parsen,
+  // sonst liefert (a.ts||0)-(b.ts||0) bei String-ts NaN und der Tiebreak greift nicht.
+  const tsn = v => typeof v === "number" ? v : (Date.parse(v) || 0);
   const sorted = [...cs].sort((a,b)=>{
     const pd = (priOrder[a.priority]??9) - (priOrder[b.priority]??9);
     if(pd) return pd;
-    return (a.ts||0) - (b.ts||0);
+    return tsn(a.ts) - tsn(b.ts);
   });
 
   const priCount = { must:0, should:0, could:0, nice:0 };
@@ -2548,7 +2551,7 @@ function buildMarkdown(opts){
 
   md += `**Session:** ${cs.length} Item${cs.length===1?"":"s"} · exportiert ${now}\n\n`;
   if(stCount.done || stCount.doing) md += `**Status:** ${STATUSES.filter(s=>stCount[s.id]).map(s=>`${s.chip} ${s.label} ${stCount[s.id]}`).join(" · ")}\n\n`;
-  md += `**Aufwand nach Priorität:** `;
+  md += `**Items nach Priorität:** `;
   md += PRIORITIES.filter(p=>priCount[p.id]).map(p=>`${p.label} ${priCount[p.id]}`).join(" · ") || "—";
   md += `\n\n**Verteilung:** `;
   md += CATEGORIES.filter(k=>catCount[k.id]).map(k=>`${k.emoji} ${k.label} ${catCount[k.id]}`).join(" · ") || "—";
@@ -2570,7 +2573,9 @@ function buildMarkdown(opts){
     // Reihenfolge: kurzer sichtbarer Text > semantische Attribute > gekürzter Text > roher Tag.
     // Ein blankes „<div>" als Überschrift ist für den LLM-Empfänger wertlos, gekürzter
     // Text (z.B. der Hero-Inhalt) verankert das Item dagegen sofort.
-    const title = shortText || attrs.ariaLabel || attrs.alt || attrs.title || attrs.placeholder || truncText || (`<${c.tag}>`);
+    // Letztes Glied: der Selektor statt eines nackten `<svg>`/`<div>` — der bleibt
+    // ein eindeutiger Anker fürs Coding-LLM, ein blanker Tag ist wertlos.
+    const title = shortText || attrs.ariaLabel || attrs.alt || attrs.title || attrs.placeholder || truncText || c.selector || (`<${c.tag}>`);
 
     md += `## ${idx+1}. [${pri.label}]${stOf(c)!=="open" ? " " + ST_MAP[stOf(c)].chip : ""} ${cat.emoji} ${verb}: ${title}\n\n`;
 
@@ -2597,14 +2602,26 @@ function buildMarkdown(opts){
     const struct = c.structured || {};
     const tpl = TEMPLATES[c.category];
     let hasStructured = false;
+    const coveredKeys = new Set();
     if(tpl && tpl.fields.length){
       tpl.fields.forEach(f => {
         const v = struct[f.key];
+        coveredKeys.add(f.key);
         if(!v) return;
         hasStructured = true;
         md += `**${f.label}:**\n\n${v.split("\n").map(l=>"> "+l).join("\n")}\n\n`;
       });
     }
+    // Nach Kategorie-Wechsel können strukturierte Felder aus einem anderen Template
+    // übrig bleiben. Diese sonst nur im JSON-Block sichtbaren Werte generisch mit
+    // ausgeben, damit der lesbare Teil deckungsgleich mit den Daten bleibt.
+    Object.keys(struct).forEach(k => {
+      const v = struct[k];
+      if(coveredKeys.has(k) || !v) return;
+      hasStructured = true;
+      const label = k.charAt(0).toUpperCase() + k.slice(1);
+      md += `**${label}:**\n\n${String(v).split("\n").map(l=>"> "+l).join("\n")}\n\n`;
+    });
     if(c.text){
       md += `**${hasStructured ? "Zusätzliche Notiz" : "Feedback"}:**\n\n${c.text.split("\n").map(l=>"> "+l).join("\n")}\n\n`;
     }
@@ -2644,7 +2661,7 @@ function buildMarkdown(opts){
           // LLM-tauglich: KEINE base64-Data-URL im Text (die blähte den Export auf
           // ~88% Ballast auf und wird von Chat-LLMs nicht als Bild gerendert).
           // Das Bild liegt als Datei im ZIP-Export (feedback.json + screenshots/).
-          md += `_📎 Screenshot vorhanden — als Bilddatei im ZIP-Export enthalten._\n\n`;
+          md += `_📎 Screenshot vorhanden — im ZIP-Export als Bilddatei, per Re-Import wieder verfügbar._\n\n`;
         }
       }
       md += `</details>\n\n`;
@@ -2683,6 +2700,13 @@ function buildMarkdown(opts){
   return md;
 }
 
+// Reaktionen aus einem Import übernehmen statt verwerfen (Kollaborations-Roundtrip):
+// nur Strings, dedupliziert und gedeckelt, damit fremde Eingaben nichts aufblähen.
+function normReactions(r){
+  const clean = a => [...new Set((Array.isArray(a) ? a : []).filter(x => typeof x === "string").slice(0, 500))];
+  return { likes: clean(r && r.likes), dislikes: clean(r && r.dislikes) };
+}
+
 // Übernimmt rohe Import-Items in STATE.comments. Importierte Dateien sind fremde
 // Eingaben: IDs landen in HTML-Attributen, Screenshots in <img src> — beides nur
 // in sicherer Form übernehmen (Stored-XSS).
@@ -2701,14 +2725,39 @@ function importItems(items, existingIds, existingFp){
 
     // Dedup: skip if same id OR same selector+ts fingerprint.
     // Kollaborations-Roundtrip: Der bekannte Kommentar wird nicht dupliziert,
-    // aber ein mitgelieferter Bearbeitungsstatus übernommen — so landet
-    // "erledigt" aus dem Export eines Helfers wieder beim Owner.
+    // aber mitgelieferte Änderungen eines Helfers werden übernommen — Status,
+    // neue Antworten und neue Reaktionen landen so wieder beim Owner.
     if((item.id && existingIds.has(item.id)) || existingFp.has(fp)){
       const mine = STATE.comments.find(x => (item.id && x.id === item.id) || (x.selector + ":" + x.ts) === fp);
-      const incoming = ST_MAP[item.status] ? item.status : null;
-      if(mine && incoming && stOf(mine) !== incoming){
-        if(incoming === "open") delete mine.status; else mine.status = incoming;
-        merged++;
+      if(mine){
+        let touched = false;
+        const incoming = ST_MAP[item.status] ? item.status : null;
+        if(incoming && stOf(mine) !== incoming){
+          if(incoming === "open") delete mine.status; else mine.status = incoming;
+          touched = true;
+        }
+        // Neue Antworten anhängen (nach id/ts+text deduplizieren)
+        const seenReplies = new Set((mine.replies || []).map(r => r.id || (r.ts + ":" + r.text)));
+        (item.replies || []).forEach(r => {
+          const key = r.id || (r.ts + ":" + r.text);
+          if(seenReplies.has(key)) return;
+          seenReplies.add(key);
+          (mine.replies = mine.replies || []).push({
+            id:     safeId(r.id) || (Date.now().toString(36) + Math.random().toString(36).slice(2)),
+            text:   r.text || "", author: r.author || "", ts: r.ts || Date.now(),
+            reactions: normReactions(r.reactions)
+          });
+          touched = true;
+        });
+        // Reaktionen vereinigen
+        const inc = normReactions(item.reactions);
+        if(inc.likes.length || inc.dislikes.length){
+          const cur = mine.reactions = normReactions(mine.reactions);
+          const before = cur.likes.length + cur.dislikes.length;
+          mine.reactions = { likes: [...new Set([...cur.likes, ...inc.likes])], dislikes: [...new Set([...cur.dislikes, ...inc.dislikes])] };
+          if(mine.reactions.likes.length + mine.reactions.dislikes.length !== before) touched = true;
+        }
+        if(touched) merged++;
       }
       skipped++; continue;
     }
@@ -2742,13 +2791,13 @@ function importItems(items, existingIds, existingFp){
           href:        fallback.href || null
         }
       } : null),
-      reactions: { likes: [], dislikes: [] },
+      reactions: normReactions(item.reactions),
       replies: (item.replies || []).map(r => ({
         id:     safeId(r.id) || (Date.now().toString(36) + Math.random().toString(36).slice(2)),
         text:   r.text || "",
         author: r.author || "",
         ts:     r.ts || Date.now(),
-        reactions: { likes: [], dislikes: [] }
+        reactions: normReactions(r.reactions)
       }))
     });
     added++;
@@ -2901,11 +2950,14 @@ async function exportZip(){
       }
     });
 
+    // Screenshots bleiben zusätzlich als base64 eingebettet (Standalone-Re-Import der
+    // feedback.json ohne Ordner), tragen aber jetzt auch den Dateipfad — so kann
+    // itemsFromZip den Ordner-Fallback nutzen, falls das base64 mal fehlt.
     const jsonPayload = {
       source: STATE.src,
       exportedAt: new Date().toISOString(),
       count: STATE.comments.length,
-      comments: STATE.comments
+      comments: STATE.comments.map(c => screenshotFiles[c.id] ? { ...c, screenshotFile: screenshotFiles[c.id] } : c)
     };
 
     const stamp = new Date().toISOString().slice(0, 10);

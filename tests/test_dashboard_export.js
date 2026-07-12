@@ -119,17 +119,17 @@ const seed = {
   console.log("\n[4] kommentare.csv");
   const csv = fs.readFileSync(path.join(ex, "kommentare.csv"), "utf8");
   check(csv.charCodeAt(0) === 0xFEFF, "BOM vorhanden (Excel-Umlaute)");
-  // Von einem echten CSV-Parser gegenlesen
+  // Von einem echten CSV-Parser gegenlesen — Delimiter ist Semikolon (deutsches Excel)
   const parsed = execFileSync("python3", ["-c", `
 import csv, io, sys, json
 raw = open(sys.argv[1], encoding="utf-8-sig").read()
-rows = list(csv.reader(io.StringIO(raw)))
+rows = list(csv.reader(io.StringIO(raw), delimiter=";"))
 print(json.dumps({"rows": len(rows), "head": rows[0], "status": [r[4] for r in rows[1:]], "nasty": [r[9] for r in rows[1:]]}))
 `, path.join(ex, "kommentare.csv")], { encoding: "utf8" });
   const p = JSON.parse(parsed);
   check(p.rows === 4, `Kopfzeile + 3 Datenzeilen (${p.rows})`);
   check(p.head[0] === "Projekt" && p.head[4] === "Status" && p.head[9] === "Kommentar", `Spalten korrekt (${p.head.join("|")})`);
-  check(p.nasty.includes(NASTY), "Text mit Komma, Anführungszeichen und Zeilenumbruch bleibt intakt");
+  check(p.nasty.includes(NASTY), "Text mit Komma, Semikolon, Anführungszeichen und Zeilenumbruch bleibt intakt");
   check(p.status.filter(s => s === "Offen").length === 2 && p.status.includes("Erledigt"), `Status-Spalte gefüllt (${p.status.join("|")})`);
 
   // ── Der Kreis schließt sich: Tool importiert das Dashboard-Archiv ──────

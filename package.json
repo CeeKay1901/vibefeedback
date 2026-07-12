@@ -8,7 +8,8 @@
     "test": "node tests/test_screenshot.js && node tests/test_bugfixes.js && node tests/test_bugfixes_layer.js && node tests/test_annotator.js && node tests/test_badge_numbers.js && node tests/test_paste_shot.js && node tests/test_demo_pages.js && node tests/test_zip_export.js && node tests/test_zip_parity.js && node tests/test_dashboard.js && node tests/test_dashboard_export.js && node tests/test_status_tool.js && node tests/test_dashboard_usability.js",
     "test:live": "node tests/test_kippflix.js",
     "test:sites": "node tests/test_real_sites.js",
-    "audit": "node scripts/superaudit.js"
+    "audit": "node scripts/superaudit.js",
+    "export:lab": "node scripts/export_lab.js"
   },
   "repository": {
     "type": "git",
